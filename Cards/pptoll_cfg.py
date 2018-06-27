@@ -2,6 +2,7 @@ import Config.Core as cepgen
 import Config.ktProcess_cfi as kt
 #from Config.Hadronisation.pythia6_cff import pythia6 as hadroniser
 #from Config.Hadronisation.pythia8_cff import pythia8 as hadroniser
+#from Config.Hadronisation.herwig7_cff import herwig7 as hadroniser
 from Config.PDG_cfi import PDG
 
 #--- example of an auxiliary particles definition

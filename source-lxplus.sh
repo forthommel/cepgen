@@ -23,6 +23,12 @@ export PYTHIA8DATA=${PYTHIA8_DIR}/share/Pythia8/xmldoc
 #--- Python environment
 export PYTHONHOME=${LCG_DIR}/Python/3.9.6/${ARCH}
 export PATH=${PYTHONHOME}/bin:${PATH}
+#--- Herwig linking
+export THEPEG_DIR=${CVMFS_DIR}/MCGenerators/thepeg/2.2.1-aaa6f/x86_64-centos7-gcc9-opt
+export HERWIG7_DIR=${CVMFS_DIR}/MCGenerators/herwig++/7.2.1-bb71a/x86_64-centos7-gcc9-opt
+#--- extra libraries for Herwig++
+export LD_LIBRARY_PATH=${Boost_DIR}/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${CVMFS_DIR}/fastjet/3.3.4-0d9d5/x86_64-centos7-gcc9-opt/lib:${LD_LIBRARY_PATH}
 #--- extra utilities
 export APFEL_DIR=${LCG_DIR}/MCGenerators/apfel/3.0.4/${ARCH}
 export HEPMC_DIR=${LCG_DIR}/HepMC/2.06.11/${ARCH}
