@@ -26,7 +26,7 @@ process = cepgen.Module('diffvm',
 #--- let the user specify the run conditions
 from Config.generator_cff import generator
 generator = generator.clone(
-    numEvents = 100000,
-    printEvery = 10000,
+    numEvents = 10000,
+    printEvery = 2500,
 )
 
