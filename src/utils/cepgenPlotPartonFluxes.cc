@@ -18,6 +18,7 @@
 
 #include <fstream>
 
+#include "CepGen/CollinearFluxes/CollinearFlux.h"
 #include "CepGen/Generator.h"
 #include "CepGen/KTFluxes/KTFlux.h"
 #include "CepGen/Modules/DrawerFactory.h"
@@ -83,6 +84,9 @@ int main(int argc, char* argv[]) {
       if (fluxes.at(j)->ktFactorised()) {
         const auto& eval = dynamic_cast<const cepgen::KTFlux&>(*fluxes.at(j));
         flux = plot_vs_q2 ? eval.fluxQ2(x, kt2, q2) : eval.fluxMX2(x, kt2, mx2);
+      } else {
+        const auto& eval = dynamic_cast<const cepgen::CollinearFlux&>(*fluxes.at(j));
+        flux = plot_vs_q2 ? eval.fluxQ2(x, q2) : eval.fluxMX2(x, mx2);
       }
       flux *= (normalised ? x : 1.);
       out << "\t" << flux;
