@@ -22,8 +22,12 @@ PDG = Parameters(
     photon    = Parameters(pdgid = 22),
     Z         = Parameters(pdgid = 23),
     W         = Parameters(pdgid = 24),
+    Jpsi      = Parameters(pdgid = 443),
+    Upsilon1S = Parameters(pdgid = 553),
     proton    = Parameters(pdgid = 2212),
     neutron   = Parameters(pdgid = 2112),
+    Upsilon2S = Parameters(pdgid = 100553),
+    Upsilon3S = Parameters(pdgid = 200553),
 )
 
 ## Define a new particle type into the PDG library
