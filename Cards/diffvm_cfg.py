@@ -3,6 +3,7 @@ from Config.integrators_cff import vegas as integrator
 #from Config.pythia8_cff import pythia8 as hadroniser
 from Config.logger_cfi import logger
 from Config.PDG_cfi import PDG
+from Config.EPA_cfi import EPA, EPAMode
 
 logger.enabledModules += (
 #    'DiffVM.*',
@@ -15,6 +16,10 @@ process = cepgen.Module('diffvm',
     processParameters = diffvm.defaultProcessParameters.clone(
         vmFlavour = PDG.Upsilon1S,
         #protonMode = diffvm.BeamMode.StandardFragmentation,
+        epaParameters = EPA.clone(
+            mode = EPAMode.T,
+            yRange = (0.,0.5),
+        ),
     ),
     inKinematics = cepgen.Parameters(
         pdgIds = (PDG.electron, PDG.proton),
