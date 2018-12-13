@@ -31,6 +31,7 @@ namespace cepgen {
     define(ParticleProperties(diffractiveProton, "diff_proton", "p\u002A", 0, 0., 0., 3, false));
     define(ParticleProperties(pomeron, "pomeron", "\u2119", 0, 0., 0., 0, false));
     define(ParticleProperties(reggeon, "reggeon", "\u211D", 0, 0., 0., 0, false));
+    define(ParticleProperties(axion, "axion", "A", 0, 0., 0., 0., false));
   }
 
   PDG& PDG::get() {
