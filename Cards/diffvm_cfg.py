@@ -14,11 +14,14 @@ import Config.DiffVM_cff as diffvm
 
 process = cepgen.Module('diffvm',
     processParameters = diffvm.defaultProcessParameters.clone(
-        vmFlavour = PDG.Upsilon1S,
+        vmFlavour = PDG.omega782,
         #protonMode = diffvm.BeamMode.StandardFragmentation,
         epaParameters = EPA.clone(
             mode = EPAMode.T,
             yRange = (0.,0.5),
+        ),
+        slopeParameters = cepgen.Parameters(
+            b0 = 5.5,
         ),
     ),
     inKinematics = cepgen.Parameters(
@@ -31,6 +34,7 @@ process = cepgen.Module('diffvm',
         mx = (1.07, 1000.),
     ),
 )
+print process.processParameters
 
 #--- let the user specify the run conditions
 from Config.generator_cff import generator
