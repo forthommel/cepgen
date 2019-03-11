@@ -22,10 +22,13 @@ PDG = Parameters(
     photon    = Parameters(pdgid = 22),
     Z         = Parameters(pdgid = 23),
     W         = Parameters(pdgid = 24),
+    omega782  = Parameters(pdgid = 223),
     Jpsi      = Parameters(pdgid = 443),
     Upsilon1S = Parameters(pdgid = 553),
     proton    = Parameters(pdgid = 2212),
     neutron   = Parameters(pdgid = 2112),
+    h1380_1   = Parameters(pdgid = 10333),
+    phi1680   = Parameters(pdgid = 100333),
     Upsilon2S = Parameters(pdgid = 100553),
     Upsilon3S = Parameters(pdgid = 200553),
 )
