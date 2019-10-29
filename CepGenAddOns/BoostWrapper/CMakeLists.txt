@@ -1,4 +1,4 @@
-find_package(Boost)
+find_package(Boost COMPONENTS python)
 
 if(NOT Boost_FOUND)
   return()
@@ -19,6 +19,12 @@ endif()
 if(boost_py_include)
   list(APPEND sources PythonConfigWriter.cpp)
 endif()
+
+find_package(PythonLibs 2.7 REQUIRED)
+PYTHON_ADD_MODULE(pycepgen PythonWrapper.cpp)
+target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+target_link_libraries(pycepgen CepGenCore ${Boost_LIBRARIES})
+#install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH})
 
 #----- build the object
 
