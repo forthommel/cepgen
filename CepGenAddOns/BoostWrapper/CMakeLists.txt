@@ -24,7 +24,7 @@ find_package(PythonLibs 2.7 REQUIRED)
 PYTHON_ADD_MODULE(pycepgen PythonWrapper.cpp)
 target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(pycepgen CepGenCore ${Boost_LIBRARIES})
-#install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH})
+install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH})
 
 #----- build the object
 
