@@ -1,4 +1,4 @@
-find_package(Boost COMPONENTS python)
+find_package(Boost)
 
 if(NOT Boost_FOUND)
   return()
@@ -20,14 +20,22 @@ if(boost_py_include)
   list(APPEND sources PythonConfigWriter.cpp)
 endif()
 
-find_package(PythonLibs 2.7 REQUIRED)
-PYTHON_ADD_MODULE(pycepgen PythonWrapper.cpp)
-target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
-target_link_libraries(pycepgen CepGen ${Boost_LIBRARIES})
-install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH})
-#--- copy the __init__.py
-#configure_file(__init__.py ${CMAKE_CURRENT_BINARY_DIR}/__init__.py COPYONLY)
-#install(TARGETS pycepgen __init__.py DESTINATION ${PYTHON_INSTALL_PATH})
+#--- Python API
+find_package(PythonLibs)
+if(PYTHONLIBS_FOUND)
+  find_package(PythonInterp)
+  set(BOOST_COMPONENTS system)
+  if(PYTHONINTERP_FOUND)
+    list(APPEND BOOST_COMPONENTS
+         "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+  endif()
+  find_package(Boost COMPONENTS ${BOOST_COMPONENTS})
+  PYTHON_ADD_MODULE(pycepgen PythonWrapper.cpp)
+  target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+  target_link_libraries(pycepgen CepGen ${Boost_LIBRARIES})
+  #configure_file(__init__.py ${CMAKE_CURRENT_BINARY_DIR}/__init__.py COPYONLY)
+  install(TARGETS pycepgen __init__.py DESTINATION ${PYTHON_INSTALL_PATH})
+endif()
 
 #----- build the object
 
