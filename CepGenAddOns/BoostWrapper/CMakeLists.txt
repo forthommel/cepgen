@@ -6,6 +6,7 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
 
+<<<<<<< HEAD
 set(sources BoostTreeHandler.cpp
             BoostTreeUtils.cpp
             BoostTrapAnalyticalIntegrator.cpp
@@ -34,7 +35,13 @@ if(PYTHONLIBS_FOUND)
   target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
   target_link_libraries(pycepgen CepGen ${Boost_LIBRARIES})
   #configure_file(__init__.py ${CMAKE_CURRENT_BINARY_DIR}/__init__.py COPYONLY)
-  install(TARGETS pycepgen __init__.py DESTINATION ${PYTHON_INSTALL_PATH})
+  execute_process(
+  COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
+    from distutils import sysconfig as sc
+    print(sc.get_python_lib(prefix='', plat_specific=True))"
+  OUTPUT_VARIABLE PYTHON_SITE
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH} COMPONENT boost)
 endif()
 
 #----- build the object
