@@ -29,7 +29,7 @@ if(PYTHONLIBS_FOUND)
     list(APPEND BOOST_COMPONENTS
          "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
   endif()
-  find_package(Boost COMPONENTS ${BOOST_COMPONENTS})
+  find_package(Boost COMPONENTS system OPTIONAL_COMPONENTS ${BOOST_COMPONENTS})
   PYTHON_ADD_MODULE(pycepgen PythonWrapper.cpp)
   target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
   target_link_libraries(pycepgen CepGen ${Boost_LIBRARIES})
