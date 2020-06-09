@@ -23,8 +23,11 @@ endif()
 find_package(PythonLibs 2.7 REQUIRED)
 PYTHON_ADD_MODULE(pycepgen PythonWrapper.cpp)
 target_include_directories(pycepgen PRIVATE ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
-target_link_libraries(pycepgen CepGenCore ${Boost_LIBRARIES})
+target_link_libraries(pycepgen CepGen ${Boost_LIBRARIES})
 install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH})
+#--- copy the __init__.py
+#configure_file(__init__.py ${CMAKE_CURRENT_BINARY_DIR}/__init__.py COPYONLY)
+#install(TARGETS pycepgen __init__.py DESTINATION ${PYTHON_INSTALL_PATH})
 
 #----- build the object
 

@@ -1,4 +1,4 @@
-from build.CepGenAddOns import pycepgen
+from build import pycepgen
 import unittest
 
 class TestEventContent(unittest.TestCase):
