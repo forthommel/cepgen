@@ -4,9 +4,6 @@ if(NOT Boost_FOUND)
   return()
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR})
-
-<<<<<<< HEAD
 set(sources BoostTreeHandler.cpp
             BoostTreeUtils.cpp
             BoostTrapAnalyticalIntegrator.cpp
@@ -41,7 +38,7 @@ if(PYTHONLIBS_FOUND)
     print(sc.get_python_lib(prefix='', plat_specific=True))"
   OUTPUT_VARIABLE PYTHON_SITE
   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  install(TARGETS pycepgen DESTINATION ${PYTHON_INSTALL_PATH} COMPONENT boost)
+  install(TARGETS pycepgen DESTINATION ${PYTHON_SITE}/cepgen COMPONENT boost)
 endif()
 
 #----- build the object

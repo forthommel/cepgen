@@ -49,10 +49,17 @@ if(RPMBUILD)
     set(CPACK_RPM_TINYEXPR_PACKAGE_REQUIRES "${CEPGEN_MIN_REQ}")
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
       /usr /usr/bin /usr/lib /usr/lib64 /usr/include)
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+      /usr /usr/bin /usr/lib /usr/lib64 /usr/include
+      /usr/lib64/python2.7 /usr/lib64/python2.7/site-packages
+      /usr/lib64/python3.7 /usr/lib64/python3.7/site-packages
+      /usr/lib64/python3.8 /usr/lib64/python3.8/site-packages
+    )
 else()
     #--- DEB information
     message(STATUS "DEB packaging may be performed")
     set(CPACK_GENERATOR "DEB")
+    set(CPACK_DEB_COMPONENT_INSTALL ON)
     set(CPACK_DEB_MAIN_COMPONENT lib)
     set(CPACK_DEB_CHANGELOG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG")
     set(CPACK_DEB_PACKAGE_URL https://cepgen.hepforge.org/)
@@ -82,6 +89,7 @@ else()
     set(CPACK_DEB_TINYEXPR_PACKAGE_REQUIRES "${CEPGEN_MIN_REQ}")
 endif()
 include(CPack)
+include(CMakePackageConfigHelpers)
 #--- register packages
 cpack_add_component(lib
     DISPLAY_NAME "CepGen core library"
