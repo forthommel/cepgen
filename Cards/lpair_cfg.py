@@ -39,8 +39,11 @@ generator = generator.clone(
 
 #--- example of an events modification procedure
 #from Config.Hadronisation.pythia8_cff import pythia8
-from Config.Hadronisation.herwig6_cff import herwig6
-#eventSequence = cepgen.Sequence(pythia8)
+#from Config.Hadronisation.herwig6_cff import herwig6
+eventSequence = cepgen.Sequence(
+    #pythia8,
+    #herwig6
+)
 
 #--- example of an output module(s) procedure
 #... dump everything into a flat ROOT tree (if CepGenRoot was built and loaded)
