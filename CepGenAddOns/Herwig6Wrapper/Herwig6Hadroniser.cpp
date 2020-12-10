@@ -15,7 +15,7 @@ extern "C"
 {
   void hwigin_(); // initialise other common blocks
   void hweini_(); // initialise elementary process
-  //void hwudat_();
+  void hwudat_();
   void hwepro_();
   void hwuine_(); // initialise event
   void hwbgen_(); // generate parton cascades
@@ -129,6 +129,7 @@ namespace cepgen
     Herwig6Hadroniser::Herwig6Hadroniser( const ParametersList& plist ) :
       Hadroniser( plist ), num_events_( 0ul )
     {
+      hwudat_();
       hwhard_.ibrn[0] = seed_;
       hwhard_.ibrn[1] = 2*seed_;
     }
@@ -147,7 +148,6 @@ namespace cepgen
     void
     Herwig6Hadroniser::init()
     {
-      //hwudat_();
       hwuinc_();
       heprup_.idbmup[0] = heprup_.idbmup[1] = 2212;
       heprup_.ebmup[0] = heprup_.ebmup[1] = 6500.;
