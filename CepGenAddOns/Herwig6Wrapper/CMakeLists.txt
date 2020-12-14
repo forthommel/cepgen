@@ -1,9 +1,9 @@
-set(HERWIG6LIB)
 #--- searching for Herwig 6
 set(HERWIG6_DIRS $ENV{HERWIG6_DIR} ${HERWIG6_DIR})
 find_library(HERWIG6 herwig HINTS ${HERWIG6_DIRS} PATH_SUFFIXES lib)
+
+set(HERWIG6LIB)
 if(HERWIG6)
-  message(STATUS "Herwig 6 found in ${HERWIG6}")
   list(APPEND HERWIG6LIB ${HERWIG6})
 else()
   file(GLOB HERWIG6_SRC ${PROJECT_SOURCE_DIR}/External/herwig6*/*.f)
@@ -24,18 +24,10 @@ else()
   list(APPEND HERWIG6LIB herwig6)
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR})
+#----- build the object
 
-file(GLOB sources *.cpp)
-
-#----- build the objects
-
-add_library(CepGenHerwig6 SHARED ${sources})
-target_link_libraries(CepGenHerwig6 PRIVATE ${HERWIG6LIB})
-list(APPEND CEPGEN_ADDONS_EXT CepGenHerwig6)
-set(CEPGEN_ADDONS_EXT ${CEPGEN_ADDONS_EXT} PARENT_SCOPE)
-
-#----- installation rules
-
-install(TARGETS CepGenHerwig6 DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT herwig6)
+cepgen_build(CepGenHerwig6
+    SOURCES *.cpp
+    EXT_LIBS ${HERWIG6LIB}
+    INSTALL_COMPONENT herwig6)
 
