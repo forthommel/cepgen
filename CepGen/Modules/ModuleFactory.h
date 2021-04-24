@@ -63,6 +63,9 @@ namespace cepgen {
     /// Describe the modules factory
     const std::string& description() const { return description_; }
 
+    std::shared_ptr<ModuleFactory> getShared() {
+      return std::shared_ptr<ModuleFactory>(&get(), [](const void*) {});
+    }
     /// Register a named module in the database
     /// \tparam U Class to register (inherited from T base class)
     template <typename U>
