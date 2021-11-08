@@ -55,7 +55,9 @@ namespace cepgen {
       double uhat() const;  ///< \f$\hat u=\frac{1}{2}\left[(p_1-p_4)^2+(p_2-p_3)^2\right]\f$
 
       static const Limits x_limits_;  ///< Standard [0,1] limits for input variables
-      ParticleProperties cs_prop_;    ///< PDG id of the central particles
+
+      std::array<ParticleProperties, 2> in_prop_;  ///< PDG properties of the incoming partons
+      ParticleProperties cs_prop_;                 ///< PDG properties of the central particles
 
       cuts::Central single_limits_;  ///< Limits to be applied on single central system's particles
 

@@ -30,7 +30,10 @@ namespace cepgen {
     const Limits Process2to4::x_limits_{0., 1.};
 
     Process2to4::Process2to4(const ParametersList& params, std::array<pdgid_t, 2> partons, pdgid_t cs_id)
-        : KTProcess(params, partons, {cs_id, cs_id}), cs_prop_(PDG::get()(cs_id)), single_limits_(params) {}
+        : KTProcess(params, partons, {cs_id, cs_id}), cs_prop_(PDG::get()(cs_id)), single_limits_(params) {
+      for (size_t i = 0; i < partons.size(); ++i)
+        in_prop_[i] = PDG::get()(partons.at(i));
+    }
 
     Process2to4::Process2to4(const Process2to4& proc)
         : KTProcess(proc), cs_prop_(proc.cs_prop_), single_limits_(proc.single_limits_) {}
@@ -54,6 +57,13 @@ namespace cepgen {
                                      << "  pA = " << pA_ << ", mA2 = " << mA2_ << "\n"
                                      << "  pB = " << pB_ << ", mB2 = " << mB2_ << ".";
 
+      if (!utils::uniform(produced_parts_))
+        throw CG_FATAL("2to4:preparePhaseSpace")
+            << "Not yet supporting 2-to-4 processes with inhomogeneous central particles!";
+
+      for (size_t i = 0; i < intermediate_parts_.size(); ++i)
+        in_prop_[i] = PDG::get()(intermediate_parts_.at(i));
+      cs_prop_ = PDG::get()(produced_parts_.at(0));
       ww_ = 0.5 * (1. + sqrt(1. - 4. * sqrt(mA2_ * mB2_) / s_));
 
       defineVariable(
@@ -76,11 +86,11 @@ namespace cepgen {
 
     double Process2to4::computeKTFactorisedMatrixElement() {
       //--- transverse kinematics of initial partons
-      const auto qt_1 = Momentum::fromPtEtaPhiE(qt1_, 0., phi_qt1_);
+      const auto qt_1 = Momentum::fromPtEtaPhiM(qt1_, 0., phi_qt1_, in_prop_.at(0).mass);
       if (fabs(qt_1.pt() - qt1_) > NUM_LIMITS)
         throw CG_FATAL("Process2to4") << "|qt1|=" << qt1_ << " != qt1.pt()=" << qt_1.pt() << ", qt1=" << qt_1 << ".";
 
-      const auto qt_2 = Momentum::fromPtEtaPhiE(qt2_, 0., phi_qt2_);
+      const auto qt_2 = Momentum::fromPtEtaPhiM(qt2_, 0., phi_qt2_, in_prop_.at(1).mass);
       if (fabs(qt_2.pt() - qt2_) > NUM_LIMITS)
         throw CG_FATAL("Process2to4") << "|qt2|=" << qt1_ << " != qt2.pt()=" << qt_2.pt() << ", qt2=" << qt_2 << ".";
 
