@@ -25,6 +25,6 @@ class TestStructureFunctions(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             builder = pycepgen.StructureFunctionsFactory()
         #builder = pycepgen.StructureFunctionsFactory().get()
-        sf = pycepgen.StructureFunctionsFactory().get().build(11)
+        sf = pycepgen.StructureFunctionsFactory.get().build(11)
 
 unittest.main()

@@ -73,9 +73,19 @@ namespace {
       return;
     PyErr_SetObject(except_type, py::object(e).ptr());
   }
+
+  /*std::shared_ptr<cepgen::ModuleFactory> getModuleFactory() {
+    return std::shared_ptr<cepgen::ModuleFactory>(&cepgen::ModuleFactory::get(), [](const void*) {});
+  }*/
+
+  std::shared_ptr<cepgen::strfun::StructureFunctionsFactory> getStructureFunctionsFactory() {
+    return std::shared_ptr<cepgen::strfun::StructureFunctionsFactory>(&cepgen::strfun::StructureFunctionsFactory::get(),
+                                                                      [](const void*) {});
+  }
 }  // namespace
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(part_set_mom_ov, setMomentum, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(part_set_mom_ov, cepgen::Particle::setMomentum, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(mod_build_ov, build, 1, 2)
 //BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS( pl_get_int_ov, get<int>, 1, 2 )
 
 BOOST_PYTHON_MODULE(pycepgen) {
@@ -112,24 +122,20 @@ BOOST_PYTHON_MODULE(pycepgen) {
       .value("parton1", cepgen::Particle::Role::Parton1)
       .value("parton2", cepgen::Particle::Role::Parton2);
 
-  cepgen::Particle& (cepgen::Particle::*particle_set_status)(cepgen::Particle::Status) = &cepgen::Particle::setStatus;
-  cepgen::Particle& (cepgen::Particle::*particle_set_pdgid)(cepgen::pdgid_t, short) = &cepgen::Particle::setPdgId;
-  cepgen::Momentum& (cepgen::Particle::*particle_get_4momentum)() = &cepgen::Particle::momentum;
-  cepgen::Particle& (cepgen::Particle::*particle_set_4momentum)(const cepgen::Momentum&, bool) =
-      &cepgen::Particle::setMomentum;
-
   py::class_<cepgen::Particle>("Particle", "Particle kinematics and general information")
       .def(py::self_ns::str(py::self_ns::self))
-      .def("setMomentum",
-           particle_set_4momentum,
-           part_set_mom_ov(py::args("momentum", "offshell"), "4-momentum")[py::return_self<>()])
+      //.def("setMomentum",
+      //     particle_set_4momentum,
+      //     part_set_mom_ov(py::args("momentum", "offshell"), "4-momentum")[py::return_self<>()])
       .add_property("id",
                     &cepgen::Particle::id,
                     py::make_function(&cepgen::Particle::setId, py::return_self<>()),
                     "Particle identifier in event")
       .add_property("status",
                     &cepgen::Particle::status,
-                    py::make_function(particle_set_status, py::return_self<>()),
+                    py::make_function(static_cast<cepgen::Particle& (cepgen::Particle::*)(cepgen::Particle::Status)>(
+                                          &cepgen::Particle::setStatus),
+                                      py::return_self<>()),
                     "Particle status (stable, decayed, ...)")
       .add_property("role",
                     &cepgen::Particle::role,
@@ -137,23 +143,34 @@ BOOST_PYTHON_MODULE(pycepgen) {
                     "Particle role in event")
       .add_property("pdgId",
                     &cepgen::Particle::pdgId,
-                    py::make_function(particle_set_pdgid, py::return_self<>()),
+                    py::make_function(static_cast<cepgen::Particle& (cepgen::Particle::*)(cepgen::pdgid_t, short)>(
+                                          &cepgen::Particle::setPdgId),
+                                      py::return_self<>()),
                     "PDG identifier")
       .add_property(
-          "momentum", py::make_function(particle_get_4momentum, py::return_internal_reference<>()), "4-momentum")
+          "momentum",
+          py::make_function(static_cast<cepgen::Momentum& (cepgen::Particle::*)()>(&cepgen::Particle::momentum),
+                            py::return_internal_reference<>()),
+          /*py::make_function(static_cast<cepgen::Particle& (cepgen::Particle::*)(const cepgen::Momentum&, bool)>(
+                                &cepgen::Particle::setMomentum),
+                            py::return_self<>(),
+                            part_set_mom_ov((py::arg("mom"), py::arg("offshell") = false))),*/
+          //py::make_function(
+          //    static_cast<cepgen::Particle& (cepgen::Particle::*)(const cepgen::Momentum&, bool)>(part_set_mom_ov)),
+          "4-momentum")
       //.add_property( "momentum", py::make_function( particle_get_4momentum, py::return_internal_reference<>() ), part_set_mom_ov( py::args( "momentum", "offshell" ) )[py::return_self<>()], "4-momentum" )
       //.add_property( "momentum", py::make_function( particle_get_4momentum, py::return_internal_reference<>() ), py::make_function( particle_set_4momentum, py::return_self<>(), part_set_mom_ov() ), "4-momentum" )
       //.add_property( "momentum", py::make_function( particle_get_4momentum, py::return_internal_reference<>() ), py::make_function( particle_set_4momentum, part_set_mom_ov( py::args( "momentum", "offshell" ), "4-momentum" )[py::return_self<>()] ), "4-momentum" )
       ;
-
-  cepgen::Particle& (cepgen::Event::*evt_add_part)(cepgen::Particle&, bool) = &cepgen::Event::addParticle;
 
   py::class_<cepgen::Event>("Event", "Event content")
       .def(py::init<bool>())
       .def(py::self_ns::str(py::self_ns::self))
       //.def( py::vector_indexing_suite<cepgen::Particles>() )
       .def("addParticle",
-           py::make_function(evt_add_part, py::return_value_policy<py::reference_existing_object>()),
+           py::make_function(
+               static_cast<cepgen::Particle& (cepgen::Event::*)(cepgen::Particle&, bool)>(&cepgen::Event::addParticle),
+               py::return_value_policy<py::reference_existing_object>()),
            "Add a particle object reference to the event");
 
   //----- Event modifiers
@@ -183,47 +200,60 @@ BOOST_PYTHON_MODULE(pycepgen) {
 
   //----- Runtime parameters
 
-  cepgen::proc::Process& (cepgen::Parameters::*process_get)() = &cepgen::Parameters::process;
-  void (cepgen::Parameters::*process_set)(cepgen::proc::Process*) = &cepgen::Parameters::setProcess;
-  cepgen::EventModifiersSequence& (cepgen::Parameters::*evt_mod_seq)() = &cepgen::Parameters::eventModifiersSequence;
-  void (cepgen::Parameters::*evt_mod_add)(cepgen::EventModifier*) = &cepgen::Parameters::addModifier;
-  cepgen::ExportModulesSequence& (cepgen::Parameters::*out_mod_seq)() = &cepgen::Parameters::outputModulesSequence;
-  void (cepgen::Parameters::*out_mod_add)(cepgen::io::ExportModule*) = &cepgen::Parameters::addOutputModule;
-
   py::class_<cepgen::Parameters>("Parameters", "Collection of runtime parameters for CepGen")
       //.def( py::self_ns::str( py::self_ns::self ) )
       .def("eventModifiers",
-           py::make_function(evt_mod_seq, py::return_internal_reference<>()),
+           py::make_function(static_cast<cepgen::EventModifiersSequence& (cepgen::Parameters::*)()>(
+                                 &cepgen::Parameters::eventModifiersSequence),
+                             py::return_internal_reference<>()),
            "List of event modification algorithms registered")
-      .def("addEventModifier", evt_mod_add, "Add a new event modification algorithm reference to the stack")
+      .def("addEventModifier",
+           static_cast<void (cepgen::Parameters::*)(cepgen::EventModifier*)>(&cepgen::Parameters::addModifier),
+           "Add a new event modification algorithm reference to the stack")
       .def("outputModules",
-           py::make_function(out_mod_seq, py::return_internal_reference<>()),
+           py::make_function(static_cast<cepgen::ExportModulesSequence& (cepgen::Parameters::*)()>(
+                                 &cepgen::Parameters::outputModulesSequence),
+                             py::return_internal_reference<>()),
            "List of output modules registered")
-      .def("addOutputModule", out_mod_add, "Add a new output module reference to the stack")
-      .add_property("process",
-                    py::make_function(process_get, py::return_internal_reference<>()),
-                    process_set,
-                    "Process to generate");
+      .def("addOutputModule",
+           static_cast<void (cepgen::Parameters::*)(cepgen::io::ExportModule*)>(&cepgen::Parameters::addOutputModule),
+           "Add a new output module reference to the stack")
+      .add_property(
+          "process",
+          py::make_function(static_cast<cepgen::proc::Process& (cepgen::Parameters::*)()>(&cepgen::Parameters::process),
+                            py::return_internal_reference<>()),
+          static_cast<void (cepgen::Parameters::*)(cepgen::proc::Process*)>(&cepgen::Parameters::setProcess),
+          "Process to generate");
 
   //----- Structure functions
 
-  cepgen::strfun::Parameterisation& (cepgen::strfun::Parameterisation::*sf_compute_fl_nor)(double, double) =
-      &cepgen::strfun::Parameterisation::computeFL;
-  cepgen::strfun::Parameterisation& (cepgen::strfun::Parameterisation::*sf_compute_fl_r)(double, double, double) =
-      &cepgen::strfun::Parameterisation::computeFL;
-
   py::class_<cepgen::strfun::Parameterisation>("StructureFunctions", "Structure functions parameterisation")
       .def("F1", &cepgen::strfun::Parameterisation::F1)
-      .def("computeFL", py::make_function(sf_compute_fl_nor, py::return_self<>()))
-      .def("computeFL", py::make_function(sf_compute_fl_r, py::return_self<>()))
+      .def("computeFL",
+           py::make_function(
+               static_cast<cepgen::strfun::Parameterisation& (cepgen::strfun::Parameterisation::*)(double, double)>(
+                   &cepgen::strfun::Parameterisation::computeFL),
+               py::return_self<>()))
+      .def("computeFL",
+           py::make_function(static_cast<cepgen::strfun::Parameterisation& (
+                                 cepgen::strfun::Parameterisation::*)(double, double, double)>(
+                                 &cepgen::strfun::Parameterisation::computeFL),
+                             py::return_self<>()))
       .add_property("F2", &cepgen::strfun::Parameterisation::F2);
   py::register_ptr_to_python<cepgen::strfun::Parameterisation*>();
 
   //----- Utilities
 
-  std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*build_w_index)(
-      const int&, cepgen::ParametersList) const = &cepgen::strfun::StructureFunctionsFactory::build;
-  //std::unique_ptr<cepgen::strfun::Parameterisation> ( cepgen::strfun::StructureFunctionsFactory::*build_wo_index )( cepgen::ParametersList ) const = &cepgen::strfun::StructureFunctionsFactory::build;
+#if DEBUG
+  /*py::class_<cepgen::ModuleFactory, std::shared_ptr<cepgen::ModuleFactory>, boost::noncopyable>(
+      "ModuleFactory", "A builder for a generic factory", py::no_init)
+      .def("get", &getModuleFactory, "Retrieve the builder")
+      .staticmethod("get");*/
+
+  //std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*build_w_index)(
+  //    const int&, cepgen::ParametersList) const = &cepgen::strfun::StructureFunctionsFactory::build;
+  //std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*build_wo_index)(
+  //    cepgen::ParametersList) const = &cepgen::strfun::StructureFunctionsFactory::build;
 
   /*py::class_<cepgen::StructureFunctionsFactory>( "StructureFunctionsFactory", "A builder for structure functions modellings", py::no_init )
     .def( "get", &cepgen::strfun::StructureFunctionsFactory::get, "Retrieve the builder" )
@@ -235,13 +265,19 @@ BOOST_PYTHON_MODULE(pycepgen) {
              std::shared_ptr<cepgen::strfun::StructureFunctionsFactory>,
              boost::noncopyable>(
       "StructureFunctionsFactory", "A builder for structure functions modellings", py::no_init)
-      .def("get", &cepgen::strfun::StructureFunctionsFactory::getShared, "Retrieve the builder")
-      .staticmethod("get")
-      .def("build",
-           py::make_function(build_w_index, py::return_value_policy<py::return_by_value>()),
+      //.def("get", &getStructureFunctionsFactory, "Retrieve the builder")
+      //.staticmethod("get")
+      /*.def("build",
+           static_cast<std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*)(
+               const int&, cepgen::ParametersList)>(&cepgen::strfun::StructureFunctionsFactory::build),
+           mod_build_ov(),
            "Build a modelling from its index (+parameters)")
-      //.def( "build", build_wo_index, "Build a modelling from its parameters" )
+      .def("build",
+           static_cast<std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*)(
+               cepgen::ParametersList)>(&cepgen::strfun::StructureFunctionsFactory::build),
+           "Build a modelling from its parameters")*/
       ;
+#endif
 
   py::class_<cepgen::Momentum>("Momentum", "4-momentum container")
       .def(py::init<double, double, double, double>())
