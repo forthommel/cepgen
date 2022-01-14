@@ -47,6 +47,7 @@ if(RPMBUILD)
     set(CPACK_RPM_ROOT_PACKAGE_REQUIRES "${CEPGEN_MIN_REQ}, root >= 6.0")
     set(CPACK_RPM_DELPHES_PACKAGE_REQUIRES "${CPACK_RPM_ROOT_PACKAGE_REQUIRES}, cepgen-root")
     set(CPACK_RPM_TINYEXPR_PACKAGE_REQUIRES "${CEPGEN_MIN_REQ}")
+    set(CPACK_RPM_LIBPLOT_PACKAGE_REQUIRES "${CEPGEN_MIN_REQ}, plotutils")
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
       /usr /usr/bin /usr/lib /usr/lib64 /usr/include)
 else()
@@ -80,6 +81,7 @@ else()
     set(CPACK_DEB_ROOT_PACKAGE_DEPENDS "${CEPGEN_MIN_REQ}, root >= 6.0")
     set(CPACK_DEB_DELPHES_PACKAGE_DEPENDS "${CPACK_DEB_ROOT_PACKAGE_REQUIRES}, cepgen-root")
     set(CPACK_DEB_TINYEXPR_PACKAGE_REQUIRES "${CEPGEN_MIN_REQ}")
+    set(CPACK_DEB_LIBPLOT_PACKAGE_DEPENDS "${CEPGEN_MIN_REQ}, plotutils")
 endif()
 include(CPack)
 #--- register packages
@@ -139,5 +141,9 @@ cpack_add_component(rivet
 cpack_add_component(root
     DISPLAY_NAME "CepGen ROOT wrappers library"
     DESCRIPTION "Collection of CepGen wrappers to the ROOT library"
+    DEPENDS lib)
+cpack_add_component(libplot
+    DISPLAY_NAME "CepGen plotutils wrappers library"
+    DESCRIPTION "Collection of CepGen wrappers to the plotutils library"
     DEPENDS lib)
 #message(STATUS ">>> ${CPACK_COMPONENTS_ALL}")
