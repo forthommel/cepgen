@@ -55,9 +55,9 @@ namespace cepgen {
     /// Form factors evaluator parameters
     const ParametersList& formFactors() const { return formfac_; }
     /// Structure functions evaluator parameters
-    const ParametersList& structureFunctions() const { return strfun_; }
+    const std::vector<ParametersList>& structureFunctions() const { return strfuns_; }
     /// Set the integer-type of structure functions evaluator to build
-    void setStructureFunctions(int, int);
+    void addStructureFunctions(int, int);
 
     /// Set the incoming beams centre of mass energy (in GeV)
     void setSqrtS(double);
@@ -68,7 +68,7 @@ namespace cepgen {
 
   private:
     ParametersList formfac_;
-    ParametersList strfun_;
+    std::vector<ParametersList> strfuns_;
     Beam pos_beam_{ParametersList()};
     Beam neg_beam_{ParametersList()};
   };

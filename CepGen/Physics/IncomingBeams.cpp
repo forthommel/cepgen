@@ -30,7 +30,7 @@
 
 namespace cepgen {
   IncomingBeams::IncomingBeams(const ParametersList& params) : SteeredObject(params) {
-    (*this).add("formFactors", formfac_).add("structureFunctions", strfun_);
+    (*this).add("formFactors", formfac_).add("structureFunctions", strfuns_);
   }
 
   void IncomingBeams::setParameters(const ParametersList& params) {
@@ -166,9 +166,13 @@ namespace cepgen {
                         mode == mode::Kinematics::ElasticElastic || mode == mode::Kinematics::InelasticElastic);
 
     //--- structure functions
-    if (!steer<ParametersList>("structureFunctions").empty()) {
-      plist_pos.set<ParametersList>("structureFunctions", steer<ParametersList>("structureFunctions"));
-      plist_neg.set<ParametersList>("structureFunctions", steer<ParametersList>("structureFunctions"));
+    if (const auto strfun = steer<ParametersList>("structureFunctions"); !strfun.empty()) {
+      plist_pos.set<std::vector<ParametersList> >("structureFunctions", {strfun});
+      plist_neg.set<std::vector<ParametersList> >("structureFunctions", {strfun});
+    }
+    if (const auto strfuns = steer<std::vector<ParametersList> >("structureFunctions"); !strfuns.empty()) {
+      plist_pos.set("structureFunctions", strfuns);
+      plist_neg.set("structureFunctions", strfuns);
     }
     CG_DEBUG("IncomingBeams") << "Will build the following incoming beams:\n* " << plist_pos << "\n* " << plist_neg
                               << ".";
@@ -226,20 +230,22 @@ namespace cepgen {
       return mode::Kinematics::InelasticInelastic;
   }
 
-  void IncomingBeams::setStructureFunctions(int sf_model, int sr_model) {
+  void IncomingBeams::addStructureFunctions(int sf_model, int sr_model) {
     const unsigned long kLHAPDFCodeDec = 10000000, kLHAPDFPartDec = 1000000;
     sf_model = (sf_model == 0 ? 11 /* SuriYennie */ : sf_model);
     sr_model = (sr_model == 0 ? 4 /* SibirtsevBlunden */ : sr_model);
-    auto& sf_params = params_.operator[]<ParametersList>("structureFunctions");
-    sf_params.setName<int>(sf_model).set<int>("sigmaRatio", sr_model);
+    auto sf_params = ParametersList().setName<int>(sf_model).set<int>("sigmaRatio", sr_model);
     if (sf_model / kLHAPDFCodeDec == 1) {  // SF from parton
       const unsigned long icode = sf_model % kLHAPDFCodeDec;
       sf_params.setName<int>(401 /* Partonic */)
           .set<int>("pdfId", icode % kLHAPDFPartDec)
           .set<int>("mode", icode / kLHAPDFPartDec);  // 0, 1, 2
     }
-    CG_DEBUG("IncomingBeams:setStructureFunctions")
-        << "Structure functions modelling to be built: " << sf_params << ".";
+    params_.operator[]<std::vector<ParametersList> >("structureFunctions").emplace_back(sf_params);
+
+    CG_DEBUG("IncomingBeams:addStructureFunctions")
+        << "Structure functions modelling to be built: " << steer<std::vector<ParametersList> >("structureFunctions")
+        << ".";
   }
 
   const ParametersList& IncomingBeams::parameters() const {
@@ -279,7 +285,7 @@ namespace cepgen {
     desc.add<ParametersDescription>("formFactors",
                                     FormFactorsFactory::get().describeParameters(formfac::gFFStandardDipoleHandler))
         .setDescription("Beam form factors modelling");
-    desc.add<ParametersDescription>(
+    desc.addParametersDescriptionVector(
             "structureFunctions", strfun::Parameterisation::description().setName<int>(11)  // default is SY
             )
         .setDescription("Beam inelastic structure functions modelling");

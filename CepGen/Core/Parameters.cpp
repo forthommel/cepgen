@@ -194,7 +194,7 @@ namespace cepgen {
        << std::setw(wt) << "C.m. energy (GeV)" << utils::format("%g", beams.sqrtS()) << "\n"
        << std::setw(wt) << "Form factors" << beams.formFactors() << "\n";
     if (beams.mode() != mode::Kinematics::ElasticElastic)
-      os << std::setw(wt) << "Structure functions" << beams.structureFunctions() << "\n";
+      os << std::setw(wt) << "Structure functions" << utils::merge(beams.structureFunctions(), ", ") << "\n";
     os << "\n"
        << std::setfill('-') << std::setw(wb + 6) << utils::boldify(" Incoming partons ") << std::setfill(' ') << "\n\n";
     const auto& cuts = kin.cuts();

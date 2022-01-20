@@ -105,8 +105,8 @@ namespace cepgen {
     for (const auto& mod : runParameters().eventModifiersSequence())
       evt_mods += (evt_mods.empty() ? "" : "-") + mod->name();
     const auto symm = runParameters().process().parameters().get<bool>("symmetrise");
-    const auto sf_info =
-        utils::sanitise(runParameters().process().kinematics().incomingBeams().structureFunctions().serialise());
+    const auto sf_info = utils::sanitise(
+        runParameters().process().kinematics().incomingBeams().structureFunctions().at(0).serialise());  //FIXME
     switch (runParameters().process().kinematics().incomingBeams().mode()) {
       case mode::Kinematics::ElasticElastic:
         proc_mode = "el";

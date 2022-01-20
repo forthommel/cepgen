@@ -127,7 +127,7 @@ private:
    * \return Success state of the operation
    */
   bool pickin();
-  formfac::FormFactors computeFormFactors(const Beam& beam, double q2, double mx2) const;
+  std::vector<formfac::FormFactors> computeFormFactors(const Beam& beam, double q2, double mx2) const;
 
   /// Internal switch for the optimised code version (LPAIR legacy)
   const int opt_;
@@ -237,7 +237,7 @@ private:
   std::uniform_real_distribution<double> rnd_phi_;
   std::uniform_int_distribution<short> rnd_side_;
   std::unique_ptr<formfac::Parameterisation> formfac_;
-  std::unique_ptr<strfun::Parameterisation> strfun_;
+  std::vector<std::unique_ptr<strfun::Parameterisation> > strfuns_;
 };
 
 //---------------------------------------------------------------------------------------------
@@ -247,7 +247,8 @@ void LPAIR::prepareKinematics() {
   charge_factor_ = std::pow(pair_.charge / 3., 2);
 
   formfac_ = FormFactorsFactory::get().build(kinematics().incomingBeams().formFactors());
-  strfun_ = StructureFunctionsFactory::get().build(kinematics().incomingBeams().structureFunctions());
+  for (const auto& strfun : kinematics().incomingBeams().structureFunctions())
+    strfuns_.emplace_back(std::move(StructureFunctionsFactory::get().build(strfun)));
 
   //--- first define the squared mass range for the diphoton/dilepton system
   w_limits_ = kinematics()
@@ -1014,12 +1015,17 @@ proc::Process::EventWeights LPAIR::periPP() const {
               sa1_ * alpha6_ * alpha6_ - sa2_ * alpha5_ * alpha5_ - sa1_ * sa2_ * qqq);  // electric-electric
 
   //--- compute the electric/magnetic form factors for the two considered parton momenta transfers
-  const auto fp1 = computeFormFactors(kinematics().incomingBeams().positive(), -t1(), mX2()),
-             fp2 = computeFormFactors(kinematics().incomingBeams().negative(), -t2(), mY2());
+  const auto fp1s = computeFormFactors(kinematics().incomingBeams().positive(), -t1(), mX2()),
+             fp2s = computeFormFactors(kinematics().incomingBeams().negative(), -t2(), mY2());
 
-  const auto peripp = EventWeights{
-      0.25 * (fp1.FM * fp2.FM * t11 + fp1.FE * fp2.FM * t21 + fp1.FM * fp2.FE * t12 + fp1.FE * fp2.FE * t22) *
-      std::pow(t1() * t2() * bb_, -2)};  //FIXME
+  EventWeights peripp;
+  for (size_t i = 0; i < fp1s.size(); ++i) {  //FIXME handle asymmetric cases
+    const auto& fp1 = fp1s.at(i);
+    const auto& fp2 = fp2s.at(i);
+    peripp.emplace_back(
+        0.25 * (fp1.FM * fp2.FM * t11 + fp1.FE * fp2.FM * t21 + fp1.FM * fp2.FE * t12 + fp1.FE * fp2.FE * t22) *
+        std::pow(t1() * t2() * bb_, -2));
+  }
 
   CG_DEBUG_LOOP("LPAIR:peripp") << "bb = " << bb_ << ", qqq = " << qqq << ", qdq = " << qdq << "\n\t"
                                 << "t11 = " << t11 << "\t"
@@ -1031,26 +1037,30 @@ proc::Process::EventWeights LPAIR::periPP() const {
   return peripp;
 }
 
-formfac::FormFactors LPAIR::computeFormFactors(const Beam& beam, double q2, double mx2) const {
+std::vector<formfac::FormFactors> LPAIR::computeFormFactors(const Beam& beam, double q2, double mx2) const {
   if (beam.elastic())
-    return (*formfac_)(q2);
+    return {(*formfac_)(q2)};  //FIXME handle multiple elastic FFs
   // at this point, deal with an inelastic photon emission
-  if (!strfun_)
+  if (strfuns_.empty())
     throw CG_FATAL("LPAIR:computeFormFactors")
         << "Inelastic proton form factors computation requires a structure functions definition!";
   const double xbj = utils::xBj(q2, mp2_, mx2);
-  formfac::FormFactors ff;
-  switch (strfun_->name()) {
-    case 11 /* SuriYennie */: {  // this one requires its own object to deal with FM
-      ff.FE = strfun_->F2(xbj, q2) * xbj * mp_ / q2;
-      ff.FM = strfun_->FM(xbj, q2);
-    } break;
-    default: {
-      ff.FE = strfun_->F2(xbj, q2) * xbj / q2;
-      ff.FM = -2. * strfun_->F1(xbj, q2) / q2;
-    } break;
+  std::vector<formfac::FormFactors> ffs;
+  for (auto& strfun : strfuns_) {
+    formfac::FormFactors ff;
+    switch (strfun->name()) {
+      case 11 /* SuriYennie */: {  // this one requires its own object to deal with FM
+        ff.FE = strfun->F2(xbj, q2) * xbj * mp_ / q2;
+        ff.FM = strfun->FM(xbj, q2);
+      } break;
+      default: {
+        ff.FE = strfun->F2(xbj, q2) * xbj / q2;
+        ff.FM = -2. * strfun->F1(xbj, q2) / q2;
+      } break;
+    }
+    ffs.emplace_back(ff);
   }
-  return ff;
+  return ffs;
 }
 
 // register process
