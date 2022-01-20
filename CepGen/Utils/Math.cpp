@@ -18,6 +18,7 @@
 
 #include <cmath>
 
+#include "CepGen/Process/Process.h"
 #include "CepGen/Utils/Math.h"
 
 namespace cepgen {
@@ -29,5 +30,9 @@ namespace cepgen {
     template bool positive<double>(const double&);
     template bool positive<float>(const float&);
     template bool positive<int>(const int&);
+    template <>
+    bool positive<proc::Process::EventWeights>(const proc::Process::EventWeights& wgts) {
+      return std::all_of(wgts.begin(), wgts.end(), [](double wgt) { return positive(wgt); });
+    }
   }  // namespace utils
 }  // namespace cepgen

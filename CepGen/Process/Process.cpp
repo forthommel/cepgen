@@ -228,7 +228,7 @@ namespace cepgen {
         return 0.;
 
       //--- combine every component into a single weight for this point
-      return (base_jacobian_ * aux_jacobian) * me_integrand;
+      return ((base_jacobian_ * aux_jacobian) * me_integrand).at(0);  //FIXME
     }
 
     void Process::clearEvent() {
@@ -425,6 +425,17 @@ namespace cepgen {
           return os << "power law";
       }
       return os;
+    }
+
+    Process::EventWeights operator*(const Process::EventWeights& wgts, double fact) {
+      auto out = wgts;
+      for (auto& wgt : out)
+        wgt *= fact;
+      return out;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Process::EventWeights& wgts) {
+      return os << "Weight{" << utils::merge(wgts, ", ") << "}";
     }
   }  // namespace proc
 }  // namespace cepgen

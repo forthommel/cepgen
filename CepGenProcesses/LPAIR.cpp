@@ -84,7 +84,7 @@ public:
                                     {Particle::OutgoingBeam2, {PDG::proton}},
                                     {Particle::CentralSystem, {pair_.pdgid, pair_.pdgid}}});
   }
-  double computeWeight() override;
+  EventWeights computeWeight() override;
   void prepareKinematics() override;
   void fillKinematics(bool) override;
 
@@ -120,7 +120,7 @@ private:
    *  b = t_1 t_2+\left(w_{\gamma\gamma}\sin^2{\theta^{\rm CM}_6}+4m_\ell\cos^2{\theta^{\rm CM}_6}\right) p_g^2
    * \f]
    */
-  double periPP() const;
+  EventWeights periPP() const;
   /**
    * Describe the kinematics of the process \f$p_1+p_2\to p_3+p_4+p_5\f$ in terms of Lorentz-invariant variables.
    * These variables (along with others) will then be fed into the \a PeriPP method (thus are essential for the evaluation of the full matrix element).
@@ -706,7 +706,7 @@ bool LPAIR::orient() {
 
 //---------------------------------------------------------------------------------------------
 
-double LPAIR::computeWeight() {
+proc::Process::EventWeights LPAIR::computeWeight() {
   ep1_ = pA().energy();
   ep2_ = pB().energy();
   // Mass difference between the first outgoing particle and the first incoming particle
@@ -731,16 +731,16 @@ double LPAIR::computeWeight() {
 
   if (!orient()) {
     CG_DEBUG_LOOP("LPAIR") << "Orient failed.";
-    return 0.;
+    return zeroWeight();
   }
 
   if (t1() > 0.) {
     CG_WARNING("LPAIR") << "t1 = " << t1() << " > 0";
-    return 0.;
+    return zeroWeight();
   }
   if (t2() > 0.) {
     CG_WARNING("LPAIR") << "t2 = " << t2() << " > 0";
-    return 0.;
+    return zeroWeight();
   }
 
   const double ecm6 = m_w4_ / (2. * mc4_), pp6cm = std::sqrt(ecm6 * ecm6 - masses_.Ml2);
@@ -915,7 +915,7 @@ double LPAIR::computeWeight() {
   CG_DEBUG_LOOP("LPAIR:gmufil") << "Invariant mass imbalance after beta/gamma boost:"
                                 << (pc(0) + pc(1)).mass() - mass_before << ".";
   if (!kinematics().cuts().central.contain(event()(Particle::CentralSystem)))
-    return 0.;
+    return zeroWeight();
 
   const auto peripp = periPP();  // compute the structure functions factors
   CG_DEBUG_LOOP("LPAIR:f") << "Jacobian: " << jacobian_ << ", str.fun. factor: " << peripp << ".";
@@ -997,7 +997,7 @@ void LPAIR::fillKinematics(bool) {
 
 //---------------------------------------------------------------------------------------------
 
-double LPAIR::periPP() const {
+proc::Process::EventWeights LPAIR::periPP() const {
   const double qqq = q1dq_ * q1dq_, qdq = 4. * masses_.Ml2 - m_w4_;
   const double t11 = 64. *
                      (bb_ * (qqq - gamma4_ - qdq * (t1() + t2() + 2. * masses_.Ml2)) -
@@ -1017,9 +1017,9 @@ double LPAIR::periPP() const {
   const auto fp1 = computeFormFactors(kinematics().incomingBeams().positive(), -t1(), mX2()),
              fp2 = computeFormFactors(kinematics().incomingBeams().negative(), -t2(), mY2());
 
-  const double peripp =
+  const auto peripp = EventWeights{
       0.25 * (fp1.FM * fp2.FM * t11 + fp1.FE * fp2.FM * t21 + fp1.FM * fp2.FE * t12 + fp1.FE * fp2.FE * t22) *
-      std::pow(t1() * t2() * bb_, -2);
+      std::pow(t1() * t2() * bb_, -2)};  //FIXME
 
   CG_DEBUG_LOOP("LPAIR:peripp") << "bb = " << bb_ << ", qqq = " << qqq << ", qdq = " << qdq << "\n\t"
                                 << "t11 = " << t11 << "\t"

@@ -49,9 +49,16 @@ namespace cepgen {
 
       static ParametersDescription description();
 
+      struct EventWeights : std::vector<double> {
+        using std::vector<double>::vector;
+        friend EventWeights operator*(const EventWeights&, double);
+        inline friend EventWeights operator*(double cst, const EventWeights& wgt) { return wgt * cst; }
+        friend std::ostream& operator<<(std::ostream&, const EventWeights&);
+      };
+
       virtual std::unique_ptr<Process> clone() const;  ///< Copy all process attributes into a new object
       /// Compute the phase space point weight
-      virtual double computeWeight() = 0;
+      virtual EventWeights computeWeight() = 0;
       /// Fill the Event object with the particles' kinematics
       /// \param[in] symmetrise Symmetrise the event? (randomise the production of positively- and negatively-charged outgoing central particles)
       virtual void fillKinematics(bool symmetrise = false) = 0;
@@ -129,6 +136,8 @@ namespace cepgen {
       //--- Mandelstam variables
       double shat() const;  ///< \f$\hat s=(p_1+p_2)^2=(p_3+...)^2\f$
 
+      const EventWeights& zeroWeight() const { return zero_weight_; }
+
       double mp_;   ///< Proton mass, in GeV/c\f$^2\f$
       double mp2_;  ///< Squared proton mass, in GeV\f$^2\f$/c\f$^4\f$
 
@@ -192,6 +201,7 @@ namespace cepgen {
       double base_jacobian_{1.};
       Kinematics kin_{ParametersList()};  ///< Set of cuts to apply on the final phase space
       std::unique_ptr<Event> event_;      ///< Event object tracking all information on all particles in the system
+      EventWeights zero_weight_{0.};
     };
     /// Helper typedef for a Process unique pointer
     typedef std::unique_ptr<Process> ProcessPtr;

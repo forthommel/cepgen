@@ -86,15 +86,15 @@ namespace cepgen {
         defineVariable(mY2(), Mapping::square, kinematics().cuts().remnants.mx, "Negative-z beam remnant squared mass");
     }
 
-    double FactorisedProcess::computeWeight() {
+    Process::EventWeights FactorisedProcess::computeWeight() {
       if (!psgen_->generatePartonKinematics())
-        return 0.;
+        return zeroWeight();
       const auto cent_me = computeFactorisedMatrixElement();
       if (!utils::positive(cent_me))
-        return 0.;  // avoid computing the fluxes if the matrix element is already null or invalid
-      const auto fluxes_weight = psgen_->fluxes();
+        return zeroWeight();  // avoid computing the fluxes if the matrix element is already null or invalid
+      const auto fluxes_weight = EventWeights{psgen_->fluxes()};  //FIXME
       if (!utils::positive(fluxes_weight))
-        return 0.;
+        return zeroWeight();
       return fluxes_weight * cent_me;
     }
 
