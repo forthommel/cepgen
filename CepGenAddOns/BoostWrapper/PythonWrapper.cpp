@@ -2,14 +2,14 @@
 #include <boost/python.hpp>
 #include <boost/version.hpp>
 
-#include "CepGen/Core/EventModifier.h"
 #include "CepGen/Core/Exception.h"
-#include "CepGen/Core/ExportModule.h"
 #include "CepGen/Core/ParametersList.h"
 #include "CepGen/Event/Event.h"
+#include "CepGen/EventFilter/EventExporter.h"
+#include "CepGen/EventFilter/EventModifier.h"
 #include "CepGen/Modules/StructureFunctionsFactory.h"
 #include "CepGen/Parameters.h"
-#include "CepGen/Processes/Process.h"
+#include "CepGen/Process/Process.h"
 #include "CepGen/StructureFunctions/Parameterisation.h"
 #include "CepGen/Version.h"
 
@@ -38,11 +38,11 @@ namespace {
   };
 
   struct EventModifierWrap : cepgen::EventModifier, py::wrapper<cepgen::EventModifier> {
-    void init() override {
-      if (py::override ov = this->get_override("init"))
+    void initialise() override {
+      if (py::override ov = this->get_override("initialise"))
         ov();
       else
-        cepgen::EventModifier::init();
+        cepgen::EventModifier::initialise();
     }
     bool run(cepgen::Event& ev, double& weight, bool full) override {
       if (py::override ov = this->get_override("run"))
@@ -51,18 +51,18 @@ namespace {
     }
   };
 
-  struct ExportModuleWrap : cepgen::io::ExportModule, py::wrapper<cepgen::io::ExportModule> {
-    void initialise(const cepgen::Parameters& params) override {
+  struct EventExporterWrap : cepgen::EventExporter, py::wrapper<cepgen::EventExporter> {
+    void initialise() override {
       if (py::override ov = this->get_override("initialise"))
-        ov(params);
+        ov();
       else
-        cepgen::io::ExportModule::initialise(params);
+        cepgen::EventExporter::initialise();
     }
     void operator<<(const cepgen::Event& evt) override {
       if (py::override ov = this->get_override("operator<<"))
         ov(evt);
       else
-        cepgen::io::ExportModule::operator<<(evt);
+        cepgen::EventExporter::operator<<(evt);
     }
   };
 
@@ -78,9 +78,9 @@ namespace {
     return std::shared_ptr<cepgen::ModuleFactory>(&cepgen::ModuleFactory::get(), [](const void*) {});
   }*/
 
-  std::shared_ptr<cepgen::strfun::StructureFunctionsFactory> getStructureFunctionsFactory() {
-    return std::shared_ptr<cepgen::strfun::StructureFunctionsFactory>(&cepgen::strfun::StructureFunctionsFactory::get(),
-                                                                      [](const void*) {});
+  std::shared_ptr<cepgen::StructureFunctionsFactory> getStructureFunctionsFactory() {
+    return std::shared_ptr<cepgen::StructureFunctionsFactory>(&cepgen::StructureFunctionsFactory::get(),
+                                                              [](const void*) {});
   }
 }  // namespace
 
@@ -151,40 +151,41 @@ BOOST_PYTHON_MODULE(pycepgen) {
           +[](cepgen::Particle& part, const cepgen::Momentum& mom) { part.setMomentum(mom, true); },
           "4-momentum");
 
-  py::class_<cepgen::Event>("Event", "Event content")
-      .def(py::init<bool>())
-      .def(py::self_ns::str(py::self_ns::self))
+  py::class_<cepgen::Event>("Event", "Event content").def(py::init<bool>()).def(py::self_ns::str(py::self_ns::self))
       //.def( py::vector_indexing_suite<cepgen::Particles>() )
-      .def("addParticle",
-           py::make_function(
-               static_cast<cepgen::Particle& (cepgen::Event::*)(cepgen::Particle&, bool)>(&cepgen::Event::addParticle),
-               py::return_value_policy<py::reference_existing_object>()),
-           "Add a particle object reference to the event");
+      //.def("addParticle",
+      //     py::make_function(
+      //         static_cast<cepgen::Particle& (cepgen::Event::*)(cepgen::Particle&, bool)>(&cepgen::Event::addParticle),
+      //         py::return_value_policy<py::reference_existing_object>()),
+      //     "Add a particle object reference to the event")
+      ;
 
   //----- Event modifiers
 
   py::class_<EventModifierWrap, std::shared_ptr<cepgen::EventModifier>, boost::noncopyable>(
       "EventModifier", "Event modification algorithm", py::no_init)
-      .def("init", py::pure_virtual(&cepgen::EventModifier::init), "Initialise the algorithm")
+      //.def("initialise", py::pure_virtual(&cepgen::EventModifier::initialise), "Initialise the algorithm")
+      .def("initialise", &cepgen::EventModifier::initialise, "Initialise the algorithm")
       .def("run", py::pure_virtual(&cepgen::EventModifier::run), "Launch the event modification algorithm on one event")
       .def("setSeed", &cepgen::EventModifier::setSeed, "Set the random number generator seed if any");
 
   //----- Export modules
 
-  py::class_<ExportModuleWrap, std::shared_ptr<cepgen::io::ExportModule>, boost::noncopyable>(
-      "ExportModule", "Export module", py::no_init)
+  py::class_<EventExporterWrap, std::shared_ptr<cepgen::EventExporter>, boost::noncopyable>(
+      "EventExporter", "Export module", py::no_init)
       .add_property(
           "name",
-          py::make_function(&cepgen::io::ExportModule::name, py::return_value_policy<py::copy_const_reference>()),
+          py::make_function(&cepgen::EventExporter::name, py::return_value_policy<py::copy_const_reference>()),
           "Module name")
       .def("initialise",
-           py::pure_virtual(&cepgen::io::ExportModule::initialise),
-           "Initialise the module from runtime parameters")
+           //py::pure_virtual(&cepgen::EventExporter::initialise),
+           &cepgen::EventExporter::initialise)  //,
+                                                //"Initialise the module from runtime parameters")
       .def("setCrossSection",
-           &cepgen::io::ExportModule::setCrossSection,
+           &cepgen::EventExporter::setCrossSection,
            "Specify the cross section + uncertainty for this run")
-      .def("setEventNumber", &cepgen::io::ExportModule::setEventNumber, "Specify the event number in this run")
-      .def("feed", py::pure_virtual(&cepgen::io::ExportModule::operator<<), "Feed the export module with one event");
+      .def("setEventNumber", &cepgen::EventExporter::setEventNumber, "Specify the event number in this run")
+      .def("feed", py::pure_virtual(&cepgen::EventExporter::operator<<), "Feed the export module with one event");
 
   //----- Runtime parameters
 
@@ -198,13 +199,13 @@ BOOST_PYTHON_MODULE(pycepgen) {
       .def("addEventModifier",
            static_cast<void (cepgen::Parameters::*)(cepgen::EventModifier*)>(&cepgen::Parameters::addModifier),
            "Add a new event modification algorithm reference to the stack")
-      .def("outputModules",
-           py::make_function(static_cast<cepgen::ExportModulesSequence& (cepgen::Parameters::*)()>(
-                                 &cepgen::Parameters::outputModulesSequence),
+      .def("eventExporters",
+           py::make_function(static_cast<cepgen::EventExportersSequence& (cepgen::Parameters::*)()>(
+                                 &cepgen::Parameters::eventExportersSequence),
                              py::return_internal_reference<>()),
            "List of output modules registered")
-      .def("addOutputModule",
-           static_cast<void (cepgen::Parameters::*)(cepgen::io::ExportModule*)>(&cepgen::Parameters::addOutputModule),
+      .def("addEventExporter",
+           static_cast<void (cepgen::Parameters::*)(cepgen::EventExporter*)>(&cepgen::Parameters::addEventExporter),
            "Add a new output module reference to the stack")
       .add_property(
           "process",
@@ -225,15 +226,14 @@ BOOST_PYTHON_MODULE(pycepgen) {
       .def("FM", &cepgen::strfun::Parameterisation::FM);
   py::register_ptr_to_python<cepgen::strfun::Parameterisation*>();
 
-  py::class_<cepgen::strfun::StructureFunctionsFactory, boost::noncopyable>("StructureFunctionsFactory", py::no_init)
+  py::class_<cepgen::StructureFunctionsFactory, boost::noncopyable>("StructureFunctionsFactory", py::no_init)
       .def(
-          "build", +[](int mod) { return cepgen::strfun::StructureFunctionsFactory::get().build(mod); })
+          "build", +[](int mod) { return cepgen::StructureFunctionsFactory::get().build(mod); })
       .def(
-          "build", +[](const cepgen::ParametersList& plist) {
-            return cepgen::strfun::StructureFunctionsFactory::get().build(plist);
-          });
-  //static_cast<std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*)(
-  //         const int&, const cepgen::ParametersList&)>(&cepgen::strfun::StructureFunctionsFactory::build));
+          "build",
+          +[](const cepgen::ParametersList& plist) { return cepgen::StructureFunctionsFactory::get().build(plist); });
+  //static_cast<std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::StructureFunctionsFactory::*)(
+  //         const int&, const cepgen::ParametersList&)>(&cepgen::StructureFunctionsFactory::build));
 
   //----- Utilities
 
@@ -243,7 +243,7 @@ BOOST_PYTHON_MODULE(pycepgen) {
       .def(py::self * double())
       .def(py::self + py::self)
       .def(py::self - py::self)
-      .def(py::self == py::self)
+      //.def(py::self == py::self)
       .def(py::self_ns::str(py::self_ns::self))
       .add_property("px",
                     &cepgen::Momentum::px,
@@ -277,8 +277,8 @@ BOOST_PYTHON_MODULE(pycepgen) {
       .def("get", get<int>, pl_get_int_ov(), "Retrieve a parameter by its index")*/
       ;
 
-  py::class_<cepgen::LoggedException> except("Exception", "Generic exception");
-  except.add_property("message", &cepgen::LoggedException::message, "Human-readable error message");
+  py::class_<cepgen::Exception, boost::noncopyable> except("Exception", "Generic exception", py::no_init);
+  except.add_property("message", &cepgen::Exception::message, "Human-readable error message");
   except_type = except.ptr();
-  py::register_exception_translator<cepgen::LoggedException>(&translate_exception);
+  py::register_exception_translator<cepgen::Exception>(&translate_exception);
 }
