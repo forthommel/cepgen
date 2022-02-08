@@ -13,8 +13,7 @@ class TestEventContent(unittest.TestCase):
         '''Test Particle object'''
         part = pycepgen.Particle()
         mom = pycepgen.Momentum(1., 2., 3., 4.)
-        part.setMomentum(mom)
-        #part.momentum = mom
+        part.momentum = mom
         self.assertEqual(part.momentum, mom)
         self.assertEqual(part.role, pycepgen.ParticleRole.unknownRole)
         self.assertEqual(part.status, pycepgen.ParticleStatus.undefined)

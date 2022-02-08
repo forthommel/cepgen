@@ -124,9 +124,6 @@ BOOST_PYTHON_MODULE(pycepgen) {
 
   py::class_<cepgen::Particle>("Particle", "Particle kinematics and general information")
       .def(py::self_ns::str(py::self_ns::self))
-      //.def("setMomentum",
-      //     particle_set_4momentum,
-      //     part_set_mom_ov(py::args("momentum", "offshell"), "4-momentum")[py::return_self<>()])
       .add_property("id",
                     &cepgen::Particle::id,
                     py::make_function(&cepgen::Particle::setId, py::return_self<>()),
@@ -151,12 +148,7 @@ BOOST_PYTHON_MODULE(pycepgen) {
           "momentum",
           py::make_function(static_cast<cepgen::Momentum& (cepgen::Particle::*)()>(&cepgen::Particle::momentum),
                             py::return_internal_reference<>()),
-          /*py::make_function(static_cast<cepgen::Particle& (cepgen::Particle::*)(const cepgen::Momentum&, bool)>(
-                                &cepgen::Particle::setMomentum),
-                            py::return_self<>(),
-                            part_set_mom_ov((py::arg("mom"), py::arg("offshell") = false))),*/
-          //py::make_function(
-          //    static_cast<cepgen::Particle& (cepgen::Particle::*)(const cepgen::Momentum&, bool)>(part_set_mom_ov)),
+          +[](cepgen::Particle& part, const cepgen::Momentum& mom) { part.setMomentum(mom, true); },
           "4-momentum")
       /*.add_property("momentum",
                     py::make_function(particle_get_4momentum, py::return_internal_reference<>()),
