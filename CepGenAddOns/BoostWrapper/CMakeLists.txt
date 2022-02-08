@@ -39,7 +39,7 @@ if(Python_Interpreter_FOUND)
     #Python_add_library(pycepgen MODULE PythonWrapper.cpp)
     set(CMAKE_SHARED_MODULE_PREFIX "")
     add_library(pycepgen MODULE PythonWrapper.cpp)
-    target_link_libraries(pycepgen CepGenCore CepGenAddOns ${Boost_LIBRARIES})
+    target_link_libraries(pycepgen CepGen ${Boost_LIBRARIES})
     target_include_directories(pycepgen PUBLIC ${Boost_INCLUDE_DIRS} ${Python_INCLUDE_DIRS})
     #--- copy the __init__.py
     #configure_file(__init__.py ${CMAKE_CURRENT_BINARY_DIR}/__init__.py COPYONLY)
@@ -48,6 +48,6 @@ if(Python_Interpreter_FOUND)
       print(sc.get_python_lib(prefix='', plat_specific=True))"
       OUTPUT_VARIABLE PYTHON_SITE
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    install(TARGETS pycepgen DESTINATION ${PYTHON_SITE}/cepgen COMPONENT python)
+    install(TARGETS pycepgen DESTINATION ${PYTHON_SITE}/cepgen COMPONENT boost)
   endif()
 endif()

@@ -86,7 +86,7 @@ namespace {
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(part_set_mom_ov, cepgen::Particle::setMomentum, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(mod_build_ov, build, 1, 2)
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS( pl_get_int_ov, get<int>, 1, 2 )
+//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(pl_get_int_ov, get<int>, 1, 2)
 
 BOOST_PYTHON_MODULE(pycepgen) {
   //----- Process implementation
@@ -158,9 +158,20 @@ BOOST_PYTHON_MODULE(pycepgen) {
           //py::make_function(
           //    static_cast<cepgen::Particle& (cepgen::Particle::*)(const cepgen::Momentum&, bool)>(part_set_mom_ov)),
           "4-momentum")
-      //.add_property( "momentum", py::make_function( particle_get_4momentum, py::return_internal_reference<>() ), part_set_mom_ov( py::args( "momentum", "offshell" ) )[py::return_self<>()], "4-momentum" )
-      //.add_property( "momentum", py::make_function( particle_get_4momentum, py::return_internal_reference<>() ), py::make_function( particle_set_4momentum, py::return_self<>(), part_set_mom_ov() ), "4-momentum" )
-      //.add_property( "momentum", py::make_function( particle_get_4momentum, py::return_internal_reference<>() ), py::make_function( particle_set_4momentum, part_set_mom_ov( py::args( "momentum", "offshell" ), "4-momentum" )[py::return_self<>()] ), "4-momentum" )
+      /*.add_property("momentum",
+                    py::make_function(particle_get_4momentum, py::return_internal_reference<>()),
+                    part_set_mom_ov(py::args("momentum", "offshell"))[py::return_self<>()],
+                    "4-momentum")
+      .add_property("momentum",
+                    py::make_function(particle_get_4momentum, py::return_internal_reference<>()),
+                    py::make_function(particle_set_4momentum, py::return_self<>(), part_set_mom_ov()),
+                    "4-momentum")
+      .add_property(
+          "momentum",
+          py::make_function(particle_get_4momentum, py::return_internal_reference<>()),
+          py::make_function(particle_set_4momentum,
+                            part_set_mom_ov(py::args("momentum", "offshell"), "4-momentum")[py::return_self<>()]),
+          "4-momentum")*/
       ;
 
   py::class_<cepgen::Event>("Event", "Event content")
@@ -201,7 +212,7 @@ BOOST_PYTHON_MODULE(pycepgen) {
   //----- Runtime parameters
 
   py::class_<cepgen::Parameters>("Parameters", "Collection of runtime parameters for CepGen")
-      //.def( py::self_ns::str( py::self_ns::self ) )
+      //.def(py::self_ns::str(py::self_ns::self))
       .def("eventModifiers",
            py::make_function(static_cast<cepgen::EventModifiersSequence& (cepgen::Parameters::*)()>(
                                  &cepgen::Parameters::eventModifiersSequence),
@@ -229,17 +240,12 @@ BOOST_PYTHON_MODULE(pycepgen) {
 
   py::class_<cepgen::strfun::Parameterisation>("StructureFunctions", "Structure functions parameterisation")
       .def("F1", &cepgen::strfun::Parameterisation::F1)
-      .def("computeFL",
-           py::make_function(
-               static_cast<cepgen::strfun::Parameterisation& (cepgen::strfun::Parameterisation::*)(double, double)>(
-                   &cepgen::strfun::Parameterisation::computeFL),
-               py::return_self<>()))
-      .def("computeFL",
-           py::make_function(static_cast<cepgen::strfun::Parameterisation& (
-                                 cepgen::strfun::Parameterisation::*)(double, double, double)>(
-                                 &cepgen::strfun::Parameterisation::computeFL),
-                             py::return_self<>()))
-      .add_property("F2", &cepgen::strfun::Parameterisation::F2);
+      .def("F2", &cepgen::strfun::Parameterisation::F2)
+      .def("FL", &cepgen::strfun::Parameterisation::FL)
+      .def("W1", &cepgen::strfun::Parameterisation::W1)
+      .def("W2", &cepgen::strfun::Parameterisation::W2)
+      .def("FE", &cepgen::strfun::Parameterisation::FE)
+      .def("FM", &cepgen::strfun::Parameterisation::FM);
   py::register_ptr_to_python<cepgen::strfun::Parameterisation*>();
 
   //----- Utilities
@@ -255,12 +261,14 @@ BOOST_PYTHON_MODULE(pycepgen) {
   //std::unique_ptr<cepgen::strfun::Parameterisation> (cepgen::strfun::StructureFunctionsFactory::*build_wo_index)(
   //    cepgen::ParametersList) const = &cepgen::strfun::StructureFunctionsFactory::build;
 
-  /*py::class_<cepgen::StructureFunctionsFactory>( "StructureFunctionsFactory", "A builder for structure functions modellings", py::no_init )
-    .def( "get", &cepgen::strfun::StructureFunctionsFactory::get, "Retrieve the builder" )
-    .staticmethod( "get" )
-    .def( "build", py::make_function( build_w_index, py::return_value_policy<py::return_by_value>() ), "Build a modelling from its index (+parameters)" )
-    //.def( "build", build_wo_index, "Build a modelling from its parameters" )
-  ;*/
+  /*py::class_<cepgen::StructureFunctionsFactory>(
+      "StructureFunctionsFactory", "A builder for structure functions modellings", py::no_init)
+      .def("get", &cepgen::StructureFunctionsFactory::get, "Retrieve the builder")
+      .staticmethod("get")
+      .def("build",
+           py::make_function(build_w_index, py::return_value_policy<py::return_by_value>()),
+           "Build a modelling from its index (+parameters)")
+      .def("build", build_wo_index, "Build a modelling from its parameters");*/
   py::class_<cepgen::StructureFunctionsFactory,
              std::shared_ptr<cepgen::strfun::StructureFunctionsFactory>,
              boost::noncopyable>(
@@ -313,10 +321,10 @@ BOOST_PYTHON_MODULE(pycepgen) {
   py::class_<cepgen::ParametersList>("ParametersList", "Structured handler for mixed parameters")
       .def(py::self_ns::str(py::self_ns::self))
       .add_property("keys", &cepgen::ParametersList::keys, "List of all parameters indexes")
-      //.def( "get", &cepgen::ParametersList::get<int>, pl_get_int_ov(), "Retrieve a parameter by its index" )
-      //.def( "get", &( cepgen::ParametersList::get<int> ), pl_get_int_ov(), "Retrieve a parameter by its index" )
-      //.def( "get", cepgen::ParametersList::get<int>, pl_get_int_ov(), "Retrieve a parameter by its index" )
-      //.def( "get", get<int>, pl_get_int_ov(), "Retrieve a parameter by its index" )
+      /*.def("get", &cepgen::ParametersList::get<int>, pl_get_int_ov(), "Retrieve a parameter by its index")
+      .def("get", &(cepgen::ParametersList::get<int>), pl_get_int_ov(), "Retrieve a parameter by its index")
+      .def("get", cepgen::ParametersList::get<int>, pl_get_int_ov(), "Retrieve a parameter by its index")
+      .def("get", get<int>, pl_get_int_ov(), "Retrieve a parameter by its index")*/
       ;
 
   py::class_<cepgen::LoggedException> except("Exception", "Generic exception");
