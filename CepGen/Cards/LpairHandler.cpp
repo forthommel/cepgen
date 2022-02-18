@@ -91,8 +91,8 @@ namespace cepgen {
       registerParameter<std::string>("KMRG", "KMR grid interpolation path", &kmr_grid_path_);
       registerParameter<std::string>("MGRD", "MSTW grid interpolation path", &mstw_grid_path_);
       registerParameter<std::string>("PDGI", "Input file for PDG information", &pdg_input_path_);
-      registerParameter<int>("PMOD", "Outgoing primary particles' mode", &str_fun_);
-      registerParameter<int>("EMOD", "Outgoing primary particles' mode", &str_fun_);
+      registerParameter<std::vector<int> >("PMOD", "Outgoing primary particles' mode", &str_funs_);
+      registerParameter<std::vector<int> >("EMOD", "Outgoing primary particles' mode", &str_funs_);
       registerParameter<int>("RTYP", "R-ratio computation type", &sr_type_);
       registerProcessParameter<int>("PAIR", "Outgoing particles' PDG id", "pair");
       registerKinematicsParameter<std::string>("FFAC", "Form factors for the incoming beams", "formFactors");
@@ -199,10 +199,14 @@ namespace cepgen {
       utils::Logger::get().setExtended(ext_log_);
 
       //--- parse the structure functions code
-      auto sf_params = StructureFunctionsFactory::get().describeParameters(str_fun_).parameters();
-      sf_params.set<ParametersList>("sigmaRatio", SigmaRatiosFactory::get().describeParameters(sr_type_).parameters());
-      if (str_fun_ == 205 /* MSTWgrid */ && !mstw_grid_path_.empty())
-        sf_params.set<std::string>("gridPath", mstw_grid_path_);
+      std::vector<ParametersList> sf_params;
+      for (const auto& sf : str_funs_) {
+        auto sf_pars = StructureFunctionsFactory::get().describeParameters(sf).parameters();
+        sf_pars.set<ParametersList>("sigmaRatio", SigmaRatiosFactory::get().describeParameters(sr_type_).parameters());
+        if (sf == 205 /* MSTWgrid */ && !mstw_grid_path_.empty())
+          sf_pars.set<std::string>("gridPath", mstw_grid_path_);
+        sf_params.emplace_back(sf_pars);
+      }
       kin_params_->set("structureFunctions", sf_params);
       proc_params_->set("kinematics", *kin_params_);
 
@@ -267,8 +271,9 @@ namespace cepgen {
 
     void LpairHandler::pack(const Parameters* params) {
       rt_params_ = const_cast<Parameters*>(params);
-      //FIXME handle multiple SFs
-      str_fun_ = rt_params_->kinematics().incomingBeams().structureFunctions().at(0).name<int>();
+      str_funs_.clear();
+      for (const auto& strfun : rt_params_->kinematics().incomingBeams().structureFunctions())
+        str_funs_.emplace_back(strfun.name<int>());
       sr_type_ = rt_params_->kinematics().incomingBeams().structureFunctions().at(0).get<int>("sigmaRatio");
       //kmr_grid_path_ = kmr::GluonGrid::get().path();
       //mstw_grid_path_ =
