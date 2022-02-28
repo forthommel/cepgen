@@ -110,6 +110,8 @@ namespace cepgen {
     void clearRun();
     /// Integrate the functional over the whole phase space
     void integrate();
+    /// Integrator task-related worker
+    GeneratorWorker& integratorWorker() const;
     /**
        * Compute the cross section for the run parameters defined by this object.
        * This returns the cross section as well as the absolute error computed along.
@@ -142,7 +144,7 @@ namespace cepgen {
     /// Physical Parameters used in the events generation and cross-section computation
     std::unique_ptr<Parameters> parameters_;
     /// Generator worker instance
-    std::unique_ptr<GeneratorWorker> worker_;
+    std::vector<std::unique_ptr<GeneratorWorker> > workers_;
     /// Integration algorithm
     std::unique_ptr<Integrator> integrator_;
     /// Integration grid instance

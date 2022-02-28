@@ -54,13 +54,14 @@ namespace cepgen {
 
   void Generator::clearRun() {
     CG_DEBUG("Generator:clearRun") << "Run is set to be cleared.";
-    worker_.reset(new GeneratorWorker(const_cast<const Parameters*>(parameters_.get())));
+    // delete all workers
+    workers_.clear();
     // destroy and recreate the integrator instance
     if (!integrator_)
       resetIntegrator();
 
-    worker_->setIntegrator(integrator_.get());
     result_ = result_error_ = -1.;
+    // let the parameters object know that a new run is engaged
     parameters_->prepareRun();
   }
 
@@ -69,14 +70,14 @@ namespace cepgen {
   void Generator::setParameters(Parameters* ip) { parameters_.reset(ip); }
 
   double Generator::computePoint(const std::vector<double>& coord) {
-    if (!worker_)
+    if (workers_.empty())
       clearRun();
     if (!parameters_->hasProcess())
       throw CG_FATAL("Generator:computePoint") << "Trying to compute a point with no process specified!";
-    const size_t ndim = worker_->integrand().process().ndim();
+    const size_t ndim = integratorWorker().integrand().process().ndim();
     if (coord.size() != ndim)
       throw CG_FATAL("Generator:computePoint") << "Invalid phase space dimension (ndim=" << ndim << ")!";
-    double res = worker_->integrand().eval(coord);
+    double res = integratorWorker().integrand().eval(coord);
     CG_DEBUG("Generator:computePoint") << "Result for x[" << ndim << "] = " << coord << ":\n\t" << res << ".";
     return res;
   }
@@ -113,7 +114,13 @@ namespace cepgen {
     if (!integ)
       integ = IntegratorFactory::get().build(parameters_->par_integrator);
     integrator_ = std::move(integ);
-    CG_INFO("Generator:integrator") << "Generator will use a " << integrator_->name() << "-type integrator.";
+    // then define all thread workers, using the integrator instance previously specified
+    for (size_t i = 0; i < parameters_->generation().numThreads(); ++i)
+      workers_.emplace_back(new GeneratorWorker(const_cast<const Parameters*>(parameters_.get()),
+                                                const_cast<const Integrator*>(integrator_.get())));
+
+    CG_INFO("Generator:integrator") << "Generator will use a " << integrator_->name() << "-type integrator for "
+                                    << utils::s("worker", workers_.size(), true) << ".";
   }
 
   void Generator::integrate() {
@@ -123,10 +130,12 @@ namespace cepgen {
 
     if (!parameters_->hasProcess())
       throw CG_FATAL("Generator:integrate") << "Trying to integrate while no process is specified!";
-    const size_t ndim = worker_->integrand().process().ndim();
+    if (workers_.empty())
+      throw CG_FATAL("Generator:integrate") << "No generator worker was defined!";
+    const size_t ndim = integratorWorker().integrand().process().ndim();
     if (ndim == 0)
-      throw CG_FATAL("Generator:integrate") << "Invalid phase space dimension. "
-                                            << "At least one integration variable is required!";
+      throw CG_FATAL("Generator:computePoint") << "Invalid phase space dimension. "
+                                               << "At least one integration variable is required!";
 
     CG_DEBUG("Generator:integrate") << "New integrator instance created for " << ndim << "-dimensional integration.";
 
@@ -145,7 +154,17 @@ namespace cepgen {
       mod->setCrossSection(result_, result_error_);
   }
 
-  const Event& Generator::generateOneEvent(Event::callback callback) { return next(callback); }
+  GeneratorWorker& Generator::integratorWorker() const {
+    if (workers_.empty())
+      throw CG_FATAL("Generator:integratorWorker")
+          << "Failed to retrieve the integrator worker! Did you already initialise them all?";
+    return *workers_.at(0);
+  }
+
+  const Event& Generator::generateOneEvent(Event::callback callback) {
+    generate(1, callback);
+    return integratorWorker().integrand().process().event();
+  }
 
   void Generator::initialise() {
     if (initialised_)
@@ -156,7 +175,7 @@ namespace cepgen {
     CG_TICKER(parameters_->timeKeeper());
 
     // if no worker is found, launch a new integration/run preparation
-    if (!worker_)
+    if (workers_.empty())
       integrate();
 
     // prepare the run parameters for event generation
@@ -166,14 +185,14 @@ namespace cepgen {
   }
 
   const Event& Generator::next(Event::callback callback) {
-    if (!worker_ || !initialised_)
+    if (!workers_.empty() || !initialised_)
       initialise();
     size_t num_try = 0;
-    while (!worker_->next(callback)) {
+    while (!workers_.at(0)->next(callback)) {
       if (num_try++ > 5)
         throw CG_FATAL("Generator:next") << "Failed to generate the next event!";
     }
-    return worker_->integrand().process().event();
+    return workers_.at(0)->integrand().process().event();
   }
 
   void Generator::generate(size_t num_events, Event::callback callback) {
@@ -196,7 +215,8 @@ namespace cepgen {
 
     //--- launch the event generation
 
-    worker_->generate(num_events, callback);
+    for (auto& worker : workers_)
+      worker->generate(num_events, callback);  //FIXME
 
     const double gen_time_s = tmr.elapsed();
     const double rate_ms =
