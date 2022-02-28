@@ -67,6 +67,7 @@ namespace cepgen {
           log << "\n\t" << *event_;
       });
       setKinematics(proc.kin_);
+      clear();
     }
 
     std::unique_ptr<Process> Process::clone() const {
@@ -301,11 +302,10 @@ namespace cepgen {
       mA2_ = p1.mass2();
       mB2_ = p2.mass2();
 
-      if (event_)
-        CG_DEBUG("Process:setKinematics") << "Kinematics successfully set!\n"
-                                          << "  sqrt(s) = " << sqs_ * 1.e-3 << " TeV,\n"
-                                          << "  p1=" << p1 << ",\tmass=" << p1.mass() << " GeV\n"
-                                          << "  p2=" << p2 << ",\tmass=" << p2.mass() << " GeV.";
+      CG_DEBUG("Process:setKinematics") << "Kinematics successfully set!\n"
+                                        << "  sqrt(s) = " << sqs_ * 1.e-3 << " TeV,\n"
+                                        << "  p1=" << p1 << ",\tmass=" << p1.mass() << " GeV\n"
+                                        << "  p2=" << p2 << ",\tmass=" << p2.mass() << " GeV.";
     }
 
     void Process::dumpPoint() const {
