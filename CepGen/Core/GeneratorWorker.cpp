@@ -32,24 +32,23 @@
 #include "CepGen/Utils/TimeKeeper.h"
 
 namespace cepgen {
-  GeneratorWorker::GeneratorWorker(const Parameters* params)
-      : params_(params), integrand_(new ProcessIntegrand(params)) {
-    CG_DEBUG("GeneratorWorker") << "New generator worker initialised for integration/event generation.\n\t"
-                                << "Parameters at " << (void*)params_ << ".";
-  }
+  GeneratorWorker::GeneratorWorker(const Parameters* params, const Integrator* integr)
+      : params_(params), integrator_(integr), integrand_(new ProcessIntegrand(params_)) {
+    if (!integrator_)
+      throw CG_FATAL("GeneratorWorker") << "Invalid integrator object at 0x" << integrator_ << " specified!";
 
-  GeneratorWorker::~GeneratorWorker() {
-    CG_DEBUG("GeneratorWorker") << "Generator worker destructed. Releasing the parameters at " << (void*)params_ << ".";
-  }
-
-  void GeneratorWorker::setIntegrator(const Integrator* integr) {
-    integrator_ = integr;
     grid_.reset(new GridParameters(integrand_->size()));
     coords_ = std::vector<double>(integrand_->size());
 
     CG_DEBUG("GeneratorWorker:integrator")
+        << "New generator worker initialised for integration/event generation.\n\t"
+        << "Parameters at " << (void*)params_ << ".\n\t"
         << "Dim-" << integrand_->size() << " " << integrator_->name() << " integrator "
         << "set for dim-" << grid_->n(0).size() << " grid.";
+  }
+
+  GeneratorWorker::~GeneratorWorker() {
+    CG_DEBUG("GeneratorWorker") << "Generator worker destructed. Releasing the parameters at " << (void*)params_ << ".";
   }
 
   //-----------------------------------------------------------------------------------------------
