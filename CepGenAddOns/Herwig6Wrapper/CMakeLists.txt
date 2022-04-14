@@ -1,6 +1,7 @@
 #--- searching for Herwig 6
-set(HERWIG6_DIRS $ENV{HERWIG6_DIR} ${HERWIG6_DIR})
+set(HERWIG6_DIRS $ENV{HERWIG6_DIR} ${HERWIG6_DIR} ${PROJECT_SOURCE_DIR})
 find_library(HERWIG6 herwig HINTS ${HERWIG6_DIRS} PATH_SUFFIXES lib)
+find_path(HERWIG6_INCLUDE HERWIG65.INC HINTS ${HERWIG6_DIRS} PATH_SUFFIXES External)
 
 set(HERWIG6LIB)
 if(HERWIG6)
@@ -30,7 +31,8 @@ endif()
 #----- build the object
 
 cepgen_build(CepGenHerwig6
-    SOURCES *.cpp
+    SOURCES *.cpp *.f
     EXT_LIBS ${HERWIG6LIB}
+    EXT_HEADERS ${HERWIG6_INCLUDE}
     INSTALL_COMPONENT herwig6)
 

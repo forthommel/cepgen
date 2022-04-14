@@ -6,6 +6,7 @@ namespace {
   void hwigin_();  // initialise other common blocks
   void hweini_();  // initialise elementary process
   void hwudat_();
+  void hwefin_();
   void hwepro_();
   void hwuine_();  // initialise event
   void hwbgen_();  // generate parton cascades
@@ -14,6 +15,7 @@ namespace {
   void hwdhad_();  // perform unstable particles decay
   void hwufne_();  // finalise event
   void hwuepr_();  // print event content
+  void hwuidt_(int& iopt, int& ipdg, int& iwig, char nwig[8]);
   void hwuinc_();  // compute constants and lookup tables
   void hwhrem_(int&, int&);
   void hwhsct_(int& report, int& firstc, int& jmueo, double& ptjim);
@@ -23,6 +25,15 @@ namespace {
   void timel_(double& tres) { tres = 1.e10; }
   extern struct { int ipart1, ipart2; } hwbeam_;
   extern struct { char part1[8], part2[8]; } hwbmch_;
+  /// spin correlations in event
+  extern struct {
+    int ndecsy, nsearch, lrdec, lwdec, syspin, threeb, fourb;
+    char taudec[6];
+  } hwdspn_;
+  extern struct {
+    char autpdf[20][2];
+    char bdecay[4];
+  } hwprch_;
   extern struct {
     double ebeam1, ebeam2, pbeam1, pbeam2;
     int iproc, maxev;
@@ -79,6 +90,20 @@ namespace {
     int lwevt, maxer, maxpr, nowgt, nrn[2];
     int numer, numeru, nwgts, gensof;
   } hwevnt_;
+
+  /// Basic parameters (and quantities derived from them)
+  extern struct {
+    double afch[2][16], alphem, b1l1m, betaf, btclm, cafac, cffac, clmax, clpow;
+    double clsmr[2], cspeed, ensof, etamix, f0mix, f1mix, f2mix, gamh, gamw, gamz, gamzp;
+    double gev2nb, h1mix, pdiqk, pgsmx, pgspl[4], phimx, pifac, prsof, pslpt[2], ptrms, pxrms;
+    double qcdl3, qcdl5, qcdlam, qdiqk, qfch[16], qg, qspac, qv;
+    double scabi, swein, tmtop, vfch[2][16], vckm[3][3], vgcut, vqcut, vpcut;
+    double zbinm, effmin, omhmix, et2mix, ph3mix, gcutme;
+    int ioprem, iprint, ispac;
+    int lrsud, lwsud, modpdf[2], nbtry, ncolo, nctry, ndtry, netry, nvlav, ngspl, nstru, nstry, nzbin;
+    int iop4jt[2], nprfmt, azsoft, azspin;
+    int cldir[2], hardme, nospac, prndec, prvtx, softme, zprime, prndef, prntex, prnweb;
+  } hwpram_;
   }
 }  // namespace
 
