@@ -185,7 +185,7 @@ namespace cepgen {
   }
 
   const Event& Generator::next(Event::callback callback) {
-    if (!workers_.empty() || !initialised_)
+    if (workers_.empty() || !initialised_)
       initialise();
     size_t num_try = 0;
     while (!workers_.at(0)->next(callback)) {
@@ -218,13 +218,18 @@ namespace cepgen {
     for (auto& worker : workers_)
       worker->generate(num_events, callback);  //FIXME
 
+    std::vector<size_t> num_gen_evt_per_worker;
+    for (const auto& worker : workers_)
+      num_gen_evt_per_worker.emplace_back(worker->numGeneratedEvents());
+
     const double gen_time_s = tmr.elapsed();
     const double rate_ms =
-        (parameters_->numGeneratedEvents() > 0) ? gen_time_s / parameters_->numGeneratedEvents() * 1.e3 : 0.;
+        parameters_->numGeneratedEvents() > 0 ? gen_time_s / parameters_->numGeneratedEvents() * 1.e3 : 0.;
     const double equiv_lumi = parameters_->numGeneratedEvents() / crossSection();
     CG_INFO("Generator") << utils::s("event", parameters_->numGeneratedEvents()) << " generated in " << gen_time_s
                          << " s "
                          << "(" << rate_ms << " ms/event).\n\t"
-                         << "Equivalent luminosity: " << utils::format("%g", equiv_lumi) << " pb^-1.";
+                         << "Equivalent luminosity: " << utils::format("%g", equiv_lumi) << " pb^-1.\n\t"
+                         << "Events generated per worker: " << num_gen_evt_per_worker << ".";
   }
 }  // namespace cepgen
