@@ -20,6 +20,7 @@
 #define CepGen_Core_GeneratorWorker_h
 
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "CepGen/Event/Event.h"
@@ -41,6 +42,9 @@ namespace cepgen {
     /// \param[in] num_events Number of events to generate
     /// \param[in] callback The callback function applied on every event generated
     void generate(size_t num_events = 0, Event::callback callback = nullptr);
+    std::thread thread(size_t num_events = 0, Event::callback callback = nullptr) {
+      return std::thread([=] { generate(num_events, callback); });
+    }
     /// Generate a single event
     /// \param[in] callback The callback function applied on every event generated
     bool next(Event::callback callback = nullptr);

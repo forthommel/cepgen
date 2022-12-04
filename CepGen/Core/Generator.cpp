@@ -215,8 +215,12 @@ namespace cepgen {
 
     //--- launch the event generation
 
+    std::vector<std::thread> threads;
     for (auto& worker : workers_)
-      worker->generate(num_events, callback);  //FIXME
+      threads.emplace_back(worker->thread(num_events, callback));
+
+    for (auto& thread : threads)
+      thread.join();
 
     std::vector<size_t> num_gen_evt_per_worker;
     for (const auto& worker : workers_)
