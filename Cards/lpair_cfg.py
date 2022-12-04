@@ -33,6 +33,7 @@ process = cepgen.Module('lpair',
 #--- let the user specify the events generation parameters
 from Config.generator_cff import generator
 generator = generator.clone(
+    numThreads = 4,
     numEvents = 100000,
     printEvery = 10000,
 )
