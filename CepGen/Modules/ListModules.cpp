@@ -67,7 +67,7 @@ namespace cepgen {
       list_modules(proc::ProcessFactory::get(), "Physics processes");
       list_modules(PartonFluxFactory::get(), "Parton fluxes modellings");
       list_modules(FormFactorsFactory::get(), "Beam form factors modellings");
-      list_int_modules(collflux::CollinearFluxFactory::get(), "Collinear flux modellings");
+      list_modules(collflux::CollinearFluxFactory::get(), "Collinear flux modellings");
       list_int_modules(sigrat::SigmaRatiosFactory::get(), "Cross section ratios modellings");
       list_int_modules(strfun::StructureFunctionsFactory::get(), "Structure functions modellings", [](int mod) {
         std::ostringstream os;

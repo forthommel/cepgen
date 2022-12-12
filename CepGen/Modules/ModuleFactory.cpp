@@ -108,7 +108,7 @@ namespace cepgen {
   }
 
   template class ModuleFactory<card::Handler, std::string>;
-  template class ModuleFactory<collflux::Parameterisation, int>;
+  template class ModuleFactory<collflux::Parameterisation, std::string>;
   template class ModuleFactory<Coupling, std::string>;
   template class ModuleFactory<utils::Derivator, std::string>;
   template class ModuleFactory<utils::Drawer, std::string>;
