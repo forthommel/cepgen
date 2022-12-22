@@ -17,6 +17,7 @@
 #define CepGen_Generator_h
 
 #include <memory>
+#include <mutex>
 
 #include "CepGen/Event/Event.h"
 
@@ -93,6 +94,8 @@ namespace cepgen {
     /// \param[in] ip List of input parameters defining the phase space on which to perform the integration
     explicit Generator(Parameters* ip);
     ~Generator();
+
+    static std::mutex mutex;
 
     /// Pointer to the parameters block
     const Parameters* parameters() const { return parameters_.get(); }

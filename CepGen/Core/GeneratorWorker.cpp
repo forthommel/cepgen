@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <mutex>
+
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Core/GeneratorWorker.h"
 #include "CepGen/Event/Event.h"
@@ -38,17 +40,22 @@ namespace cepgen {
       throw CG_FATAL("GeneratorWorker") << "Invalid integrator object at 0x" << integrator_ << " specified!";
 
     grid_.reset(new GridParameters(integrand_->size()));
-    coords_ = std::vector<double>(integrand_->size());
+    coords_.resize(integrand_->size());
 
     CG_DEBUG("GeneratorWorker:integrator")
         << "New generator worker initialised for integration/event generation.\n\t"
         << "Parameters at " << (void*)params_ << ".\n\t"
         << "Dim-" << integrand_->size() << " " << integrator_->name() << " integrator "
-        << "set for dim-" << grid_->n(0).size() << " grid.";
+        << "set for dim-" << grid().n(0).size() << " grid.";
   }
 
   GeneratorWorker::~GeneratorWorker() {
     CG_DEBUG("GeneratorWorker") << "Generator worker destructed. Releasing the parameters at " << (void*)params_ << ".";
+  }
+
+  GridParameters& GeneratorWorker::grid() {
+    std::lock_guard<std::mutex> lock(Generator::mutex);
+    return *const_cast<GridParameters*>(grid_);
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -73,6 +80,8 @@ namespace cepgen {
       throw CG_FATAL("GeneratorWorker:generate") << "No integrator object handled!";
     if (!grid_)
       throw CG_FATAL("GeneratorWorker:generate") << "No grid object handled!";
+    if (!grid().prepared())
+      computeGenerationParameters();
 
     // initialise grid if not already done
     if (!grid_->prepared())
@@ -95,22 +104,22 @@ namespace cepgen {
       // select a function value and reject if fmax is too small
       do {
         // ...
-        ps_bin_ = integrator_->uniform(0., grid_->size());
-        y = integrator_->uniform(0., grid_->globalMax());
-        grid_->increment(ps_bin_);
-      } while (y > grid_->maxValue(ps_bin_));
+        ps_bin_ = integrator_->uniform(0., grid().size());
+        y = integrator_->uniform(0., grid().globalMax());
+        grid().increment(ps_bin_);
+      } while (y > grid().maxValue(ps_bin_));
       // shoot a point x in this bin
-      grid_->shoot(integrator_, ps_bin_, coords_);
+      grid().shoot(integrator_, ps_bin_, coords_);
       // get weight for selected x value
       weight = integrator_->eval(*integrand_, coords_);
       if (weight > y)
         break;
     }
 
-    if (weight > grid_->maxValue(ps_bin_))
+    if (weight > grid().maxValue(ps_bin_))
       // if weight is higher than local or global maximum,
       // init correction cycle for the next event
-      grid_->initCorrectionCycle(ps_bin_, weight);
+      grid().initCorrectionCycle(ps_bin_, weight);
     else  // no grid correction needed for this bin
       ps_bin_ = UNASSIGNED_BIN;
 
@@ -123,20 +132,20 @@ namespace cepgen {
 
     CG_DEBUG_LOOP("GeneratorWorker:correction") << "Correction cycles are started.\n\t"
                                                 << "bin = " << ps_bin_ << "\n\t"
-                                                << "correction value = " << grid_->correctionValue() << ".";
+                                                << "correction value = " << grid().correctionValue() << ".";
 
-    if (grid_->correctionValue() >= 1.)
-      grid_->setCorrectionValue(grid_->correctionValue() - 1.);
+    if (grid().correctionValue() >= 1.)
+      grid().setCorrectionValue(grid().correctionValue() - 1.);
 
-    if (integrator_->uniform() < grid_->correctionValue()) {
-      grid_->setCorrectionValue(-1.);
+    if (integrator_->uniform() < grid().correctionValue()) {
+      grid().setCorrectionValue(-1.);
       // select x values in phase space bin
-      grid_->shoot(integrator_, ps_bin_, coords_);
+      grid().shoot(integrator_, ps_bin_, coords_);
       const double weight = integrator_->eval(*integrand_, coords_);
       // parameter for correction of correction
-      grid_->rescale(ps_bin_, weight);
+      grid().rescale(ps_bin_, weight);
       // accept event
-      if (weight >= integrator_->uniform(0., grid_->maxValueDiff()) + grid_->maxHistValue()) {
+      if (weight >= integrator_->uniform(0., grid().maxValueDiff()) + grid().maxHistValue()) {
         store = true;
         return true;
       }
@@ -144,7 +153,7 @@ namespace cepgen {
     }
     // correction if too big weight is found while correction
     // (all your bases are belong to us...)
-    return grid_->correct(ps_bin_);
+    return grid().correct(ps_bin_);
   }
 
   bool GeneratorWorker::storeEvent(Event::callback callback) {
@@ -171,7 +180,7 @@ namespace cepgen {
   //-----------------------------------------------------------------------------------------------
 
   void GeneratorWorker::computeGenerationParameters() {
-    if (grid_->prepared())
+    if (grid().prepared())
       return;  // do not prepare again the grid
     if (!params_)
       throw CG_FATAL("GeneratorWorker:setGen") << "No steering parameters specified!";
@@ -183,22 +192,22 @@ namespace cepgen {
                                       << "for the generation of unweighted events.";
 
     const double inv_num_points = 1. / params_->generation().numPoints();
-    std::vector<double> point_coord(integrand_->size(), 0.);
-    if (point_coord.size() < grid_->n(0).size())
+    std::vector<double> point_coord(integrator_->size(), 0.);
+    if (point_coord.size() < grid().n(0).size())
       throw CG_FATAL("GridParameters:shoot") << "Coordinates vector multiplicity is insufficient!";
 
     // ...
     double sum = 0., sum2 = 0., sum2p = 0.;
 
-    utils::ProgressBar prog_bar(grid_->size(), 5);
+    utils::ProgressBar prog_bar(grid().size(), 5);
 
     //--- main loop
-    for (unsigned int i = 0; i < grid_->size(); ++i) {
+    for (unsigned int i = 0; i < grid().size(); ++i) {
       double fsum = 0., fsum2 = 0.;
       for (size_t j = 0; j < params_->generation().numPoints(); ++j) {
-        grid_->shoot(integrator_, i, point_coord);
+        grid().shoot(integrator_, i, point_coord);
         const double weight = integrator_->eval(*integrand_, point_coord);
-        grid_->setValue(i, weight);
+        grid().setValue(i, weight);
         fsum += weight;
         fsum2 += weight * weight;
       }
@@ -211,17 +220,17 @@ namespace cepgen {
       // per-bin debugging loop
       CG_DEBUG_LOOP("GeneratorWorker:setGen").log([&](auto& dbg) {
         const double sig = sqrt(sig2);
-        const double eff = (grid_->maxValue(i) != 0.) ? av / grid_->maxValue(i) : 0.;
-        dbg << "n-vector for bin " << i << ": " << utils::repr(grid_->n(i)) << "\n\t"
+        const double eff = (grid().maxValue(i) != 0.) ? av / grid().maxValue(i) : 0.;
+        dbg << "n-vector for bin " << i << ": " << utils::repr(grid().n(i)) << "\n\t"
             << "av   = " << av << "\n\t"
             << "sig  = " << sig << "\n\t"
-            << "fmax = " << grid_->maxValue(i) << "\n\t"
+            << "fmax = " << grid().maxValue(i) << "\n\t"
             << "eff  = " << eff;
       });
       prog_bar.update(i + 1);
     }  // end of main loop
 
-    const double inv_max = 1. / grid_->size();
+    const double inv_max = 1. / grid().size();
     sum *= inv_max;
     sum2 *= inv_max;
     sum2p *= inv_max;
@@ -229,18 +238,18 @@ namespace cepgen {
     const double sig = sqrt(sum2 - sum * sum), sigp = sqrt(sum2p);
 
     double eff1 = 0.;
-    for (unsigned int i = 0; i < grid_->size(); ++i)
-      eff1 += sum / grid_->size() * grid_->maxValue(i);
-    const double eff2 = sum / grid_->globalMax();
+    for (unsigned int i = 0; i < grid().size(); ++i)
+      eff1 += sum / grid().size() * grid().maxValue(i);
+    const double eff2 = sum / grid().globalMax();
 
     CG_DEBUG("GeneratorWorker:setGen") << "Average function value         = " << sum << "\n\t"
                                        << "Average squared function value = " << sum2 << "\n\t"
                                        << "Overall standard deviation     = " << sig << "\n\t"
                                        << "Average standard deviation     = " << sigp << "\n\t"
-                                       << "Maximum function value         = " << grid_->globalMax() << "\n\t"
+                                       << "Maximum function value         = " << grid().globalMax() << "\n\t"
                                        << "Average inefficiency           = " << eff1 << "\n\t"
                                        << "Overall inefficiency           = " << eff2;
-    grid_->setPrepared(true);
+    grid().setPrepared(true);
     //--- from now on events will be stored
     integrand_->setStorage(true);
 

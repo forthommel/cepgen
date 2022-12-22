@@ -33,6 +33,8 @@
 #include "CepGen/Utils/TimeKeeper.h"
 
 namespace cepgen {
+  std::mutex Generator::mutex;
+
   Generator::Generator(bool safe_mode) : parameters_(new Parameters) {
     static bool init = false;
     if (!init) {
@@ -114,13 +116,14 @@ namespace cepgen {
     if (!integ)
       integ = IntegratorFactory::get().build(parameters_->par_integrator);
     integrator_ = std::move(integ);
-    // then define all thread workers, using the integrator instance previously specified
+
+    // define all thread workers, using the integrator instance previously specified
     for (size_t i = 0; i < parameters_->generation().numThreads(); ++i)
       workers_.emplace_back(new GeneratorWorker(const_cast<const Parameters*>(parameters_.get()),
                                                 const_cast<const Integrator*>(integrator_.get())));
 
     CG_INFO("Generator:integrator") << "Generator will use a " << integrator_->name() << "-type integrator for "
-                                    << utils::s("worker", workers_.size(), true) << ".";
+                                    << utils::s("worker", parameters_->generation().numThreads(), true) << ".";
   }
 
   void Generator::integrate() {
@@ -180,6 +183,11 @@ namespace cepgen {
 
     // prepare the run parameters for event generation
     parameters_->initialise();
+
+    // prepare the grid parameters for a potential event generation
+    grid_.reset(new GridParameters(integrator_->size()));
+    for (auto& worker : workers_)
+      worker->setGrid(grid_.get());
 
     initialised_ = true;
   }
