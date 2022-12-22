@@ -38,6 +38,10 @@ namespace cepgen {
     explicit GeneratorWorker(const Parameters*, const Integrator*);
     virtual ~GeneratorWorker();
 
+    void setGrid(const GridParameters* grid) { grid_ = grid; }
+    GridParameters& grid();
+    const GridParameters& grid() const { return *grid_; }
+
     /// Launch the event generation
     /// \param[in] num_events Number of events to generate
     /// \param[in] callback The callback function applied on every event generated
@@ -72,10 +76,11 @@ namespace cepgen {
     /// Pointer to the mother-handled integrator instance
     /// \note NOT owning
     const Integrator* integrator_{nullptr};
+    /// Pointer to the generation grid
+    /// \note NOT owning
+    const GridParameters* grid_{nullptr};
     /// Local event weight evaluator
     std::unique_ptr<ProcessIntegrand> integrand_;
-    /// Set of parameters for the integration/event generation grid
-    std::unique_ptr<GridParameters> grid_;
     /// Selected bin at which the function will be evaluated
     int ps_bin_{UNASSIGNED_BIN};  ///< Last bin to be corrected
     std::vector<double> coords_;  ///< Phase space coordinates being evaluated
