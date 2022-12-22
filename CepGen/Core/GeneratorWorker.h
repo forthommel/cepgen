@@ -24,12 +24,14 @@
 #include <vector>
 
 #include "CepGen/Event/Event.h"
+#include "CepGen/Generator.h"
 
 namespace cepgen {
   class Integrator;
   class Parameters;
   class ProcessIntegrand;
   class GridParameters;
+
   /// Monte-Carlo generator instance
   class GeneratorWorker {
   public:
@@ -39,8 +41,8 @@ namespace cepgen {
     virtual ~GeneratorWorker();
 
     void setGrid(const GridParameters* grid) { grid_ = grid; }
-    GridParameters& grid();
-    const GridParameters& grid() const { return *grid_; }
+    ThreadSafe<GridParameters> grid();
+    const GridParameters* grid() const { return grid_; }
 
     /// Launch the event generation
     /// \param[in] num_events Number of events to generate

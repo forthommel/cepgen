@@ -159,6 +159,18 @@ namespace cepgen {
     /// Error on the cross section as computed in the last integration
     double result_error_{-1.};
   };
+
+  /// A wrapper to ensure thread safety of an object while it is being used
+  template <typename T>
+  class ThreadSafe {
+  public:
+    explicit ThreadSafe(T& obj) : object_(&obj) { Generator::mutex.lock(); }
+    ~ThreadSafe() { Generator::mutex.unlock(); }
+    T* operator->() { return object_; }
+
+  private:
+    T* object_;
+  };
 }  // namespace cepgen
 
 #endif
