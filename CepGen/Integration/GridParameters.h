@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2022  Laurent Forthomme
+ *  Copyright (C) 2018-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,10 @@ namespace cepgen {
     /// Build a generation grid for a ndim-dimensional phase space
     explicit GridParameters(size_t ndim);
 
+    /// Integration grid size parameter
+    static constexpr unsigned short M_BIN = 3;
+    /// Weight of each grid coordinate
+    static constexpr double INV_M_BIN = 1. / M_BIN;
     /// Coordinates definition
     typedef std::vector<unsigned short> coord_t;
 
@@ -66,11 +70,6 @@ namespace cepgen {
     void initCorrectionCycle(size_t, float);
     double maxValueDiff() const { return f_max_diff_; }
     double maxHistValue() const { return f_max_old_; }
-
-    /// Integration grid size parameter
-    static constexpr unsigned short M_BIN = 3;
-    /// Weight of each grid coordinate
-    static constexpr double INV_M_BIN = 1. / M_BIN;
 
   private:
     void generateCoordinates(coord_t&, size_t) const;
