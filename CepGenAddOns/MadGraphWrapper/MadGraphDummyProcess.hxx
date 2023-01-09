@@ -28,5 +28,6 @@ namespace cepgen {
   MadGraphProcess::~MadGraphProcess() {}
   double MadGraphProcess::eval() { return 0.; }
   void MadGraphProcess::initialise(const std::string&) {}
+  std::vector<Momentum> MadGraphProcess::generateMomenta(double, double&){ return std::vector<Momentum>{}; }
 }  // namespace cepgen
 

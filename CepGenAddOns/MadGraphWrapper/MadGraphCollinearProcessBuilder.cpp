@@ -19,7 +19,7 @@
 #include "CepGen/CollinearFluxes/Parameterisation.h"
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Event/Event.h"
-#include "CepGen/Modules/CollinearFluxFactory.h"
+#include "CepGen/Modules/PartonFluxFactory.h"
 #include "CepGen/Modules/ProcessFactory.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/Process.h"
@@ -49,9 +49,12 @@ private:
 
 MadGraphCollinearProcessBuilder::MadGraphCollinearProcessBuilder(const ParametersList& params)
     : MadGraphProcessBuilder(params),
-      proc::Process(params, true),
-      flux_(collflux::CollinearFluxFactory::get().build(SteeredObject::steer<ParametersList>("collinearFluxes"))) {
+      proc::Process(params),
+      flux_(CollinearFluxFactory::get().build(SteeredObject::steer<ParametersList>("collinearFluxes"))) {
   const auto& interm_part = mg5_proc_->intermediatePartons();
+  for (const auto& ip : interm_part)
+    if (ip != PDG::photon && ip != PDG::gluon)
+      throw CG_FATAL("MadGraphCollinearProcessBuilder") << "Only photon and gluon fluxes are supported.";
   const auto& cent_sys = mg5_proc_->centralSystem();
   CG_DEBUG("MadGraphCollinearProcessBuilder") << "MadGraph_aMC process created for:\n\t"
                                               << "* interm. parts.: " << interm_part << "\n\t"
