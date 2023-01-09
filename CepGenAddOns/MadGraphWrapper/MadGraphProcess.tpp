@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2022  Laurent Forthomme
+ *  Copyright (C) 2020-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include "CPPProcess.h"
 #include "CepGen/Core/Exception.h"
 #include "CepGenAddOns/MadGraphWrapper/MadGraphProcess.h"
+#include "rambo.h"
 
 using namespace cepgen;
 
@@ -53,7 +54,6 @@ void MadGraphProcess::initialise(const std::string& param_card) {
   mom_.clear();
   for (size_t i = 0; i < proc_->nexternal; ++i)
     mom_.emplace_back(new double[4]{proc_->getMasses().at(i), 0., 0., 0.});
-  momenta_.reserve(proc_->nexternal);
 }
 
 double MadGraphProcess::eval() {
@@ -77,11 +77,19 @@ double MadGraphProcess::eval() {
   return me[0];
 }
 
-const std::vector<Momentum>& MadGraphProcess::momenta() {
+std::vector<Momentum> MadGraphProcess::momenta() {
+  std::vector<Momentum> momenta;
   const auto& p4 = proc_->getMomenta();
   // cast it to the member attribute and return it
-  for (size_t i = 0; i < p4.size(); ++i)
-    momenta_[i] = Momentum::fromPxPyPzE(p4[i][1], p4[i][2], p4[i][3], p4[i][0]);
-  return momenta_;
+  for (const auto& p4 : proc_->getMomenta())
+    momenta.emplace_back(p4[1], p4[2], p4[3], p4[0]);
+  return momenta;
+}
+
+std::vector<Momentum> MadGraphProcess::generateMomenta(double energy, double& weight) {
+  std::vector<Momentum> momenta;
+  for (const auto& mom : get_momenta(proc_->ninitial, energy, proc_->getMasses(), weight))
+    momenta.emplace_back(mom[1], mom[2], mom[3], mom[0]);
+  return momenta;
 }
 //=============================================================================

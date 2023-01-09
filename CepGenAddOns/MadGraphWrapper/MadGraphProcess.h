@@ -51,7 +51,14 @@ namespace cepgen {
       mom_[i][3] = mom.pz();
       return *this;
     }
-    const std::vector<Momentum>& momenta();
+    inline MadGraphProcess& setMomenta(const std::vector<Momentum>& mom) {
+      for (size_t i = 0; i < mom.size(); ++i)
+        setMomentum(i, mom.at(i));
+      return *this;
+    }
+    std::vector<Momentum> momenta();
+    /// Use Rambo to generate a set of momenta for the event and an event weight
+    std::vector<Momentum> generateMomenta(double energy, double& weight);
 
   private:
     std::unique_ptr<CPPProcess> proc_;
@@ -61,8 +68,6 @@ namespace cepgen {
     const std::string descr_;
     const std::array<int, 2> incoming_pdgids_;
     const std::vector<int> central_pdgids_;
-
-    std::vector<Momentum> momenta_;
   };
 }  // namespace cepgen
 
