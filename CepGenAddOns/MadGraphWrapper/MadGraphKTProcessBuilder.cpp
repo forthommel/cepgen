@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2022  Laurent Forthomme
+ *  Copyright (C) 2020-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,68 +18,47 @@
 
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Event/Event.h"
-#include "CepGen/Generator.h"
 #include "CepGen/Modules/ProcessFactory.h"
 #include "CepGen/Process/Process2to4.h"
-#include "CepGen/Utils/AbortHandler.h"
-#include "CepGenAddOns/MadGraphWrapper/MadGraphInterface.h"
-#include "CepGenAddOns/MadGraphWrapper/MadGraphProcess.h"
+#include "CepGenAddOns/MadGraphWrapper/MadGraphProcessBuilder.h"
 
 using namespace cepgen;
 
-class MadGraphProcessBuilder : public proc::Process2to4 {
+class MadGraphKTProcessBuilder : public MadGraphProcessBuilder, public proc::Process2to4 {
 public:
-  explicit MadGraphProcessBuilder(const ParametersList&);
-  proc::ProcessPtr clone() const override { return proc::ProcessPtr(new MadGraphProcessBuilder(*this)); }
+  explicit MadGraphKTProcessBuilder(const ParametersList&);
+  proc::ProcessPtr clone() const override { return proc::ProcessPtr(new MadGraphKTProcessBuilder(*this)); }
 
   static ParametersDescription description();
 
   void prepareProcessKinematics() override;
   double computeCentralMatrixElement() const override;
-
-private:
-  std::shared_ptr<MadGraphProcess> mg5_proc_;
 };
 
-MadGraphProcessBuilder::MadGraphProcessBuilder(const ParametersList& params)
-    : Process2to4(params, std::array<pdgid_t, 2>{}, 0) {
-  utils::AbortHandler();
-  try {
-    const auto& lib_file = steer<std::string>("lib");
-    if (!lib_file.empty())
-      loadLibrary(lib_file);
-    else {
-      const MadGraphInterface interf(params);
-      loadLibrary(interf.run());
-    }
-  } catch (const utils::RunAbortedException&) {
-    CG_FATAL("MadGraphProcessBuilder") << "MadGraph_aMC process generation aborted.";
-  }
-  // once MadGraph process library is loaded into runtime environment, can define its wrapper object
-  mg5_proc_.reset(new MadGraphProcess);
+MadGraphKTProcessBuilder::MadGraphKTProcessBuilder(const ParametersList& params)
+    : MadGraphProcessBuilder(params), Process2to4(params, std::array<pdgid_t, 2>{}, 0) {
   const auto& interm_part = mg5_proc_->intermediatePartons();
   const auto& cent_sys = mg5_proc_->centralSystem();
-  CG_DEBUG("MadGraphProcessBuilder") << "MadGraph_aMC process created for:\n\t"
-                                     << "* interm. parts.: " << interm_part << "\n\t"
-                                     << "* central system: " << cent_sys << ".";
+  CG_DEBUG("MadGraphKTProcessBuilder") << "MadGraph_aMC process created for:\n\t"
+                                       << "* interm. parts.: " << interm_part << "\n\t"
+                                       << "* central system: " << cent_sys << ".";
   setIntermediatePartons({(pdgid_t)interm_part[0], (pdgid_t)interm_part[1]});
   setProducedParticles(std::vector<pdgid_t>(cent_sys.begin(), cent_sys.end()));
 }
 
-void MadGraphProcessBuilder::prepareProcessKinematics() {
+void MadGraphKTProcessBuilder::prepareProcessKinematics() {
   if (!mg5_proc_)
-    CG_FATAL("MadGraphProcessBuilder") << "Process not properly linked!";
+    CG_FATAL("MadGraphKTProcessBuilder") << "Process not properly linked!";
 
-  const auto& params_card = steer<std::string>("parametersCard");
-  CG_INFO("MadGRaphProcessBuilder") << "Preparing process kinematics for card at \"" << params_card << "\".";
-  mg5_proc_->initialise(params_card);
+  CG_INFO("MadGraphKTProcessBuilder") << "Preparing process kinematics for card at \"" << params_card_ << "\".";
+  mg5_proc_->initialise(params_card_);
 }
 
-double MadGraphProcessBuilder::computeCentralMatrixElement() const {
+double MadGraphKTProcessBuilder::computeCentralMatrixElement() const {
   if (!mg5_proc_)
-    CG_FATAL("MadGraphProcessBuilder:eval") << "Process not properly linked!";
+    CG_FATAL("MadGraphKTProcessBuilder:eval") << "Process not properly linked!";
 
-  CG_DEBUG_LOOP("MadGraphProcessBuilder:eval")
+  CG_DEBUG_LOOP("MadGraphKTProcessBuilder:eval")
       << "Particles content:\n"
       << "incoming: " << q1_ << " (m=" << q1_.mass() << "), " << q2_ << " (m=" << q2_.mass() << ")\n"
       << "outgoing: " << p_c1_ << " (m=" << p_c1_.mass() << "), " << p_c2_ << " (m=" << p_c2_.mass() << ").";
@@ -91,13 +70,11 @@ double MadGraphProcessBuilder::computeCentralMatrixElement() const {
   return mg5_proc_->eval();
 }
 
-ParametersDescription MadGraphProcessBuilder::description() {
+ParametersDescription MadGraphKTProcessBuilder::description() {
   auto desc = Process2to4::description();
-  desc.setDescription("MadGraph_aMC process builder");
-  desc.add<std::string>("lib", "").setDescription("Precompiled library for this process definition");
-  desc.add<std::string>("parametersCard", "param_card.dat").setDescription("Runtime MadGraph parameters card");
-  desc += MadGraphInterface::description();
+  desc += MadGraphProcessBuilder::description();
+  desc.setDescription("MadGraph_aMC process builder (kT-factorised ME)");
   return desc;
 }
 
-REGISTER_PROCESS("mg5_aMC", MadGraphProcessBuilder)
+REGISTER_PROCESS("mg5_aMC", MadGraphKTProcessBuilder)
