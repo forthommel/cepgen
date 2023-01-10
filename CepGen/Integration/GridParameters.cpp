@@ -77,16 +77,18 @@ namespace cepgen {
   }
 
   bool GridParameters::correct(size_t bin) {
+    if (correc_.count(bin) == 0 || correc2_.count(bin) == 0)
+      throw CG_FATAL("GridParameters:correct") << "No correction parameter found for bin " << bin << ".";
     if (f_max2_ <= f_max_.at(bin))
       return true;
     f_max_old_ = f_max_.at(bin);
     f_max_diff_ = f_max2_ - f_max_old_;
-    correc_ = (num_points_.at(bin) - 1.) * f_max_diff_ / f_max_global_;
+    correc_[bin] = (num_points_.at(bin) - 1.) * f_max_diff_ / f_max_global_;
     if (f_max2_ >= f_max_global_)
-      correc_ *= f_max2_ / f_max_global_;
+      correc_[bin] *= f_max2_ / f_max_global_;
     setValue(bin, f_max2_);
-    correc_ -= correc2_;
-    correc2_ = 0.;
+    correc_[bin] -= correc2_[bin];
+    correc2_[bin] = 0.;
     f_max2_ = 0.;
     return false;
   }
@@ -95,18 +97,18 @@ namespace cepgen {
     if (weight <= f_max_.at(bin))
       return;
     f_max2_ = std::max(f_max2_, weight);
-    correc_ += 1.;
-    correc2_ -= 1.;
+    correc_[bin] += 1.;
+    correc2_[bin] -= 1.;
   }
 
   void GridParameters::initCorrectionCycle(size_t bin, float weight) {
     f_max_old_ = f_max_.at(bin);
     f_max_diff_ = weight - f_max_old_;
     setValue(bin, weight);
-    correc_ = (num_points_.at(bin) - 1) * f_max_diff_ / f_max_global_ - 1.;
+    correc_[bin] = (num_points_.at(bin) - 1) * f_max_diff_ / f_max_global_ - 1.;
 
     CG_DEBUG("GridParameters:initCorrectionCycle")
-        << "Correction " << correc_ << " will be applied "
+        << "Correction " << correc_[bin] << " will be applied "
         << "for phase space bin " << bin << " (" << utils::s("point", num_points_.at(bin), true) << "). "
         << "Maxima ratio: " << (f_max_diff_ / f_max_global_) << ".";
   }
