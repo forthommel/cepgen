@@ -189,11 +189,11 @@ namespace cepgen {
     if (workers_.empty() || !initialised_)
       initialise();
     size_t num_try = 0;
-    while (!workers_.at(0)->next(callback)) {
+    while (!integratorWorker().next(callback)) {
       if (num_try++ > 5)
         throw CG_FATAL("Generator:next") << "Failed to generate the next event!";
     }
-    return workers_.at(0)->integrand().process().event();
+    return integratorWorker().integrand().process().event();
   }
 
   void Generator::generate(size_t num_events, Event::callback callback) {
@@ -201,7 +201,7 @@ namespace cepgen {
 
     initialise();
 
-    //--- if invalid argument, retrieve from runtime parameters
+    // if argument is invalid, retrieve the number of events to generate from run parameters collection
     if (num_events < 1) {
       if (parameters_->generation().targetLuminosity() > 0.) {
         num_events = std::ceil(parameters_->generation().targetLuminosity() * result_);
@@ -209,17 +209,15 @@ namespace cepgen {
       } else
         num_events = parameters_->generation().maxGen();
     }
+    std::vector<std::thread> threads;
+    for (auto& worker : workers_)
+      threads.emplace_back(worker->thread(num_events, callback));
 
     CG_INFO("Generator") << utils::s("event", num_events, true) << " will be generated.";
 
     const utils::Timer tmr;
 
-    //--- launch the event generation
-
-    std::vector<std::thread> threads;
-    for (auto& worker : workers_)
-      threads.emplace_back(worker->thread(num_events, callback));
-
+    // launch the event generation
     for (auto& thread : threads)
       thread.join();
 
