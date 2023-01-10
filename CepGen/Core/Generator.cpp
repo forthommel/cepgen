@@ -157,13 +157,6 @@ namespace cepgen {
       mod->setCrossSection(result_, result_error_);
   }
 
-  GeneratorWorker& Generator::integratorWorker() const {
-    if (workers_.empty())
-      throw CG_FATAL("Generator:integratorWorker")
-          << "Failed to retrieve the integrator worker! Did you already initialise them all?";
-    return *workers_.at(0);
-  }
-
   const Event& Generator::generateOneEvent(Event::callback callback) {
     generate(1, callback);
     return integratorWorker().integrand().process().event();
@@ -243,5 +236,24 @@ namespace cepgen {
                          << "(" << rate_ms << " ms/event).\n\t"
                          << "Equivalent luminosity: " << utils::format("%g", equiv_lumi) << " pb^-1.\n\t"
                          << "Events generated per worker: " << num_gen_evt_per_worker << ".";
+  }
+
+  GeneratorWorker& Generator::integratorWorker() const {
+    if (workers_.empty())
+      throw CG_FATAL("Generator:integratorWorker")
+          << "Failed to retrieve the integrator worker! Did you already initialise them all?";
+    return *workers_.at(0);
+  }
+
+  const GeneratorWorker& Generator::worker(size_t wid) const {
+    if (wid >= workers_.size())
+      throw CG_FATAL("Generator:worker").log([this, &wid](auto& log) {
+        log << "Worker #" << wid << " does not exist. List of worker(s): ";
+        std::vector<size_t> ids;
+        for (size_t i = 0; i < workers_.size(); ++i)
+          ids.emplace_back(i);
+        log << ids << ".";
+      });
+    return *workers_.at(wid);
   }
 }  // namespace cepgen
