@@ -20,6 +20,7 @@
 #define CepGen_Integration_GridParameters_h
 
 #include <cstddef>
+#include <unordered_map>
 #include <vector>
 
 namespace cepgen {
@@ -61,9 +62,9 @@ namespace cepgen {
     /// Mark the grid as prepared
     void setPrepared(bool prepared = true) { gen_prepared_ = prepared; }
     /// Correction to apply on the next phase space point generation
-    float correctionValue() const { return correc_; }
+    float correctionValue(size_t bin) const { return correc_.at(bin); }
     /// Set the correction to apply on the next phase space point generation
-    void setCorrectionValue(float correc) { correc_ = correc; }
+    void setCorrectionValue(size_t bin, float correc) { correc_[bin] = correc; }
     /// Apply the correction requested at the previous generation
     bool correct(size_t);
     void rescale(size_t, float);
@@ -77,9 +78,6 @@ namespace cepgen {
     size_t ndim_{0};
     /// Has the grid been already prepared?
     bool gen_prepared_{false};
-    /// Correction to apply on the next phase space point generation
-    float correc_{0.};
-    float correc2_{0.};
     /// Point coordinates in grid
     std::vector<coord_t> coords_;
     /// Number of functions values evaluated for this point
@@ -91,6 +89,9 @@ namespace cepgen {
     float f_max2_{0.};
     float f_max_diff_{0.};
     float f_max_old_{0.};
+    /// Binned correction
+    /// Correction to apply on the next phase space point generation
+    std::unordered_map<size_t, float> correc_, correc2_;
   };
 }  // namespace cepgen
 

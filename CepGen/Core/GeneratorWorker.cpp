@@ -131,13 +131,13 @@ namespace cepgen {
 
     CG_DEBUG_LOOP("GeneratorWorker:correction") << "Correction cycles are started.\n\t"
                                                 << "bin = " << ps_bin_ << "\n\t"
-                                                << "correction value = " << grid()->correctionValue() << ".";
+                                                << "correction value = " << grid()->correctionValue(ps_bin_) << ".";
 
-    if (grid()->correctionValue() >= 1.)
-      grid()->setCorrectionValue(grid()->correctionValue() - 1.);
+    if (grid()->correctionValue(ps_bin_) >= 1.)
+      grid()->setCorrectionValue(ps_bin_, grid()->correctionValue(ps_bin_) - 1.);
 
-    if (integrator_->uniform() < grid()->correctionValue()) {
-      grid()->setCorrectionValue(-1.);
+    if (integrator_->uniform() < grid()->correctionValue(ps_bin_)) {
+      grid()->setCorrectionValue(ps_bin_, -1.);
       // select x values in phase space bin
       grid()->shoot(integrator_, ps_bin_, coords_);
       const double weight = integrator_->eval(*integrand_, coords_);
