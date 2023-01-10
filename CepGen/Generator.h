@@ -115,6 +115,8 @@ namespace cepgen {
     void integrate();
     /// Integrator task-related worker
     GeneratorWorker& integratorWorker() const;
+    /// A worker thread
+    const GeneratorWorker& worker(size_t) const;
     /**
        * Compute the cross section for the run parameters defined by this object.
        * This returns the cross section as well as the absolute error computed along.
