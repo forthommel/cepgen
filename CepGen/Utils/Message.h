@@ -34,8 +34,8 @@ namespace cepgen {
     explicit inline Message() = default;
     virtual ~Message() = default;
     /// Dump the full exception information in a given output stream
-    /// \param[inout] os the output stream where the information is dumped
-    virtual void dump(std::ostream* os = nullptr) const = 0;
+    /// \param[inout] ios the output stream where the information is dumped
+    virtual void dump(std::ostream* ios = nullptr) const = 0;
     static std::string now();  ///< Human-readable date/time
   };
 
@@ -155,7 +155,7 @@ namespace cepgen {
     /// Message type
     const MessageType& type() const { return type_; }
     /// Human-readable dump of the message
-    void dump(std::ostream* os = nullptr) const noexcept override;
+    void dump(std::ostream* = nullptr) const noexcept override;
     /// Output stream object
     std::ostream& stream() { return message_; }
 
@@ -178,7 +178,7 @@ namespace cepgen {
     inline NullStream() = default;
     /// Empty constructor
     inline NullStream(const LoggedMessage&) {}
-    void dump(std::ostream* os = nullptr) const override { (void)(os); }
+    void dump(std::ostream* = nullptr) const override {}
     /// Stream operator (null and void)
     template <class T>
     NullStream& operator<<(const T&) {
