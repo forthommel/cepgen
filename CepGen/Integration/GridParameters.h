@@ -44,7 +44,7 @@ namespace cepgen {
     /// Grid multiplicity
     size_t size() const;
     /// Number of times a phase space point has been randomly selected
-    const coord_t& n(size_t coord) const;
+    const coord_t& n(size_t) const;
     /// Global function maximum
     float globalMax() const { return f_max_global_; }
     /// Maximal function value for a given grid coordinate
@@ -52,7 +52,7 @@ namespace cepgen {
     /// Set the function value for a given grid coordinate
     void setValue(size_t, float);
     /// Shoot a phase space point for a grid coordinate
-    void shoot(const Integrator* integ, size_t coord, std::vector<double>& out) const;
+    void shoot(const Integrator*, size_t, std::vector<double>& out) const;
     /// Specify a new trial has been attempted for bin
     void increment(size_t coord);
     /// Number of points already shot for a given grid coordinate
@@ -62,15 +62,14 @@ namespace cepgen {
     /// Mark the grid as prepared
     void setPrepared(bool prepared = true) { gen_prepared_ = prepared; }
     /// Correction to apply on the next phase space point generation
-    float correctionValue(size_t bin) const { return correc_.at(bin); }
+    float correctionValue(size_t bin) const { return bin_correc_.at(bin).correc; }
     /// Set the correction to apply on the next phase space point generation
-    void setCorrectionValue(size_t bin, float correc) { correc_[bin] = correc; }
+    void setCorrectionValue(size_t bin, float correc) { bin_correc_[bin].correc = correc; }
     /// Apply the correction requested at the previous generation
     bool correct(size_t);
     void rescale(size_t, float);
     void initCorrectionCycle(size_t, float);
-    double maxValueDiff() const { return f_max_diff_; }
-    double maxHistValue() const { return f_max_old_; }
+    double maxHist(const Integrator*, size_t bin) const;
 
   private:
     void generateCoordinates(coord_t&, size_t) const;
@@ -80,18 +79,19 @@ namespace cepgen {
     bool gen_prepared_{false};
     /// Point coordinates in grid
     std::vector<coord_t> coords_;
-    /// Number of functions values evaluated for this point
-    std::vector<size_t> num_points_;
-    /// Maximal value of the function at one given point
-    std::vector<float> f_max_;
     /// Maximal value of the function in the considered integration range
     float f_max_global_{0.};
-    float f_max2_{0.};
-    float f_max_diff_{0.};
-    float f_max_old_{0.};
     /// Binned correction
+    struct BinCorrection {
+      size_t num_points{0ul};  ///< Number of functions values evaluated for this point
+      float correc{0.}, correc2{0.};
+      float f_max{0.};  ///< Maximal value of the function at one given point
+      float f_max2{0.};
+      float f_max_diff{0.};
+      float f_max_old{0.};
+    };
     /// Correction to apply on the next phase space point generation
-    std::unordered_map<size_t, float> correc_, correc2_;
+    std::vector<BinCorrection> bin_correc_;
   };
 }  // namespace cepgen
 

@@ -122,7 +122,8 @@ namespace cepgen {
       workers_.emplace_back(new GeneratorWorker(const_cast<const Parameters*>(parameters_.get()),
                                                 const_cast<const Integrator*>(integrator_.get())));
 
-    CG_INFO("Generator:integrator") << "Generator will use a " << integrator_->name() << "-type integrator for "
+    CG_INFO("Generator:integrator") << "Integration with a " << integrator_->name() << "-type, dimension-"
+                                    << integratorWorker().integrand().size() << " integrator, generation using "
                                     << utils::s("worker", parameters_->generation().numThreads(), true) << ".";
   }
 
@@ -145,7 +146,7 @@ namespace cepgen {
     if (!integrator_)
       throw CG_FATAL("Generator:integrate") << "No integrator object was declared for the generator!";
 
-    integrator_->integrate(worker_->integrand(), result_, result_error_);
+    integrator_->integrate(integratorWorker().integrand(), result_, result_error_);
 
     CG_DEBUG("Generator:integrate") << "Computed cross section: (" << result_ << " +- " << result_error_ << ") pb.";
 
@@ -178,7 +179,7 @@ namespace cepgen {
     parameters_->initialise();
 
     // prepare the grid parameters for a potential event generation
-    grid_.reset(new GridParameters(integrator_->size()));
+    grid_.reset(new GridParameters(integratorWorker().integrand().size()));
     for (auto& worker : workers_)
       worker->setGrid(grid_.get());
 

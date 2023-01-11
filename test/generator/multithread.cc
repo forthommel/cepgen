@@ -36,8 +36,11 @@ int main(int argc, char* argv[]) {
     gen.computeXsection(xsec, xsec_unc);
   }
 
-  for (int i = 0; i < num_threads; ++i)
+  for (int i = 0; i < num_threads; ++i) {
+    CG_TEST(&gen.worker(i).integrand().process() != &gen.parametersRef().process(),
+            "Thread #" + to_string(i) + " process");
     CG_TEST(gen.worker(i).integrand().process().kinematics() == kin, "Thread #" + to_string(i) + " process kinematics");
+  }
 
   CG_TEST_SUMMARY;
 }
