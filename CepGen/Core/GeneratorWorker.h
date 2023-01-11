@@ -41,8 +41,6 @@ namespace cepgen {
     virtual ~GeneratorWorker();
 
     void setGrid(const GridParameters* grid) { grid_ = grid; }
-    ThreadSafe<GridParameters> grid();
-    const GridParameters* grid() const { return grid_; }
 
     /// Prepare the object for event generation
     void computeGenerationParameters();

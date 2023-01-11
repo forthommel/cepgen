@@ -166,9 +166,10 @@ namespace cepgen {
   template <typename T>
   class ThreadSafe {
   public:
-    explicit ThreadSafe(T& obj) : object_(&obj) { Generator::mutex.lock(); }
+    explicit ThreadSafe(const T* obj) : object_(const_cast<T*>(obj)) { Generator::mutex.lock(); }
     ~ThreadSafe() { Generator::mutex.unlock(); }
     T* operator->() { return object_; }
+    T& operator*() { return *object_; }
 
   private:
     T* object_;
