@@ -23,6 +23,7 @@
 #include "CepGen/EventFilter/EventBrowser.h"
 #include "CepGen/EventFilter/EventExporter.h"
 #include "CepGen/EventFilter/EventModifier.h"
+#include "CepGen/Generator.h"
 #include "CepGen/Integration/ProcessIntegrand.h"
 #include "CepGen/Parameters.h"
 #include "CepGen/Process/Process.h"
@@ -87,7 +88,7 @@ namespace cepgen {
   }
 
   double ProcessIntegrand::eval(const std::vector<double>& x) {
-    CG_TICKER(const_cast<Parameters*>(params_)->timeKeeper());
+    CG_TICKER(ThreadSafe<Parameters>(params_)->timeKeeper());
 
     //--- start the timer
     tmr_->reset();
