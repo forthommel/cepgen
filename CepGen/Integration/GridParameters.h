@@ -84,7 +84,8 @@ namespace cepgen {
     /// Binned correction
     struct BinCorrection {
       size_t num_points{0ul};  ///< Number of functions values evaluated for this point
-      float correc{0.}, correc2{0.};
+      float correc{0.};        ///< Correction to apply on the next phase space point generation
+      float correc2{0.};
       float f_max{0.};  ///< Maximal value of the function at one given point
       float f_max2{0.};
       float f_max_diff{0.};
