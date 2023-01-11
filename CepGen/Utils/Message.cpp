@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "CepGen/Generator.h"
 #include "CepGen/Utils/Message.h"
 #include "CepGen/Utils/String.h"
 
@@ -52,11 +53,8 @@ namespace cepgen {
     return exc;
   }
 
-  void LoggedMessage::dump(std::ostream* os) const noexcept {
-    if (!os)
-      os = utils::Logger::get().output();
-    if (!os)
-      return;
+  void LoggedMessage::dump(std::ostream* ios) const noexcept {
+    ThreadSafe<std::ostream> os(ios ? ios : utils::Logger::get().output());
 
     if (type_ == MessageType::verbatim || type_ == MessageType::undefined) {
       (*os) << message_.str() << "\n";
