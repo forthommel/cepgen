@@ -44,6 +44,8 @@ namespace cepgen {
     ThreadSafe<GridParameters> grid();
     const GridParameters* grid() const { return grid_; }
 
+    /// Prepare the object for event generation
+    void computeGenerationParameters();
     /// Launch the event generation
     /// \param[in] num_events Number of events to generate
     /// \param[in] callback The callback function applied on every event generated
@@ -71,8 +73,6 @@ namespace cepgen {
     bool storeEvent(Event::callback);
     /// Apply a correction cycle to the grid
     bool correctionCycle(bool&);
-    /// Prepare the object for event generation
-    void computeGenerationParameters();
 
     /// Steering parameters for the event generation
     /// \note NOT owning

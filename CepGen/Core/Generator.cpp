@@ -182,6 +182,8 @@ namespace cepgen {
     grid_.reset(new GridParameters(integratorWorker().integrand().size()));
     for (auto& worker : workers_)
       worker->setGrid(grid_.get());
+    if (!grid_->prepared())
+      integratorWorker().computeGenerationParameters();
 
     initialised_ = true;
   }
