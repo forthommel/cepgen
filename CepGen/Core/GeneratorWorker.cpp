@@ -79,10 +79,6 @@ namespace cepgen {
     if (!grid_)
       throw CG_FATAL("GeneratorWorker:generate") << "No grid object handled!";
 
-    // initialise grid if not already done
-    if (!grid()->prepared())
-      computeGenerationParameters();
-
     // apply correction cycles if required from previous event
     if (ps_bin_ != UNASSIGNED_BIN) {
       bool store = false;
