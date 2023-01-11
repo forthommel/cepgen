@@ -39,7 +39,6 @@ namespace cepgen {
     if (!integrator_)
       throw CG_FATAL("GeneratorWorker") << "Invalid integrator object at 0x" << integrator_ << " specified!";
 
-    grid_.reset(new GridParameters(integrand_->size()));
     coords_.resize(integrand_->size());
 
     CG_DEBUG("GeneratorWorker:integrator")
@@ -79,11 +78,9 @@ namespace cepgen {
       throw CG_FATAL("GeneratorWorker:generate") << "No integrator object handled!";
     if (!grid_)
       throw CG_FATAL("GeneratorWorker:generate") << "No grid object handled!";
-    if (!grid()->prepared())
-      computeGenerationParameters();
 
     // initialise grid if not already done
-    if (!grid_->prepared())
+    if (!grid()->prepared())
       computeGenerationParameters();
 
     // apply correction cycles if required from previous event
@@ -144,7 +141,7 @@ namespace cepgen {
       // parameter for correction of correction
       grid()->rescale(ps_bin_, weight);
       // accept event
-      if (weight >= integrator_->uniform(0., grid()->maxValueDiff()) + grid()->maxHistValue()) {
+      if (weight >= grid()->maxHist(integrator_, ps_bin_)) {
         store = true;
         return true;
       }
@@ -191,7 +188,7 @@ namespace cepgen {
                                       << "for the generation of unweighted events.";
 
     const double inv_num_points = 1. / params_->generation().numPoints();
-    std::vector<double> point_coord(integrator_->size(), 0.);
+    std::vector<double> point_coord(integrand_->size(), 0.);
     if (point_coord.size() < grid()->n(0).size())
       throw CG_FATAL("GridParameters:shoot") << "Coordinates vector multiplicity is insufficient!";
 
