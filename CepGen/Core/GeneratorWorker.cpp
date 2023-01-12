@@ -43,8 +43,7 @@ namespace cepgen {
     CG_DEBUG("GeneratorWorker:integrator")
         << "New generator worker initialised for integration/event generation.\n\t"
         << "Parameters at " << (void*)params_ << ".\n\t"
-        << "Dim-" << integrand_->size() << " " << integrator_->name() << " integrator "
-        << "set for dim-" << grid_->n(0).size() << " grid.";
+        << "Dim-" << integrand_->size() << " " << integrator_->name() << " integrator.";
   }
 
   GeneratorWorker::~GeneratorWorker() {
@@ -62,7 +61,8 @@ namespace cepgen {
 
   void GeneratorWorker::generate(size_t num_events, Event::callback callback) {
     if (!params_)
-      throw CG_FATAL("GeneratorWorker:generate") << "No steering parameters specified!";
+      throw CG_FATAL("GeneratorWorker:generate") << "[thread#" << std::this_thread::get_id() << "] "
+                                                 << "No steering parameters specified!";
 
     if (num_events < 1)
       num_events = params_->generation().maxGen();
@@ -75,9 +75,11 @@ namespace cepgen {
     CG_TICKER(ThreadSafe<Parameters>(params_)->timeKeeper());
 
     if (!integrator_)
-      throw CG_FATAL("GeneratorWorker:generate") << "No integrator object handled!";
+      throw CG_FATAL("GeneratorWorker:generate") << "[thread#" << std::this_thread::get_id() << "] "
+                                                 << "No integrator object handled!";
     if (!grid_)
-      throw CG_FATAL("GeneratorWorker:generate") << "No grid object handled!";
+      throw CG_FATAL("GeneratorWorker:generate") << "[thread#" << std::this_thread::get_id() << "] "
+                                                 << "No grid object handled!";
 
     // apply correction cycles if required from previous event
     if (ps_bin_ != UNASSIGNED_BIN) {
@@ -122,7 +124,8 @@ namespace cepgen {
   bool GeneratorWorker::correctionCycle(bool& store) {
     CG_TICKER(ThreadSafe<Parameters>(params_)->timeKeeper());
 
-    CG_DEBUG_LOOP("GeneratorWorker:correction") << "Correction cycles are started.\n\t"
+    CG_DEBUG_LOOP("GeneratorWorker:correction") << "[thread#" << std::this_thread::get_id() << "] "
+                                                << "Correction cycles are started.\n\t"
                                                 << "bin = " << ps_bin_ << "\n\t"
                                                 << "correction value = " << grid_->correctionValue(ps_bin_) << ".";
 
@@ -159,7 +162,8 @@ namespace cepgen {
 
     const auto ngen = params_->numGeneratedEvents();
     if ((ngen + 1) % params_->generation().printEvery() == 0)
-      CG_INFO("GeneratorWorker:store") << utils::s("event", ngen + 1, true) << " generated.";
+      CG_INFO("GeneratorWorker:store") << "[thread#" << std::this_thread::get_id() << "] "
+                                       << utils::s("event", ngen + 1, true) << " generated.";
     {
       std::lock_guard<std::mutex>(Generator::mutex);
       if (callback)
@@ -177,10 +181,10 @@ namespace cepgen {
   //-----------------------------------------------------------------------------------------------
 
   void GeneratorWorker::computeGenerationParameters() {
-    if (grid_->prepared())
-      return;  // do not prepare again the grid
+    if (!grid_)
+      throw CG_FATAL("GeneratorWorker:setGen") << "No generator grid object specified.";
     if (!params_)
-      throw CG_FATAL("GeneratorWorker:setGen") << "No steering parameters specified!";
+      throw CG_FATAL("GeneratorWorker:setGen") << "No steering parameters specified.";
 
     integrand_->setStorage(false);
 
@@ -218,7 +222,7 @@ namespace cepgen {
       CG_DEBUG_LOOP("GeneratorWorker:setGen").log([&](auto& dbg) {
         const double sig = sqrt(sig2);
         const double eff = (grid_->maxValue(i) != 0.) ? av / grid_->maxValue(i) : 0.;
-        dbg << "n-vector for bin " << i << ": " << utils::repr(grid_->n(i)) << "\n\t"
+        dbg << "n-vector for bin " << i << ": " << grid_->n(i) << "\n\t"
             << "av   = " << av << "\n\t"
             << "sig  = " << sig << "\n\t"
             << "fmax = " << grid_->maxValue(i) << "\n\t"

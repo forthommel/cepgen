@@ -32,6 +32,8 @@ namespace cepgen {
       coords_.emplace_back(coord);
       bin_correc_.emplace_back();
     }
+    CG_DEBUG("GridParameters") << "Initialised a " << ndim << "-dimension grid with "
+                               << utils::s("bin", coords_.size(), true) << ".";
   }
 
   size_t GridParameters::size() const { return coords_.size(); }
