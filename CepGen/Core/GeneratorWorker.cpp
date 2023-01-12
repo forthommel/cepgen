@@ -27,6 +27,7 @@
 #include "CepGen/Integration/ProcessIntegrand.h"
 #include "CepGen/Parameters.h"
 #include "CepGen/Process/Process.h"
+#include "CepGen/Utils/AbortHandler.h"
 #include "CepGen/Utils/ProgressBar.h"
 #include "CepGen/Utils/String.h"
 #include "CepGen/Utils/TimeKeeper.h"
@@ -54,6 +55,11 @@ namespace cepgen {
   // events generation part
   //-----------------------------------------------------------------------------------------------
 
+  std::thread GeneratorWorker::thread(size_t num_events, Event::callback callback) {
+    utils::gRunMode = 1;
+    return std::thread([=] { generate(num_events, callback); });
+  }
+
   void GeneratorWorker::generate(size_t num_events, Event::callback callback) {
     if (!params_)
       throw CG_FATAL("GeneratorWorker:generate") << "No steering parameters specified!";
@@ -61,7 +67,7 @@ namespace cepgen {
     if (num_events < 1)
       num_events = params_->generation().maxGen();
 
-    while (params_->numGeneratedEvents() < num_events)
+    while (params_->numGeneratedEvents() < num_events && (int)utils::gRunMode >= 0)
       next(callback);
   }
 
@@ -85,7 +91,7 @@ namespace cepgen {
     //--- normal generation cycle
 
     double weight = 0.;
-    while (true) {
+    while ((int)utils::gRunMode >= 0) {
       double y = -1.;
       // select a function value and reject if fmax is too small
       do {
