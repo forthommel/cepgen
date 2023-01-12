@@ -54,7 +54,7 @@ namespace cepgen {
   }
 
   void LoggedMessage::dump(std::ostream* ios) const noexcept {
-    ThreadSafe<std::ostream> os(ios ? ios : utils::Logger::get().output());
+    auto* os = ios ? ios : utils::Logger::get().probe<std::ostream*>([](auto& log) { return log.output(); });
 
     if (type_ == MessageType::verbatim || type_ == MessageType::undefined) {
       (*os) << message_.str() << "\n";

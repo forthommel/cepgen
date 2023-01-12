@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2021  Laurent Forthomme
+ *  Copyright (C) 2013-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,12 +22,14 @@
 #include <regex>
 #include <vector>
 
+#include "CepGen/Utils/ThreadSafeObject.h"
+
 namespace cepgen {
   namespace utils {
     /// \brief General purposes logger
     /// \author Laurent Forthomme <laurent.forthomme@cern.ch>
     /// \date 15 Oct 2015
-    class Logger {
+    class Logger : public ThreadSafeObject<Logger> {
     public:
       /// Retrieve the running instance of the logger
       static Logger& get(std::ostream* os = nullptr);
