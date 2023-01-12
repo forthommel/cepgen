@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2023  Laurent Forthomme
+ *  Copyright (C) 2017-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,7 +26,8 @@
 
 namespace cepgen {
   namespace utils {
-    extern std::atomic<int> gSignal;
+    /// Abort signal handler
+    std::atomic<int> gRunMode{0};
     /// Exception raised when the user terminates the process
     struct RunAbortedException : std::runtime_error {
       RunAbortedException() : std::runtime_error("CepGen run aborted") {}
@@ -36,26 +37,24 @@ namespace cepgen {
     };
 
     /// Object handling an user-driven process abortion
+    /// \date Oct 2017
     class AbortHandler {
     public:
       /// Define a process abortion procedure
       explicit AbortHandler(int flags = SA_SIGINFO) {
-        action_.sa_sigaction = handle_ctrl_c;
+        action_.sa_sigaction = [](int sig, siginfo_t* si, void*) {
+          auto mode = (int)gRunMode;
+          gRunMode = -1;
+          if (mode == 0 && (sig == SIGINT || abs(si->si_code) != SIGABRT))  // single-thread case
+            throw RunAbortedException();
+        };
         sigemptyset(&action_.sa_mask);
         action_.sa_flags = flags;
-        init();
-      }
-
-    private:
-      static void handle_ctrl_c(int signal, siginfo_t* si, void*) {
-        gSignal = signal;
-        if (abs(si->si_code) != SIGABRT)
-          throw RunAbortedException();
-      }
-      void init() {
         if (sigaction(SIGINT, &action_, nullptr) != 0 || sigaction(SIGTERM, &action_, nullptr) != 0)
           throw CG_FATAL("AbortHandler") << "Failed to initialise the C-c handler!";
       }
+
+    private:
       struct sigaction action_;
     };
   }  // namespace utils

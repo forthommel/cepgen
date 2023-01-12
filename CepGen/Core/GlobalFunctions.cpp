@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2021  Laurent Forthomme
+ *  Copyright (C) 2013-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,10 +35,6 @@
 #endif
 
 namespace cepgen {
-  namespace utils {
-    std::atomic<int> gSignal;  ///< Abort signal handler
-  }                            // namespace utils
-
   bool loadLibrary(const std::string& path, bool match) {
     if (utils::contains(loaded_libraries, path))
       return true;
