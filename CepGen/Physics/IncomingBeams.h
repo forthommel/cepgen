@@ -29,11 +29,16 @@
 
 namespace cepgen {
   /// Beam/primary particle's kinematics
-  class IncomingBeams : public SteeredObject<IncomingBeams> {
+  class IncomingBeams final : public SteeredObject<IncomingBeams> {
   public:
     explicit IncomingBeams(const ParametersList&);
+    IncomingBeams(const IncomingBeams&);
+    ~IncomingBeams();
+
+    IncomingBeams& operator=(const IncomingBeams&);
 
     static ParametersDescription description();
+
     void setParameters(const ParametersList&) override;
     /// List containing all parameters handled
     const ParametersList& parameters() const override;
@@ -54,12 +59,12 @@ namespace cepgen {
     double sqrtS() const;
 
     /// Form factors evaluator
-    formfac::Parameterisation* formFactors() const { return form_factors_.get(); }
+    formfac::Parameterisation* formFactors() const { return form_factors_; }
     /// Set a form factors evaluator object
     void setFormFactors(std::unique_ptr<formfac::Parameterisation>);
 
     /// Structure functions evaluator
-    strfun::Parameterisation* structureFunctions() const { return str_fun_.get(); }
+    strfun::Parameterisation* structureFunctions() const { return str_fun_; }
     /// Set a structure functions evaluator object
     void setStructureFunctions(std::unique_ptr<strfun::Parameterisation>);
     /// Set the integer-type of structure functions evaluator to build
@@ -69,9 +74,9 @@ namespace cepgen {
     Beam pos_beam_;
     Beam neg_beam_;
     /// Type of form factors to consider
-    std::shared_ptr<formfac::Parameterisation> form_factors_;
+    formfac::Parameterisation* form_factors_{nullptr};
     /// Type of structure functions to consider
-    std::shared_ptr<strfun::Parameterisation> str_fun_;
+    strfun::Parameterisation* str_fun_{nullptr};
   };
 }  // namespace cepgen
 

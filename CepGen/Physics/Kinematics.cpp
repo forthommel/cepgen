@@ -71,8 +71,6 @@ namespace cepgen {
         per_part.set<ParametersList>(std::to_string(cuts_vs_part.first), cuts_vs_part.second.parameters(extended));
       params.set<ParametersList>("cuts", per_part);
     }
-    CG_DEBUG("Kinematics:parameters") << "Kinematics parameters values retrieved:\n"
-                                      << ParametersDescription(params) << ".";
     return params;
   }
 

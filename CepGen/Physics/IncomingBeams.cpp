@@ -35,6 +35,29 @@ namespace cepgen {
     setParameters(params_);
   }
 
+  IncomingBeams::IncomingBeams(const IncomingBeams& oth)
+      : SteeredObject(oth), pos_beam_(oth.pos_beam_), neg_beam_(oth.neg_beam_) {
+    *this = oth;
+  }
+
+  IncomingBeams::~IncomingBeams() {
+    if (form_factors_)
+      delete form_factors_;
+    if (str_fun_)
+      delete str_fun_;
+  }
+
+  IncomingBeams& IncomingBeams::operator=(const IncomingBeams& oth) {
+    SteeredObject::operator=(oth);
+    pos_beam_ = oth.pos_beam_;
+    neg_beam_ = oth.neg_beam_;
+    if (oth.form_factors_)
+      form_factors_ = new formfac::Parameterisation(*oth.form_factors_);
+    if (oth.str_fun_)
+      str_fun_ = new strfun::Parameterisation(*oth.str_fun_);
+    return *this;
+  }
+
   void IncomingBeams::setParameters(const ParametersList& params) {
     SteeredObject::setParameters(params);
     ParametersList plist_pos, plist_neg;
@@ -121,8 +144,9 @@ namespace cepgen {
     //--- form factors
     const auto ff_mode = steer<std::string>("formFactors");
     if (!ff_mode.empty() || !form_factors_)
-      form_factors_ =
-          formfac::FormFactorsFactory::get().build(ff_mode.empty() ? formfac::gFFStandardDipoleHandler : ff_mode);
+      form_factors_ = formfac::FormFactorsFactory::get()
+                          .build(ff_mode.empty() ? formfac::gFFStandardDipoleHandler : ff_mode)
+                          .release();
 
     const auto mode = steerAs<int, mode::Kinematics>("mode");
     if (mode != mode::Kinematics::invalid) {
@@ -151,7 +175,7 @@ namespace cepgen {
     auto strfun = steer<ParametersList>("structureFunctions");
     if (!strfun.empty() || !str_fun_) {
       CG_DEBUG("IncomingBeams") << "Structure functions modelling to be built: " << strfun << ".";
-      str_fun_ = strfun::StructureFunctionsFactory::get().build(strfun);
+      str_fun_ = strfun::StructureFunctionsFactory::get().build(strfun).release();
     }
     //--- parton fluxes for kt-factorisation
     if (params_.has<std::vector<int> >("ktFluxes")) {
@@ -263,11 +287,11 @@ namespace cepgen {
     }
     CG_DEBUG("IncomingBeams:setStructureFunctions")
         << "Structure functions modelling to be built: " << sf_params << ".";
-    str_fun_ = strfun::StructureFunctionsFactory::get().build(sf_params);
+    str_fun_ = strfun::StructureFunctionsFactory::get().build(sf_params).release();
   }
 
   void IncomingBeams::setStructureFunctions(std::unique_ptr<strfun::Parameterisation> param) {
-    str_fun_ = std::move(param);
+    str_fun_ = param.release();
   }
 
   ParametersDescription IncomingBeams::description() {
@@ -288,9 +312,8 @@ namespace cepgen {
     desc.add<std::string>("formFactors", "").setDescription("Beam form factors modelling");
     desc.add<int>("mode", (int)mode::Kinematics::invalid)
         .setDescription("Process kinematics mode (1 = elastic, (2-3) = single-dissociative, 4 = double-dissociative)");
-    auto sf_desc = strfun::Parameterisation::description();
-    sf_desc.setName<int>(11);  // default is SY
-    desc.add<ParametersDescription>("structureFunctions", sf_desc)
+    desc.add<ParametersDescription>("structureFunctions",
+                                    strfun::Parameterisation::description().setName<int>(11))  // default is SY
         .setDescription("Beam inelastic structure functions modelling");
     desc.add<int>("ktFluxes", -1).setDescription("kT-factorised fluxes modelling");
     return desc;
