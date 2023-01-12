@@ -23,10 +23,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "CepGen/Utils/ThreadSafeObject.h"
+
 namespace cepgen {
   class Integrator;
   /// A parameters placeholder for the grid integration helper
-  class GridParameters {
+  class GridParameters : public utils::ThreadSafeObject<GridParameters> {
   public:
     /// Build a generation grid for a ndim-dimensional phase space
     explicit GridParameters(size_t ndim);

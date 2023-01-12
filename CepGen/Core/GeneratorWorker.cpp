@@ -100,7 +100,7 @@ namespace cepgen {
         // ...
         ps_bin_ = integrator_->uniform(0., grid_->size());
         y = integrator_->uniform(0., grid_->globalMax());
-        { ThreadSafe<GridParameters>(grid_)->increment(ps_bin_); }
+        grid_->apply([&](auto& grid) { grid.increment(ps_bin_); });
       } while (y > grid_->maxValue(ps_bin_));
       // shoot a point x in this bin
       grid_->shoot(integrator_, ps_bin_, coords_);
@@ -113,7 +113,7 @@ namespace cepgen {
     if (weight > grid_->maxValue(ps_bin_)) {
       // if weight is higher than local or global maximum,
       // init correction cycle for the next event
-      ThreadSafe<GridParameters>(grid_)->initCorrectionCycle(ps_bin_, weight);
+      grid_->apply([&](auto& grid) { grid.initCorrectionCycle(ps_bin_, weight); });
     } else  // no grid correction needed for this bin
       ps_bin_ = UNASSIGNED_BIN;
 
@@ -129,17 +129,16 @@ namespace cepgen {
                                                 << "bin = " << ps_bin_ << "\n\t"
                                                 << "correction value = " << grid_->correctionValue(ps_bin_) << ".";
 
-    if (grid_->correctionValue(ps_bin_) >= 1.) {
-      ThreadSafe<GridParameters>(grid_)->setCorrectionValue(ps_bin_, grid_->correctionValue(ps_bin_) - 1.);
-    }
+    if (grid_->correctionValue(ps_bin_) >= 1.)
+      grid_->apply([&](auto& grid) { grid.setCorrectionValue(ps_bin_, grid_->correctionValue(ps_bin_) - 1.); });
 
     if (integrator_->uniform() < grid_->correctionValue(ps_bin_)) {
-      { ThreadSafe<GridParameters>(grid_)->setCorrectionValue(ps_bin_, -1.); }
+      grid_->apply([&](auto& grid) { grid.setCorrectionValue(ps_bin_, -1.); });
       // select x values in phase space bin
       grid_->shoot(integrator_, ps_bin_, coords_);
       const double weight = integrator_->eval(*integrand_, coords_);
       // parameter for correction of correction
-      { ThreadSafe<GridParameters>(grid_)->rescale(ps_bin_, weight); }
+      grid_->apply([&](auto& grid) { grid.rescale(ps_bin_, weight); });
       // accept event
       if (weight >= grid_->maxHist(integrator_, ps_bin_)) {
         store = true;
@@ -149,9 +148,7 @@ namespace cepgen {
     }
     // correction if too big weight is found while correction
     // (all your bases are belong to us...)
-    bool correct = false;
-    { correct = ThreadSafe<GridParameters>(grid_)->correct(ps_bin_); }
-    return correct;
+    return grid_->probe<bool>([&](auto& grid) { return grid.correct(ps_bin_); });
   }
 
   bool GeneratorWorker::storeEvent(Event::callback callback) {
@@ -208,7 +205,7 @@ namespace cepgen {
       for (size_t j = 0; j < params_->generation().numPoints(); ++j) {
         grid_->shoot(integrator_, i, point_coord);
         const double weight = integrator_->eval(*integrand_, point_coord);
-        { ThreadSafe<GridParameters>(grid_)->setValue(i, weight); }
+        grid_->apply([&i, &weight](auto& grid) { grid.setValue(i, weight); });
         fsum += weight;
         fsum2 += weight * weight;
       }
@@ -250,7 +247,7 @@ namespace cepgen {
                                        << "Maximum function value         = " << grid_->globalMax() << "\n\t"
                                        << "Average inefficiency           = " << eff1 << "\n\t"
                                        << "Overall inefficiency           = " << eff2;
-    { ThreadSafe<GridParameters>(grid_)->setPrepared(true); }
+    grid_->apply([](auto& grid) { grid.setPrepared(true); });
     //--- from now on events will be stored
     integrand_->setStorage(true);
 
