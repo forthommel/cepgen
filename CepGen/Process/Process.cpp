@@ -33,8 +33,7 @@ namespace cepgen {
         : NamedModule(params),
           mp_(PDG::get().mass(PDG::proton)),
           mp2_(mp_ * mp_),
-          alphaem_(AlphaEMFactory::get().build(steer<ParametersList>("alphaEM"))),
-          kin_(ParametersList()) {
+          alphaem_(AlphaEMFactory::get().build(steer<ParametersList>("alphaEM"))) {
       if (has_event)
         event_.reset(new Event);
     }
@@ -52,7 +51,6 @@ namespace cepgen {
           sqs_(proc.sqs_),
           mA2_(proc.mA2_),
           mB2_(proc.mB2_),
-          kin_(proc.kin_),
           is_point_set_(false),
           first_run_(proc.first_run_) {
       if (proc.event_)
