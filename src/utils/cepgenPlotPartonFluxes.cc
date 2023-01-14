@@ -96,7 +96,10 @@ int main(int argc, char* argv[]) {
     out << "\n" << x;
     double f = 0.;
     for (const auto& flux_vs_name : fluxes) {
-      f = (*flux_vs_name.second)(x, kt2, mx2);
+      if (flux_vs_name.second->ktFactorised())
+        f = (*flux_vs_name.second)(x, kt2, mx2);
+      else
+        f = (*flux_vs_name.second)(x, mx2);
       out << "\t" << f;
       graph_flux.at(flux_vs_name.first).addPoint(x, f);
     }
@@ -125,6 +128,7 @@ int main(int argc, char* argv[]) {
                                             : "$\\varphi_{T}(\\xi, k_{T}^{2})$");
       if (y_range.valid())
         gr.second.yAxis().setRange(y_range);
+      gr.second.setTitle(cepgen::utils::format("%s", cepgen::PartonFluxFactory::get().describe(gr.first).data()));
       coll.emplace_back(&gr.second);
     }
     plt->draw(coll, "comp_partonflux", top_label, dm);
