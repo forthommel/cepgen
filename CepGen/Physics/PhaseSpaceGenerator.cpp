@@ -20,10 +20,33 @@
 #include "CepGen/Process/Process.h"
 
 namespace cepgen {
-  PhaseSpaceGenerator::PhaseSpaceGenerator(proc::Process& proc, const std::vector<pdgid_t>& output)
-      : proc_(proc), output_(output) {}
 
-  void PhaseSpaceGenerator::initialise() {}
+  template <>
+  void PhaseSpaceGenerator<2>::initialise() {
+    proc_.defineVariable(vars_.at(0),  // y_c1_,
+                         proc::Process::Mapping::linear,
+                         proc_.kinematics().cuts().central.rapidity_single,
+                         {-6., 6.},
+                         "First outgoing particle rapidity");
+    proc_.defineVariable(vars_.at(1),  // y_c2_,
+                         proc::Process::Mapping::linear,
+                         proc_.kinematics().cuts().central.rapidity_single,
+                         {-6., 6.},
+                         "Second outgoing particle rapidity");
+    proc_.defineVariable(vars_.at(3),  // pt_diff_,
+                         proc::Process::Mapping::linear,
+                         proc_.kinematics().cuts().central.pt_diff,
+                         {0., 500.},
+                         "Final state particles transverse momentum difference");
+    proc_.defineVariable(vars_.at(4),  // phi_pt_diff_,
+                         proc::Process::Mapping::linear,
+                         proc_.kinematics().cuts().central.phi_diff,
+                         {0., 2. * M_PI},
+                         "Final state particles azimuthal angle difference");
+  }
 
-  const std::vector<Momentum>& PhaseSpaceGenerator::generate() { return momenta_; }
+  template <>
+  const PhaseSpaceGenerator<2>::Momenta& PhaseSpaceGenerator<2>::generate() {
+    return momenta_;
+  }
 }  // namespace cepgen

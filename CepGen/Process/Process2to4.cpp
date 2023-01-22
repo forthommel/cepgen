@@ -29,7 +29,10 @@ namespace cepgen {
     const Limits Process2to4::x_limits_{0., 1.};
 
     Process2to4::Process2to4(const ParametersList& params, std::array<pdgid_t, 2> partons, pdgid_t cs_id)
-        : KTProcess(params, partons, {cs_id, cs_id}), cs_prop_(PDG::get()(cs_id)), single_limits_(params) {}
+        : KTProcess(params, partons, {cs_id, cs_id}),
+          cs_prop_(PDG::get()(cs_id)),
+          single_limits_(params),
+          pgen_(*this) {}
 
     void Process2to4::setCuts(const cuts::Central& single) { single_limits_ = single; }
 
@@ -37,20 +40,7 @@ namespace cepgen {
       if (cs_prop_.pdgid == PDG::invalid)  // ensure the central particles properties are correctly initialised
         cs_prop_ = PDG::get()(steer<ParticleProperties>("pair").pdgid);
 
-      defineVariable(
-          y_c1_, Mapping::linear, kin_.cuts().central.rapidity_single, {-6., 6.}, "First outgoing particle rapidity");
-      defineVariable(
-          y_c2_, Mapping::linear, kin_.cuts().central.rapidity_single, {-6., 6.}, "Second outgoing particle rapidity");
-      defineVariable(pt_diff_,
-                     Mapping::linear,
-                     kin_.cuts().central.pt_diff,
-                     {0., 500.},
-                     "Final state particles transverse momentum difference");
-      defineVariable(phi_pt_diff_,
-                     Mapping::linear,
-                     kin_.cuts().central.phi_diff,
-                     {0., 2. * M_PI},
-                     "Final state particles azimuthal angle difference");
+      pgen_.initialise();
 
       prepareProcessKinematics();
     }

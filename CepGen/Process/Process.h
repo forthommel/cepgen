@@ -118,28 +118,12 @@ namespace cepgen {
       /// Event pointer retrieval method
       Event* eventPtr();
 
-    protected:
-      double mp_;   ///< Proton mass, in GeV/c\f$^2\f$
-      double mp2_;  ///< Squared proton mass, in GeV\f$^2\f$/c\f$^4\f$
-      /**
-         * \brief Type of mapping to apply on the variable
-         */
+      /// Type of mapping to apply on the variable
       enum class Mapping {
         linear = 0,   ///< a linear \f${\rm d}x\f$ mapping
         exponential,  ///< an exponential \f$\frac{\dot{x}}{x} = \dot{\log x}\f$ mapping
         square,       ///< a square \f${\rm d}x^2=2x\cdot\dot{x}\f$ mapping
         power_law     ///< a power-law mapping inherited from LPAIR
-        /**
-           * Define modified variables of integration to avoid peaks integrations (see \cite Vermaseren:1982cz for details):
-           * - \f$y_{\rm out} = x_{\rm min}\left(\frac{x_{\rm max}}{x_{\rm min}}\right)^{\rm exp}\f$ the new variable
-           * - \f${\rm d}y_{\rm out} = x_{\rm min}\left(\frac{x_{\rm max}}{x_{\rm min}}\right)^{\rm exp}\log\frac{x_{\rm min}}{x_{\rm max}}\f$, the new variable's differential form
-           * \note This method overrides the set of `mapxx` subroutines in ILPAIR, with a slight difference according to the sign of the
-           *  \f${\rm d}y_{\rm out}\f$ parameter :
-           *  - left unchanged :
-           * > `mapw2`, `mapxq`, `mapwx`, `maps2`
-           *  - opposite sign :
-           * > `mapt1`, `mapt2`
-           */
       };
       /// Human-friendly printout of the mapping type
       friend std::ostream& operator<<(std::ostream&, const Mapping&);
@@ -159,6 +143,10 @@ namespace cepgen {
       /// Generate and initialise all variables handled by this process
       /// \note To be run at each point computation (therefore, to be optimised!)
       void generateVariables() const;
+
+    protected:
+      double mp_;   ///< Proton mass, in GeV/c\f$^2\f$
+      double mp2_;  ///< Squared proton mass, in GeV\f$^2\f$/c\f$^4\f$
       /// Phase space point-dependent component of the Jacobian weight of the point in the phase space for integration
       double jacobian() const;
 

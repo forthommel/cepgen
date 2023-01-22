@@ -29,7 +29,7 @@ namespace cepgen {
     KTProcess::KTProcess(const ParametersList& params,
                          const std::array<pdgid_t, 2>& partons,
                          const std::vector<pdgid_t>& central)
-        : Process(params), pgen_(*this, central), intermediate_parts_(partons), produced_parts_(central) {
+        : Process(params), intermediate_parts_(partons), produced_parts_(central) {
       event().map()[Particle::CentralSystem].resize(central.size());
     }
 

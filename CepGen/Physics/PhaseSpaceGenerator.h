@@ -19,6 +19,7 @@
 #ifndef CepGen_Physics_PhaseSpaceGenerator_h
 #define CepGen_Physics_PhaseSpaceGenerator_h
 
+#include <array>
 #include <vector>
 
 #include "CepGen/Physics/Momentum.h"
@@ -29,19 +30,22 @@ namespace cepgen {
     class Process;
   }
   /// A phase space mapping utility
+  template <size_t N>
   class PhaseSpaceGenerator {
   public:
-    explicit PhaseSpaceGenerator(proc::Process&, const std::vector<pdgid_t>&);
+    explicit PhaseSpaceGenerator(proc::Process& proc) : proc_(proc) {}
 
     /// Initialise the phase space generator
     void initialise();
+    /// A momenta collection object
+    typedef std::array<Momentum, N> Momenta;
     /// Generate the output particles' momenta
-    const std::vector<Momentum>& generate();
+    const Momenta& generate();
 
   private:
     proc::Process& proc_;
-    const std::vector<pdgid_t> output_;
-    std::vector<Momentum> momenta_;
+    Momenta momenta_;
+    std::array<double, N> vars_;
   };
 }  // namespace cepgen
 

@@ -94,8 +94,6 @@ namespace cepgen {
 
       double ww_{0.};
 
-      /// A mapper for the generation of phase space momenta
-      const PhaseSpaceGenerator pgen_;
       std::array<pdgid_t, 2> intermediate_parts_;  ///< First and second intermediate parton (photon, pomeron, ...)
       std::vector<pdgid_t> produced_parts_;        ///< Type of particles produced in the final state
     };
