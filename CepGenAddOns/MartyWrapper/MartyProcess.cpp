@@ -34,7 +34,8 @@ namespace cepgen {
           : Process2to4(params,
                         {0, 0},
                         0),  //FIXME
-            model_name_(steer<std::string>("model")) {
+            model_name_(steer<std::string>("model")),
+            reg_prop_(steer<double>("regProp")) {
         intermediate_parts_[0] = steer<ParticleProperties>("ip1").pdgid;
         intermediate_parts_[1] = steer<ParticleProperties>("ip2").pdgid;
         produced_parts_ = std::vector<pdgid_t>(2, steer<ParticleProperties>("output").pdgid);
@@ -44,9 +45,9 @@ namespace cepgen {
         else
           throw CG_FATAL("MartyProcess") << "Invalid model requested: '" << model_name_ << ".'";
         try {
-          auto ip1 = mty::GetParticle(*model, toMartyFields(PDG::get()(intermediate_parts_.at(0)).name));
-          auto ip2 = mty::GetParticle(*model, toMartyFields(PDG::get()(intermediate_parts_.at(1)).name));
-          auto central = mty::GetParticle(*model, toMartyFields(PDG::get()(produced_parts_.at(0)).name));
+          auto ip1 = mty::GetParticle(*model, toMartyFields(intermediate_parts_.at(0)));
+          auto ip2 = mty::GetParticle(*model, toMartyFields(intermediate_parts_.at(1)));
+          auto central = mty::GetParticle(*model, toMartyFields(produced_parts_.at(0)));
           auto proc = model->computeAmplitude(
               mty::Order::TreeLevel,
               {mty::Incoming(ip1), mty::Incoming(ip2), mty::Outgoing(central), mty::Outgoing(mty::AntiPart(central))});
@@ -61,7 +62,7 @@ namespace cepgen {
           };
           me_expr_ = csl::Evaluated(csl::DeepExpanded(sq_ampl), csl::eval::all);
           me_params_ = extract_variables(me_expr_);
-          CG_LOG << me_params_;
+          CG_LOG << "Extracted model parameters for process: " << me_params_;
           //csl::LibFunction fct("me", me_expr_, nullptr, true);
         } catch (const mty::error::Type& err) {
           throw CG_FATAL("MartyProcess") << "Error encountered: " << err;
@@ -69,16 +70,21 @@ namespace cepgen {
       }
       ProcessPtr clone() const override { return ProcessPtr(new MartyProcess(*this)); }
 
-      static std::string toMartyFields(const std::string& cg_name) {
-        if (cg_name == "gamma")
-          return "A";
-        if (cg_name == "nu(e)")
-          return "nu_e";
-        if (cg_name == "nu(mu)")
-          return "nu_mu";
-        if (cg_name == "nu(tau)")
-          return "nu_tau";
-        return cg_name;
+      static std::string toMartyFields(pdgid_t pdgid) {
+        switch (pdgid) {
+          case PDG::gluon:
+            return "G";
+          case PDG::photon:
+            return "A";
+          case 12:
+            return "nu_e";
+          case 14:
+            return "nu_mu";
+          case 16:
+            return "nu_tau";
+          default:
+            return PDG::get()(pdgid).name;
+        }
       }
 
       static ParametersDescription description() {
@@ -88,6 +94,7 @@ namespace cepgen {
         desc.add<pdgid_t>("ip1", PDG::photon).setDescription("positive-z axis incoming parton");
         desc.add<pdgid_t>("ip2", PDG::photon).setDescription("negative-z axis incoming parton");
         desc.add<pdgid_t>("output", PDG::invalid).setDescription("outgoing central system's PDG identifier");
+        desc.add<double>("regProp", 0.).setDescription("divergence suppression parameter");
         return desc;
       }
 
@@ -97,8 +104,12 @@ namespace cepgen {
         //throw CG_FATAL("MartyProcess:computeCentralMatrixElement") << "Not yet implemented!";
         static auto to_value = [&](auto& to_replace) {
           const auto& var_name = to_replace->getName();
+          if (var_name == "s_12")
+            return (q1() + q2()).mass2();
           if (var_name == "s_13")
             return (q1() + pc(0)).mass2();
+          if (var_name == "s_14")
+            return (q1() + pc(1)).mass2();
           if (var_name == "s_23")
             return (q2() + pc(0)).mass2();
           if (var_name == "s_24")
@@ -106,19 +117,20 @@ namespace cepgen {
           if (var_name == "s_34")
             return (pc(0) + pc(1)).mass2();
           if (var_name == "reg_prop")
-            return 0.;
+            return reg_prop_;
           throw CG_FATAL("MartyProcess") << "Failed to recognise the parameter name '" << var_name << "'.";
         };
         auto me_expr = me_expr_;
         for (const auto& param : me_params_)
           csl::Replace(me_expr, param, csl::float_s(to_value(param)));
         auto eval = csl::GetComplexModulus(csl::Evaluated(me_expr, csl::eval::all));
-        if (auto type = csl::GetType(eval) != csl::Type::Float)
-          throw CG_FATAL("MartyProcess") << "Invalid type retrieved after evaluation: '" << type << "'.";
+        if (csl::GetType(eval) != csl::Type::Float && csl::GetType(eval) != csl::Type::Integer)
+          throw CG_FATAL("MartyProcess") << "Invalid type retrieved after evaluation: '" << csl::GetType(eval) << "'.";
         return eval->evaluateScalar();
       }
 
       const std::string model_name_;
+      const double reg_prop_;
       csl::Expr me_expr_;
       std::set<csl::Expr> me_params_;
     };
