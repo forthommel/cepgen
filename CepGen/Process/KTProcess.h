@@ -19,6 +19,7 @@
 #ifndef CepGen_Process_KTProcess_h
 #define CepGen_Process_KTProcess_h
 
+#include "CepGen/Physics/PhaseSpaceGenerator.h"
 #include "CepGen/Process/Process.h"
 
 namespace cepgen {
@@ -91,6 +92,10 @@ namespace cepgen {
       /// Azimuthal rotation of the second intermediate parton's transverse virtuality
       double phi_qt2_{0.};
 
+      double ww_{0.};
+
+      /// A mapper for the generation of phase space momenta
+      const PhaseSpaceGenerator pgen_;
       std::array<pdgid_t, 2> intermediate_parts_;  ///< First and second intermediate parton (photon, pomeron, ...)
       std::vector<pdgid_t> produced_parts_;        ///< Type of particles produced in the final state
     };

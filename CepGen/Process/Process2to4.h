@@ -64,9 +64,6 @@ namespace cepgen {
 
       double amt1_{0.};  ///< Transverse mass of the first central particle
       double amt2_{0.};  ///< Transverse mass of the second central particle
-
-    private:
-      double ww_{0.};
     };
   }  // namespace proc
 }  // namespace cepgen

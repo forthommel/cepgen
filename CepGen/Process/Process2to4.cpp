@@ -37,8 +37,6 @@ namespace cepgen {
       if (cs_prop_.pdgid == PDG::invalid)  // ensure the central particles properties are correctly initialised
         cs_prop_ = PDG::get()(steer<ParticleProperties>("pair").pdgid);
 
-      ww_ = 0.5 * (1. + sqrt(1. - 4. * sqrt(mA2_ * mB2_) / s_));
-
       defineVariable(
           y_c1_, Mapping::linear, kin_.cuts().central.rapidity_single, {-6., 6.}, "First outgoing particle rapidity");
       defineVariable(
@@ -58,27 +56,14 @@ namespace cepgen {
     }
 
     double Process2to4::computeKTFactorisedMatrixElement() {
-      //--- transverse kinematics of initial partons
-      const auto qt_1 = Momentum::fromPtEtaPhiE(qt1_, 0., phi_qt1_);
-      if (fabs(qt_1.pt() - qt1_) > NUM_LIMITS)
-        throw CG_FATAL("Process2to4") << "|qt1|=" << qt1_ << " != qt1.pt()=" << qt_1.pt() << ", qt1=" << qt_1 << ".";
-
-      const auto qt_2 = Momentum::fromPtEtaPhiE(qt2_, 0., phi_qt2_);
-      if (fabs(qt_2.pt() - qt2_) > NUM_LIMITS)
-        throw CG_FATAL("Process2to4") << "|qt2|=" << qt1_ << " != qt2.pt()=" << qt_2.pt() << ", qt2=" << qt_2 << ".";
-
-      //--- two-parton system (in transverse plane)
-      const auto qt_sum = qt_1 + qt_2;
-
-      CG_DEBUG_LOOP("2to4:me") << "q(1/2)x = " << qt_1.px() << " / " << qt_2.px() << "\n\t"
-                               << "q(1/2)y = " << qt_1.py() << " / " << qt_2.py() << "\n\t"
-                               << "sum(qt) = " << qt_sum;
-
       //--- transverse kinematics of outgoing central system
       const auto pt_diff = Momentum::fromPtEtaPhiE(pt_diff_, 0., phi_pt_diff_);
       if (fabs(pt_diff.pt() - pt_diff_) > NUM_LIMITS)
         throw CG_FATAL("Process2to4") << "|dpt|=" << pt_diff_ << " != dpt.pt()=" << pt_diff.pt() << ", dpt=" << pt_diff
                                       << ".";
+
+      //--- two-parton system (in transverse plane)
+      const auto qt_sum = q1() + q2();
 
       const auto pt_c1 = 0.5 * (qt_sum + pt_diff);
       const auto pt_c2 = 0.5 * (qt_sum - pt_diff);
@@ -154,8 +139,8 @@ namespace cepgen {
       CG_DEBUG_LOOP("2to4:pxy") << "px± = " << px_plus << " / " << px_minus << "\n\t"
                                 << "py± = " << py_plus << " / " << py_minus << ".";
 
-      pX() = -Momentum(qt_1).setPz((px_plus - px_minus) * M_SQRT1_2).setEnergy((px_plus + px_minus) * M_SQRT1_2);
-      pY() = -Momentum(qt_2).setPz((py_plus - py_minus) * M_SQRT1_2).setEnergy((py_plus + py_minus) * M_SQRT1_2);
+      pX() = -Momentum(q1()).setPz((px_plus - px_minus) * M_SQRT1_2).setEnergy((px_plus + px_minus) * M_SQRT1_2);
+      pY() = -Momentum(q2()).setPz((py_plus - py_minus) * M_SQRT1_2).setEnergy((py_plus + py_minus) * M_SQRT1_2);
 
       CG_DEBUG_LOOP("2to4:remnants") << "First remnant:  " << pX() << ", mass = " << pX().mass() << "\n\t"
                                      << "Second remnant: " << pY() << ", mass = " << pY().mass() << ".";
@@ -173,12 +158,10 @@ namespace cepgen {
 
       const double norm = 1. / ww_ / ww_ / s_;
       const double tau1 = norm * qt1_ * qt1_ / x1_ / x1_;
-      q1() =
-          Momentum(qt_1).setPz(+0.5 * x1_ * ww_ * sqs_ * (1. - tau1)).setEnergy(+0.5 * x1_ * ww_ * sqs_ * (1. + tau1));
+      q1().setPz(+0.5 * x1_ * ww_ * sqs_ * (1. - tau1)).setEnergy(+0.5 * x1_ * ww_ * sqs_ * (1. + tau1));
 
       const double tau2 = norm * qt2_ * qt2_ / x2_ / x2_;
-      q2() =
-          Momentum(qt_2).setPz(-0.5 * x2_ * ww_ * sqs_ * (1. - tau2)).setEnergy(+0.5 * x2_ * ww_ * sqs_ * (1. + tau2));
+      q2().setPz(-0.5 * x2_ * ww_ * sqs_ * (1. - tau2)).setEnergy(+0.5 * x2_ * ww_ * sqs_ * (1. + tau2));
 
       CG_DEBUG_LOOP("2to4:partons") << "First parton:  " << q1() << ", mass2 = " << q1().mass2() << "\n\t"
                                     << "Second parton: " << q2() << ", mass2 = " << q2().mass2() << ".";

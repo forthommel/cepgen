@@ -29,7 +29,7 @@ namespace cepgen {
     KTProcess::KTProcess(const ParametersList& params,
                          const std::array<pdgid_t, 2>& partons,
                          const std::vector<pdgid_t>& central)
-        : Process(params), intermediate_parts_(partons), produced_parts_(central) {
+        : Process(params), pgen_(*this, central), intermediate_parts_(partons), produced_parts_(central) {
       event().map()[Particle::CentralSystem].resize(central.size());
     }
 
@@ -59,6 +59,17 @@ namespace cepgen {
       const auto& ib2 = event_->oneWithRole(Particle::IncomingBeam2);
       auto& p1 = event_->oneWithRole(Particle::Parton1);
       auto& p2 = event_->oneWithRole(Particle::Parton2);
+
+      //============================================================================================
+      // register the incoming beams' variables
+      //============================================================================================
+
+      mA2_ = event_->oneWithRole(Particle::IncomingBeam1).mass2();
+      mB2_ = event_->oneWithRole(Particle::IncomingBeam2).mass2();
+      ww_ = 0.5 * (1. + sqrt(1. - 4. * sqrt(mA2_ * mB2_) / s_));
+      CG_DEBUG_LOOP("KTProcess:prepareKinematics") << "incoming particles:\n"
+                                                   << "  pA = " << pA() << ", mA2 = " << mA2_ << "\n"
+                                                   << "  pB = " << pB() << ", mB2 = " << mB2_ << ".";
 
       //============================================================================================
       // register the incoming partons' variables
@@ -107,6 +118,18 @@ namespace cepgen {
     }
 
     double KTProcess::computeWeight() {
+      //--- transverse kinematics of initial partons
+      q1() = Momentum::fromPtEtaPhiE(qt1_, 0., phi_qt1_);
+      if (fabs(q1().pt() - qt1_) > NUM_LIMITS)
+        throw CG_FATAL("Process2to4") << "|qt1|=" << qt1_ << " != qt1.pt()=" << q1().pt() << ", qt1=" << q1() << ".";
+
+      q2() = Momentum::fromPtEtaPhiE(qt2_, 0., phi_qt2_);
+      if (fabs(q2().pt() - qt2_) > NUM_LIMITS)
+        throw CG_FATAL("Process2to4") << "|qt2|=" << qt2_ << " != qt2.pt()=" << q2().pt() << ", qt2=" << q2() << ".";
+
+      CG_DEBUG_LOOP("KTProcess") << "q(1/2)x = " << q1().px() << " / " << q2().px() << "\n\t"
+                                 << "q(1/2)y = " << q1().py() << " / " << q2().py();
+
       const auto cent_me = computeKTFactorisedMatrixElement();
       if (cent_me <= 0)
         return 0.;  // avoid computing the fluxes if the matrix element is already null
