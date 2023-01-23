@@ -127,6 +127,8 @@ namespace cepgen {
       };
       /// Human-friendly printout of the mapping type
       friend std::ostream& operator<<(std::ostream&, const Mapping&);
+      /// Numerical limits for sanity comparisons
+      static constexpr double NUM_LIMITS = 1.e-3;  // MeV/mm-level
       /// Register a variable to be handled and populated whenever
       ///  a new phase space point weight is to be calculated.
       /// \note To be run once per generation (before any point computation)
@@ -156,8 +158,6 @@ namespace cepgen {
       // ---
 
     protected:
-      /// Numerical limits for sanity comparisons
-      static constexpr double NUM_LIMITS = 1.e-3;  // MeV/mm-level
       /// Electromagnetic running coupling algorithm
       std::unique_ptr<Coupling> alphaem_;
       /// Strong running coupling algorithm

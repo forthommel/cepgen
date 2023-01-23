@@ -22,6 +22,7 @@
 #include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/HeavyIon.h"
 #include "CepGen/Physics/PDG.h"
+#include "CepGen/Physics/PhaseSpaceGenerator.h"
 #include "CepGen/Process/KTProcess.h"
 
 namespace cepgen {
@@ -31,6 +32,12 @@ namespace cepgen {
                          const std::vector<pdgid_t>& central)
         : Process(params), intermediate_parts_(partons), produced_parts_(central) {
       event().map()[Particle::CentralSystem].resize(central.size());
+      if (central.size() == 1)
+        pgen_.reset(new PhaseSpaceGenerator2to3(*this));
+      else if (central.size() == 2)
+        pgen_.reset(new PhaseSpaceGenerator2to4(*this));
+      else
+        throw CG_FATAL("KTProcess") << "Unsupported phase space dimension.";
     }
 
     void KTProcess::addEventContent() {

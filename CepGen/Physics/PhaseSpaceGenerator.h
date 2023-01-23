@@ -27,25 +27,36 @@
 
 namespace cepgen {
   namespace proc {
-    class Process;
+    class KTProcess;
   }
   /// A phase space mapping utility
-  template <size_t N>
   class PhaseSpaceGenerator {
   public:
-    explicit PhaseSpaceGenerator(proc::Process& proc) : proc_(proc) {}
+    explicit PhaseSpaceGenerator(proc::KTProcess& proc) : proc_(proc) {}
 
     /// Initialise the phase space generator
-    void initialise();
-    /// A momenta collection object
-    typedef std::array<Momentum, N> Momenta;
+    virtual void initialise() = 0;
     /// Generate the output particles' momenta
-    const Momenta& generate();
+    virtual bool generate() = 0;
 
-  private:
-    proc::Process& proc_;
-    Momenta momenta_;
-    std::array<double, N> vars_;
+  protected:
+    proc::KTProcess& proc_;
+  };
+
+  struct PhaseSpaceGenerator2to3 final : public PhaseSpaceGenerator {
+    using PhaseSpaceGenerator::PhaseSpaceGenerator;
+
+    void initialise() override;
+    bool generate() override;
+  };
+
+  struct PhaseSpaceGenerator2to4 final : public PhaseSpaceGenerator {
+    using PhaseSpaceGenerator::PhaseSpaceGenerator;
+
+    void initialise() override;
+    bool generate() override;
+
+    double y_c1_, y_c2_, pt_diff_, phi_pt_diff_;
   };
 }  // namespace cepgen
 

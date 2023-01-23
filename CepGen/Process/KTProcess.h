@@ -19,10 +19,10 @@
 #ifndef CepGen_Process_KTProcess_h
 #define CepGen_Process_KTProcess_h
 
-#include "CepGen/Physics/PhaseSpaceGenerator.h"
 #include "CepGen/Process/Process.h"
 
 namespace cepgen {
+  class PhaseSpaceGenerator;
   namespace proc {
     /**
      * A generic \f$k_{\rm T}\f$-factorisation process.
@@ -96,6 +96,8 @@ namespace cepgen {
 
       std::array<pdgid_t, 2> intermediate_parts_;  ///< First and second intermediate parton (photon, pomeron, ...)
       std::vector<pdgid_t> produced_parts_;        ///< Type of particles produced in the final state
+      /// A mapper for the generation of phase space momenta
+      std::shared_ptr<PhaseSpaceGenerator> pgen_;
     };
   }  // namespace proc
 }  // namespace cepgen
