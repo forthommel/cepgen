@@ -32,8 +32,9 @@ namespace cepgen {
   /// A phase space mapping utility
   class PhaseSpaceGenerator {
   public:
-    explicit PhaseSpaceGenerator(proc::KTProcess& proc) : proc_(proc) {}
+    explicit PhaseSpaceGenerator(proc::KTProcess&);
 
+    static const Limits x_limits_;  ///< Standard [0,1] limits for input variables
     /// Initialise the phase space generator
     virtual void initialise() = 0;
     /// Generate the output particles' momenta
@@ -41,6 +42,7 @@ namespace cepgen {
 
   protected:
     proc::KTProcess& proc_;
+    const double ww_;
   };
 
   struct PhaseSpaceGenerator2to3 final : public PhaseSpaceGenerator {
@@ -48,6 +50,8 @@ namespace cepgen {
 
     void initialise() override;
     bool generate() override;
+
+    double y_c_, pt_c_;
   };
 
   struct PhaseSpaceGenerator2to4 final : public PhaseSpaceGenerator {

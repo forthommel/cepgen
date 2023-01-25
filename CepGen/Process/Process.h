@@ -31,6 +31,9 @@
 
 namespace cepgen {
   class Event;
+  class PhaseSpaceGenerator;
+  struct PhaseSpaceGenerator2to3;
+  struct PhaseSpaceGenerator2to4;
   /// Location for all physics processes to be generated
   namespace proc {
     /// \brief Class template to define any process to compute using this MC integrator/events generator
@@ -45,6 +48,10 @@ namespace cepgen {
       /// Copy constructor for a user process
       Process(const Process&);
       virtual ~Process() = default;
+
+      friend class ::cepgen::PhaseSpaceGenerator;
+      friend struct ::cepgen::PhaseSpaceGenerator2to3;
+      friend struct ::cepgen::PhaseSpaceGenerator2to4;
 
       static ParametersDescription description();
 

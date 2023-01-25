@@ -103,8 +103,8 @@ namespace cepgen {
       colf_ = cs_prop.colours;
       prefactor_ = 4. * M_PI;
 
-      CG_DEBUG("PPtoFF:prepare") << "Produced particles: " << cs_prop_.descr << " ("
-                                 << "mass = " << cs_prop_.mass << " GeV, "
+      CG_DEBUG("PPtoFF:prepare") << "Produced particles: " << cs_prop.descr << " ("
+                                 << "mass = " << cs_prop.mass << " GeV, "
                                  << "charge = " << std::setprecision(2) << qf3_ / 3. << " e)\n\t"
                                  << "matrix element computation method: " << (int)method_ << ".";
 
@@ -165,13 +165,13 @@ namespace cepgen {
     }
 
     double PPtoFF::offShellME() const {
-      const double alpha1 = amt1_ / sqs_ * exp(y_c1_), beta1 = amt1_ / sqs_ * exp(-y_c1_);
-      const double alpha2 = amt2_ / sqs_ * exp(y_c2_), beta2 = amt2_ / sqs_ * exp(-y_c2_);
+      const double alpha1 = mt_.at(0) / sqs_ * exp(pc(0).rapidity()), beta1 = mt_.at(0) / sqs_ * exp(-pc(0).rapidity());
+      const double alpha2 = mt_.at(1) / sqs_ * exp(pc(1).rapidity()), beta2 = mt_.at(1) / sqs_ * exp(-pc(1).rapidity());
       const double x1 = alpha1 + alpha2, x2 = beta1 + beta2;
       const double z1p = alpha1 / x1, z1m = alpha2 / x1, z1 = z1p * z1m;
       const double z2p = beta1 / x2, z2m = beta2 / x2, z2 = z2p * z2m;
 
-      CG_DEBUG_LOOP("2to4:zeta") << "amt(1/2) = " << amt1_ << " / " << amt2_ << "\n\t"
+      CG_DEBUG_LOOP("2to4:zeta") << "mt(1/2) = " << mt_ << "\n\t"
                                  << "z(1/2)p = " << z1p << " / " << z2p << ", z1 = " << z1 << "\n\t"
                                  << "z(1/2)m = " << z1m << " / " << z2m << ", z2 = " << z2 << ".";
 
@@ -240,7 +240,7 @@ namespace cepgen {
 
       double amat2 = 0.5 * prefactor_ * pow(x1 * x2 * s_, 2) * (osp_.mat1 * amat2_1 + osp_.mat2 * amat2_2);
 
-      const double tmax = pow(std::max(amt1_, amt2_), 2);
+      const double tmax = pow(std::max(mt_.at(0), mt_.at(1)), 2);
       const double q1val = std::sqrt(std::max(eps12, tmax)), q2val = std::sqrt(std::max(eps22, tmax));
       if (event_->oneWithRole(Particle::Parton1).pdgId() == PDG::gluon)
         amat2 *= 0.5 * (*alphas_)(q1val);

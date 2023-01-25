@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2022  Laurent Forthomme
+ *  Copyright (C) 2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,21 +16,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CepGen_Process_Process2to4_h
-#define CepGen_Process_Process2to4_h
+#ifndef CepGen_Process_Process2to3_h
+#define CepGen_Process_Process2to3_h
 
 #include "CepGen/Process/KTProcess.h"
 
 namespace cepgen {
   namespace proc {
-    /// A 2-to-4 (or 2-to-2 central) process
-    class Process2to4 : public KTProcess {
+    /// A 2-to-3 (or 2-to-1 central) process
+    class Process2to3 : public KTProcess {
     public:
-      /// Initialise a 2-to-4 process
+      /// Initialise a 2-to-3 process
       /// \param[in] params Collection of user-defined steering parameters
       /// \param[in] partons Incoming hard scattering particles
       /// \param[in] cs_id Central particles PDG id
-      explicit Process2to4(const ParametersList& params, std::array<pdgid_t, 2> partons, pdgid_t cs_id);
+      explicit Process2to3(const ParametersList& params, std::array<pdgid_t, 2> partons, pdgid_t cs_id);
 
       static ParametersDescription description();
 
@@ -47,11 +47,7 @@ namespace cepgen {
       /// Computation rule for the central matrix element
       virtual double computeCentralMatrixElement() const = 0;
 
-      //--- Mandelstam variables
-      double that() const;  ///< \f$\hat t=\frac{1}{2}\left[(p_1-p_3)^2+(p_2-p_4)^2\right]\f$
-      double uhat() const;  ///< \f$\hat u=\frac{1}{2}\left[(p_1-p_4)^2+(p_2-p_3)^2\right]\f$
-
-      cuts::Central single_limits_;  ///< Limits to be applied on single central system's particles
+      cuts::Central single_limits_;  ///< Limits to be applied on single central system's particle
     };
   }  // namespace proc
 }  // namespace cepgen
