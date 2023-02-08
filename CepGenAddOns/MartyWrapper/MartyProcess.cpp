@@ -17,13 +17,13 @@
  */
 
 #include <marty.h>
-#include <marty/models/sm.h>
 
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Event/Event.h"
 #include "CepGen/Modules/ProcessFactory.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/Process2to4.h"
+#include "CepGenAddOns/MartyWrapper/MartyModelFactory.h"
 
 namespace cepgen {
   namespace proc {
@@ -36,14 +36,12 @@ namespace cepgen {
                         0),  //FIXME
             model_name_(steer<std::string>("model")),
             reg_prop_(steer<double>("regProp")) {
-        intermediate_parts_[0] = steer<ParticleProperties>("ip1").pdgid;
-        intermediate_parts_[1] = steer<ParticleProperties>("ip2").pdgid;
-        produced_parts_ = std::vector<pdgid_t>(2, steer<ParticleProperties>("output").pdgid);
-        std::unique_ptr<mty::Model> model;
-        if (model_name_ == "sm")
-          model.reset(new mty::SM_Model);
-        else
-          throw CG_FATAL("MartyProcess") << "Invalid model requested: '" << model_name_ << ".'";
+        CG_INFO("MartyProcess") << "List of models registered: " << MartyModelFactory::get().models() << ".";
+        // define the incoming-outgoing central system
+        setIntermediatePartons({steer<ParticleProperties>("ip1").pdgid, steer<ParticleProperties>("ip2").pdgid});
+        setProducedParticles(std::vector<pdgid_t>(2, steer<ParticleProperties>("output").pdgid));
+        // start computing the Feynman rules for the given model
+        auto model = MartyModelFactory::get().build(model_name_);
         try {
           auto ip1 = mty::GetParticle(*model, toMartyFields(intermediate_parts_.at(0)));
           auto ip2 = mty::GetParticle(*model, toMartyFields(intermediate_parts_.at(1)));
@@ -137,4 +135,5 @@ namespace cepgen {
   }  // namespace proc
 }  // namespace cepgen
 // register process
-REGISTER_PROCESS("marty", MartyProcess)
+typedef cepgen::proc::MartyProcess MartyProcess;
+REGISTER_PROCESS("marty", MartyProcess);
