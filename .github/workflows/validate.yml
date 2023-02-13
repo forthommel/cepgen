@@ -1,0 +1,37 @@
+name: Validation
+
+on:
+  push:
+    branches: [master, ci-validation]
+
+env:
+  CEPGEN_PATH: /Package/build
+
+jobs:
+  tests:
+    uses: ./.github/workflows/build.yml
+  validate:
+    needs: tests
+    runs-on: ubuntu-latest
+    container:
+      image: 'laufor/ci-images:cepgen-fedora39'
+      options: -v ${{ github.workspace }}:/Package
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        name: cepgen/validation
+        ref: refs/head/release
+    - name: 'Download artifacts'
+      uses: actions/download-artifact@v4
+      with:
+        name: build-env
+
+    - name: 'Package configuration'
+      working-directory: /Package/validation
+      run: |
+        bash init.sh
+
+    - name: 'Validation'
+      working-directory: /Package/validation
+      run: |
+        make
