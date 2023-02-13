@@ -37,7 +37,9 @@ namespace cepgen {
        << runParameters().kinematics().incomingBeams().mode() << ")\n";
     if (runParameters().kinematics().incomingBeams().mode() != mode::Kinematics::ElasticElastic)
       os << prep << " Structure functions: "
-         << utils::merge(runParameters().kinematics().incomingBeams().structureFunctions(), ", ") << "\n";
+         << utils::repr<ParametersList>(runParameters().kinematics().incomingBeams().structureFunctions(),
+                                        [](const ParametersList& pl) -> std::string { return pl.print(); })
+         << "\n";
     if (!runParameters().eventModifiersSequence().empty()) {
       os << prep << " " << utils::s("Event modifier", runParameters().eventModifiersSequence().size()) << ": ";
       std::string sep;

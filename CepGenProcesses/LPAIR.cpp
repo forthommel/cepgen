@@ -84,7 +84,7 @@ public:
                                     {Particle::OutgoingBeam2, {PDG::proton}},
                                     {Particle::CentralSystem, {pair_.pdgid, pair_.pdgid}}});
   }
-  EventWeights computeWeight() override;
+  Weights computeWeight() override;
   void prepareKinematics() override;
   void fillKinematics(bool) override;
 
@@ -120,7 +120,7 @@ private:
    *  b = t_1 t_2+\left(w_{\gamma\gamma}\sin^2{\theta^{\rm CM}_6}+4m_\ell\cos^2{\theta^{\rm CM}_6}\right) p_g^2
    * \f]
    */
-  EventWeights periPP() const;
+  Weights periPP() const;
   /**
    * Describe the kinematics of the process \f$p_1+p_2\to p_3+p_4+p_5\f$ in terms of Lorentz-invariant variables.
    * These variables (along with others) will then be fed into the \a PeriPP method (thus are essential for the evaluation of the full matrix element).
@@ -247,6 +247,7 @@ void LPAIR::prepareKinematics() {
   charge_factor_ = std::pow(pair_.charge / 3., 2);
 
   formfac_ = FormFactorsFactory::get().build(kinematics().incomingBeams().formFactors());
+  strfuns_.clear();
   for (const auto& strfun : kinematics().incomingBeams().structureFunctions())
     strfuns_.emplace_back(std::move(StructureFunctionsFactory::get().build(strfun)));
 
@@ -707,7 +708,7 @@ bool LPAIR::orient() {
 
 //---------------------------------------------------------------------------------------------
 
-proc::Process::EventWeights LPAIR::computeWeight() {
+proc::Process::Weights LPAIR::computeWeight() {
   ep1_ = pA().energy();
   ep2_ = pB().energy();
   // Mass difference between the first outgoing particle and the first incoming particle
@@ -732,16 +733,16 @@ proc::Process::EventWeights LPAIR::computeWeight() {
 
   if (!orient()) {
     CG_DEBUG_LOOP("LPAIR") << "Orient failed.";
-    return zeroWeight();
+    return {};
   }
 
   if (t1() > 0.) {
     CG_WARNING("LPAIR") << "t1 = " << t1() << " > 0";
-    return zeroWeight();
+    return {};
   }
   if (t2() > 0.) {
     CG_WARNING("LPAIR") << "t2 = " << t2() << " > 0";
-    return zeroWeight();
+    return {};
   }
 
   const double ecm6 = m_w4_ / (2. * mc4_), pp6cm = std::sqrt(ecm6 * ecm6 - masses_.Ml2);
@@ -916,7 +917,7 @@ proc::Process::EventWeights LPAIR::computeWeight() {
   CG_DEBUG_LOOP("LPAIR:gmufil") << "Invariant mass imbalance after beta/gamma boost:"
                                 << (pc(0) + pc(1)).mass() - mass_before << ".";
   if (!kinematics().cuts().central.contain(event()(Particle::CentralSystem)))
-    return zeroWeight();
+    return {};
 
   const auto peripp = periPP();  // compute the structure functions factors
   CG_DEBUG_LOOP("LPAIR:f") << "Jacobian: " << jacobian_ << ", str.fun. factor: " << peripp << ".";
@@ -998,7 +999,7 @@ void LPAIR::fillKinematics(bool) {
 
 //---------------------------------------------------------------------------------------------
 
-proc::Process::EventWeights LPAIR::periPP() const {
+proc::Process::Weights LPAIR::periPP() const {
   const double qqq = q1dq_ * q1dq_, qdq = 4. * masses_.Ml2 - m_w4_;
   const double t11 = 64. *
                      (bb_ * (qqq - gamma4_ - qdq * (t1() + t2() + 2. * masses_.Ml2)) -
@@ -1017,8 +1018,11 @@ proc::Process::EventWeights LPAIR::periPP() const {
   //--- compute the electric/magnetic form factors for the two considered parton momenta transfers
   const auto fp1s = computeFormFactors(kinematics().incomingBeams().positive(), -t1(), mX2()),
              fp2s = computeFormFactors(kinematics().incomingBeams().negative(), -t2(), mY2());
+  if (fp1s.size() != fp2s.size())
+    throw CG_FATAL("LPAIR:peripp") << "Invalid form factors multiplicity retrieved: " << fp1s.size()
+                                   << " != " << fp2s.size() << ".";
 
-  EventWeights peripp;
+  Weights peripp;
   for (size_t i = 0; i < fp1s.size(); ++i) {  //FIXME handle asymmetric cases
     const auto& fp1 = fp1s.at(i);
     const auto& fp2 = fp2s.at(i);

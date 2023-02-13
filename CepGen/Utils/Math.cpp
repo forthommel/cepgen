@@ -31,7 +31,7 @@ namespace cepgen {
     template bool positive<float>(const float&);
     template bool positive<int>(const int&);
     template <>
-    bool positive<proc::Process::EventWeights>(const proc::Process::EventWeights& wgts) {
+    bool positive<proc::Process::Weights>(const proc::Process::Weights& wgts) {
       return std::all_of(wgts.begin(), wgts.end(), [](double wgt) { return positive(wgt); });
     }
   }  // namespace utils

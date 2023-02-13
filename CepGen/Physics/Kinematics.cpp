@@ -28,6 +28,10 @@ namespace cepgen {
 
   void Kinematics::setParameters(const ParametersList& params) {
     SteeredObject::setParameters(params);
+    if (const auto& strfun = params_.get<ParametersList>("structureFunctions"); !strfun.empty()) {
+      params_.operator[]<std::vector<ParametersList> >("structureFunctions").emplace_back(strfun);
+      params_.erase<ParametersList>("structureFunctions");
+    }
     CG_DEBUG("Kinematics") << "Building a Kinematics parameters container "
                            << "with the following parameters:\n\t" << params_ << ".";
 
@@ -39,8 +43,7 @@ namespace cepgen {
         minimum_final_state_.emplace_back((pdgid_t)pdg);
 
     //--- specify where to look for the grid path for gluon emission
-    const auto& kmr_grid_path = steerPath("kmrGridPath");
-    if (!kmr_grid_path.empty())
+    if (const auto& kmr_grid_path = steerPath("kmrGridPath"); !kmr_grid_path.empty())
       kmr::GluonGrid::get(ParametersList(params_).set<std::string>("path", kmr_grid_path));
   }
 

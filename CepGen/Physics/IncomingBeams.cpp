@@ -286,8 +286,13 @@ namespace cepgen {
                                     FormFactorsFactory::get().describeParameters(formfac::gFFStandardDipoleHandler))
         .setDescription("Beam form factors modelling");
     desc.addParametersDescriptionVector(
-            "structureFunctions", strfun::Parameterisation::description().setName<int>(11)  // default is SY
-            )
+            "structureFunctions",
+            strfun::Parameterisation::description(),
+            {
+                //strfun::Parameterisation::description().setName<int>(11)  // default is SY
+                ParametersList().setName<int>(11)  // default is SY
+                //StructureFunctionsFactory::get().describeParameters(11).parameters()  // default is SY
+            })
         .setDescription("Beam inelastic structure functions modelling");
     return desc;
   }

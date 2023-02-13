@@ -84,7 +84,10 @@ namespace cepgen {
     tmr_->reset();
 
     //--- specify the phase space point to probe and calculate weight
-    auto weight = process().weight(x);
+    const auto weights = process().weight(x);
+    if (weights.empty())
+      return 0.;
+    auto weight = weights.at(0);  //FIXME
 
     //--- invalidate any unphysical behaviour
     if (!utils::positive(weight))
@@ -99,7 +102,7 @@ namespace cepgen {
 
     // once kinematics variables computed, can apply taming functions
     for (const auto& tam : params_->tamingFunctions())
-      if (const auto val = (*tam)(bws_.get(*event, tam->variables().at(0))) != 0.)
+      if (const auto val = (*tam)(bws_.get(*event, tam->variables().at(0))); val != 0.)
         weight *= val;
       else
         return 0.;

@@ -203,7 +203,7 @@ namespace cepgen {
       return jacobian;
     }
 
-    double Process::weight(const std::vector<double>& x) {
+    Process::Weights Process::weight(const std::vector<double>& x) {
       point_coord_ = x;
 
       //--- generate and initialise all variables and generate auxiliary
@@ -217,7 +217,7 @@ namespace cepgen {
       });
 
       if (!utils::positive(aux_jacobian))
-        return 0.;
+        return {};
 
       //--- compute the integrand
       const auto me_integrand = computeWeight();
@@ -225,10 +225,10 @@ namespace cepgen {
                                       << "Proc.-specific integrand * Jacobian (excl. global Jacobian) = "
                                       << (me_integrand * aux_jacobian) << ".";
       if (!utils::positive(me_integrand))
-        return 0.;
+        return {};
 
       //--- combine every component into a single weight for this point
-      return ((base_jacobian_ * aux_jacobian) * me_integrand).at(0);  //FIXME
+      return (base_jacobian_ * aux_jacobian) * me_integrand;
     }
 
     void Process::clearEvent() {
@@ -427,15 +427,15 @@ namespace cepgen {
       return os;
     }
 
-    Process::EventWeights operator*(const Process::EventWeights& wgts, double fact) {
-      auto out = wgts;
+    Process::Weights operator*(const Process::Weights& wgts, double fact) {
+      Process::Weights out = wgts;
       for (auto& wgt : out)
         wgt *= fact;
       return out;
     }
 
-    std::ostream& operator<<(std::ostream& os, const Process::EventWeights& wgts) {
-      return os << "Weight{" << utils::merge(wgts, ", ") << "}";
+    std::ostream& operator<<(std::ostream& os, const Process::Weights& wgts) {
+      return os << "Weight{" << utils::repr(wgts) << "}";
     }
   }  // namespace proc
 }  // namespace cepgen
