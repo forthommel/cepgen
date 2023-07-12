@@ -73,8 +73,10 @@ int main(int argc, char* argv[]) {
 
   vector<std::unique_ptr<cepgen::PartonFlux> > fluxes;
   vector<cepgen::utils::Graph1D> graph_flux;
+  size_t num_ktfactorised = 0;
   for (const auto& flux : fluxes_names) {
     fluxes.emplace_back(cepgen::PartonFluxFactory::get().build(flux));
+    num_ktfactorised += fluxes.back()->ktFactorised();
     graph_flux.emplace_back(flux, cepgen::PartonFluxFactory::get().describe(flux));
   }
   for (const auto& x : x_range.generate(num_points)) {
@@ -109,7 +111,9 @@ int main(int argc, char* argv[]) {
 
     for (auto& gr : graph_flux) {
       gr.xAxis().setLabel("$\\xi$");
-      gr.yAxis().setLabel(normalised ? "$\\xi\\varphi(\\xi, k_{T}^{2})$" : "$\\varphi(\\xi, k_{T}^{2}])$");
+      gr.yAxis().setLabel(normalised
+                              ? "$\\xi\\varphi(\\xi" + std::string(num_ktfactorised > 0 ? "[, k_{T}^{2}]" : "") + ")$"
+                              : "$\\varphi(\\xi" + std::string(num_ktfactorised > 0 ? "[, k_{T}^{2}]" : "") + ")$");
       if (y_range.valid())
         gr.yAxis().setRange(y_range);
       coll.emplace_back(&gr);

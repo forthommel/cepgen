@@ -39,10 +39,14 @@ namespace cepgen {
           integr_(AnalyticIntegratorFactory::get().build(params.get<ParametersList>("analyticalIntegrator"))) {
       if (!flux_.ktFactorised())
         throw CG_FATAL("GammaIntegrated") << "Input flux has to be unintegrated.";
-      // initialise the function to integrate
-      func_.reset(new utils::Function1D([&](double kt2, void* params) {
+      // initialise the functions to integrate
+      func_q2_.reset(new utils::Function1D([&](double kt2, void* params) {
         const auto& args = *static_cast<FluxArguments*>(params);
-        return flux_.fluxMX2(args.x, kt2, args.mf2);
+        return flux_.fluxQ2(args.x, kt2, args.var2);
+      }));
+      func_mx2_.reset(new utils::Function1D([&](double kt2, void* params) {
+        const auto& args = *static_cast<FluxArguments*>(params);
+        return flux_.fluxMX2(args.x, kt2, args.var2);
       }));
       CG_INFO("GammaIntegrated") << "kt flux-integrated collinear flux evaluator initialised.\n\t"
                                  << "Q^2 integration range: " << kt2_range_ << " GeV^2\n\t"
@@ -57,27 +61,33 @@ namespace cepgen {
       auto desc = CollinearFlux::description();
       desc.setDescription("kt-integrated photon flux");
       desc.add<Limits>("q2range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
-      desc.add<ParametersDescription>("ktPartonFlux", ParametersDescription().setName<std::string>("BudnevElasticKT"))
+      desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("BudnevElasticKT"))
           .setDescription("Type of unintegrated kT-dependent parton flux");
       desc.add<ParametersDescription>("analyticalIntegrator", ParametersDescription().setName<std::string>("gsl"))
           .setDescription("Steering parameters for the analytical integrator");
       return desc;
     }
 
+    double fluxQ2(double x, double q2) const override {
+      if (!x_range_.contains(x, true))
+        return 0.;
+      return integr_->integrate(*func_q2_, FluxArguments{x, q2}, kt2_range_) / x;
+    }
+
     double fluxMX2(double x, double mx2) const override {
       if (!x_range_.contains(x, true))
         return 0.;
-      return /*2. * M_PI **/ integr_->integrate(*func_, FluxArguments{x, mx2}, kt2_range_) / x;
+      return integr_->integrate(*func_mx2_, FluxArguments{x, mx2}, kt2_range_) / x;
     }
 
   private:
     const Limits kt2_range_;
     const KTFlux& flux_;
-    std::unique_ptr<utils::Function1D> func_;
+    std::unique_ptr<utils::Function1D> func_q2_, func_mx2_;
     std::unique_ptr<AnalyticIntegrator> integr_;
 
     struct FluxArguments {
-      double x{0.}, mf2{0.};
+      double x{0.}, var2{0.};
     };
   };
 }  // namespace cepgen

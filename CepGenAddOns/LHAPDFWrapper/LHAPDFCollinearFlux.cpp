@@ -18,18 +18,16 @@
 
 #include <LHAPDF/LHAPDF.h>
 
+#include "CepGen/CollinearFluxes/CollinearFlux.h"
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Modules/PartonFluxFactory.h"
-#include "CepGen/PartonFluxes/PartonFlux.h"
-#include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/PDG.h"
-#include "CepGen/Physics/Utils.h"
 
 namespace cepgen {
-  class LHAPDFCollinearPartonFlux : public PartonFlux {
+  class LHAPDFCollinearPartonFlux : public CollinearFlux {
   public:
     explicit LHAPDFCollinearPartonFlux(const ParametersList& params)
-        : PartonFlux(params),
+        : CollinearFlux(params),
           pdf_(LHAPDF::mkPDF(steer<std::string>("set"), steer<int>("member"))),
           pdgid_(steerAs<int, pdgid_t>("partonPdgId")),
           from_remnant_(steer<bool>("fromRemnant")) {
@@ -57,7 +55,7 @@ namespace cepgen {
     }
 
     static ParametersDescription description() {
-      auto desc = PartonFlux::description();
+      auto desc = CollinearFlux::description();
       desc.setDescription("LHAPDF collinear photon flux");
       //desc.add<std::string>("set", "NNPDF31_nnlo_pdfas").setDescription("PDFset to use");
       //desc.add<std::string>("set", "LUXqed17_plus_PDF4LHC15_nnlo_100").setDescription("PDFset to use");
@@ -71,13 +69,12 @@ namespace cepgen {
       return desc;
     }
 
-    cepgen::pdgid_t partonPdgId() const override { return pdgid_; }
+    cepgen::pdgid_t partonPdgId() const override final { return pdgid_; }
+    double mass2() const override final { return mp2_; }
 
-    double collinearFlux(double x, double mx) const override {
-      static const Limits x_valid{0., 1.};
-      if (x == 0. || !x_valid.contains(x) || mx <= 0.)
+    double fluxQ2(double x, double q2) const override {
+      if (!x_range_.contains(x, true))
         return 0.;
-      const auto q2 = utils::q2(x, mp2_, mx * mx);
       if (!pdf_->inRangeXQ2(x, q2))
         return 0.;
       if (from_remnant_) {
@@ -95,7 +92,6 @@ namespace cepgen {
     std::unique_ptr<LHAPDF::PDF> pdf_;
     const pdgid_t pdgid_;
     const bool from_remnant_;
-    static constexpr double prefactor_ = constants::ALPHA_EM * M_1_PI;
   };
 }  // namespace cepgen
 
