@@ -113,11 +113,13 @@ namespace cepgen {
       if (x == 1.)
         return 0.;
       const double qq1 = 1 + qq, y = x * x / (1 - x);
-      double f = (1 + a_ * y) * (-log(qq1 / qq) + 1 / qq1 + 1 / (2 * qq1 * qq1) + 1 / (3 * qq1 * qq1 * qq1));
-      f += (1 - b_) * y / (4 * qq * qq1 * qq1 * qq1);
-      f += c_ * (1 + y / 4) *
-           (log((qq1 - b_) / qq1) + b_ / qq1 + b_ * b_ / (2 * qq1 * qq1) + b_ * b_ * b_ / (3 * qq1 * qq1 * qq1));
-      return f;
+      double fac1 = -log(qq1 / qq), fac2 = log((qq1 - b_) / qq1);
+      for (size_t i = 1; i <= 3; ++i) {
+        const auto fac = std::pow(1. / qq1, i) / i;
+        fac1 += fac;
+        fac2 += std::pow(b_, i) * fac;
+      }
+      return (1 + a_ * y) * fac1 + (1 - b_) * y / (4 * qq * qq1 * qq1 * qq1) + c_ * (1 + y / 4) * fac2;
     }
 
   private:
