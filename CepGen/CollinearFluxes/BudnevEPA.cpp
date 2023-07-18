@@ -73,9 +73,9 @@ namespace cepgen {
       double q2min;
       if (!computeQ2min(x, q2min))
         return 0.;
-      return std::max(prefactor_ * (1. * 0.5 * ml2_ * x * (-1. / q2min + 1. / q2range_.max()) +
-                                    (1. - x + 0.5 * x * x) / x * log(q2range_.max() / q2min)),
-                      0.);
+      return std::max(0.,
+                      prefactor_ * (ml2_ * x * (1. / q2range_.max() - 1. / q2min) +
+                                    (1. - x + 0.5 * x * x) / x * log(q2range_.max() / q2min)));
     }
 
   private:

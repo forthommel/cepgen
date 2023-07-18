@@ -29,9 +29,9 @@
 #include "CepGen/Utils/Limits.h"
 
 namespace cepgen {
-  class GammaIntegrated : public CollinearFlux {
+  class IntegratedKTFlux : public CollinearFlux {
   public:
-    explicit GammaIntegrated(const ParametersList& params)
+    explicit IntegratedKTFlux(const ParametersList& params)
         : CollinearFlux(params),
           kt2_range_(steer<Limits>("kt2range")),
           flux_(
@@ -48,9 +48,10 @@ namespace cepgen {
         const auto& args = *static_cast<FluxArguments*>(params);
         return flux_.fluxMX2(args.x, kt2, args.var2);
       }));
-      CG_INFO("GammaIntegrated") << "kt flux-integrated collinear flux evaluator initialised.\n\t"
-                                 << "Q^2 integration range: " << kt2_range_ << " GeV^2\n\t"
-                                 << "Unintegrated flux: " << flux_.name() << ".";
+      CG_INFO("IntegratedKTFlux") << "kt flux-integrated collinear flux evaluator initialised.\n\t"
+                                  << "Analytical integrator: " << integr_->name() << "\n\t"
+                                  << "Q^2 integration range: " << kt2_range_ << " GeV^2\n\t"
+                                  << "Unintegrated flux: " << flux_.name() << ".";
     }
 
     bool fragmenting() const override final { return flux_.fragmenting(); }
@@ -60,7 +61,8 @@ namespace cepgen {
     static ParametersDescription description() {
       auto desc = CollinearFlux::description();
       desc.setDescription("kt-integrated photon flux");
-      desc.add<Limits>("q2range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
+      desc.add<Limits>("kt2range", {0., 1.e4})
+          .setDescription("kinematic range for the parton transverse virtuality, in GeV^2");
       desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("BudnevElasticKT"))
           .setDescription("Type of unintegrated kT-dependent parton flux");
       desc.add<ParametersDescription>("analyticalIntegrator", ParametersDescription().setName<std::string>("gsl"))
@@ -91,4 +93,4 @@ namespace cepgen {
     };
   };
 }  // namespace cepgen
-REGISTER_FLUX("GammaIntegrated", GammaIntegrated);
+REGISTER_FLUX("IntegratedKTFlux", IntegratedKTFlux);
