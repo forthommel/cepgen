@@ -25,6 +25,7 @@
 #include "CepGen/Modules/AnalyticIntegratorFactory.h"
 #include "CepGen/Modules/DrawerFactory.h"
 #include "CepGen/Modules/PartonFluxFactory.h"
+#include "CepGen/Physics/PDG.h"
 #include "CepGen/Utils/ArgumentsParser.h"
 #include "CepGen/Utils/Drawer.h"
 #include "CepGen/Utils/Graph.h"
@@ -32,10 +33,21 @@
 
 using namespace std;
 
+cepgen::CollinearFlux* build_coll_flux(const string& flux_name) {
+  auto* flux = dynamic_cast<cepgen::CollinearFlux*>(cepgen::PartonFluxFactory::get().build(flux_name).release());
+  if (!flux->ktFactorised())
+    return flux;
+  return dynamic_cast<cepgen::CollinearFlux*>(
+      cepgen::PartonFluxFactory::get()
+          .build("IntegratedKTFlux",
+                 cepgen::ParametersList().set("ktFlux", cepgen::ParametersList().setName<std::string>(flux_name)))
+          .release());
+}
+
 int main(int argc, char* argv[]) {
   vector<string> fluxes;
   int num_points;
-  string integrator, output_file, plotter;
+  string integrator, output_file, plotter, beams;
   bool logx, logy, draw_grid;
   vector<double> rescl, sqrts, accept;
   cepgen::Limits mx_range, y_range;
@@ -46,10 +58,11 @@ int main(int argc, char* argv[]) {
   cepgen::ArgumentsParser(argc, argv)
       .addOptionalArgument(
           "flux,f", "(collinear) flux modelling(s)", &fluxes, cepgen::PartonFluxFactory::get().modules())
+      .addOptionalArgument("beams,b", "beams info (PDGid1:pz1[,PDGid2:pz2])", &beams, "")
       .addOptionalArgument("rescaling,r", "luminosity rescaling", &rescl, vector<double>{1.})
       .addOptionalArgument("integrator,i", "type of integration algorithm", &integrator, "gsl")
       .addOptionalArgument("sqrts,s", "two-proton centre of mass energy (GeV)", &sqrts, vector<double>{13.e3})
-      .addOptionalArgument("mxrange,m", "two-photon mass range", &mx_range, cepgen::Limits{0., 100.})
+      .addOptionalArgument("mrange,m", "two-photon mass range", &mx_range, cepgen::Limits{0., 100.})
       .addOptionalArgument("npoints,n", "number of x-points to scan", &num_points, 500)
       .addOptionalArgument("output,o", "output file name", &output_file, "collflux.int.scan.output.txt")
       .addOptionalArgument("plotter,p", "type of plotter to user", &plotter, "")
@@ -64,8 +77,35 @@ int main(int argc, char* argv[]) {
   ofstream out(output_file);
   if (logx && mx_range.min() == 0.)
     mx_range.min() = 1.e-3;
-  if (sqrts.size() != fluxes.size())
-    sqrts = vector<double>(fluxes.size(), sqrts.at(0));
+
+  //----- two possible strategies handled for the centre of mass energy computation
+
+  if (beams.empty()) {  // centre of mass energy is directly specified _for each flux_.
+    if (sqrts.size() != fluxes.size())
+      sqrts = vector<double>(fluxes.size(), sqrts.at(0));
+  } else {  // one single centre of mass energy for all fluxes ; unpack the beams info, and compute the centre of mass energy
+    vector<int> pdgids;
+    vector<double> pzs;
+    size_t i = 0;
+    for (const auto& beam_info : cepgen::utils::split(beams, ',')) {
+      ++i;
+      const auto info = cepgen::utils::split(beam_info, ':');
+      if (info.size() != 2)
+        throw CG_FATAL("main") << "Invalid format for beam " << i << ": should be 'id:pz(GeV)'.";
+      pdgids.emplace_back(std::stoi(info.at(0)));
+      pzs.emplace_back(std::stod(info.at(1)));
+    }
+    cepgen::Momentum mom1, mom2;
+    if (i == 1) {
+      mom1 = cepgen::Momentum::fromPxPyPzM(0., 0., pzs.at(0), cepgen::PDG::get().mass(pdgids.at(0)));
+      mom2 = cepgen::Momentum::fromPxPyPzM(0., 0., -pzs.at(0), cepgen::PDG::get().mass(pdgids.at(0)));
+    } else {
+      mom1 = cepgen::Momentum::fromPxPyPzM(0., 0., pzs.at(0), cepgen::PDG::get().mass(pdgids.at(0)));
+      mom2 = cepgen::Momentum::fromPxPyPzM(0., 0., -pzs.at(1), cepgen::PDG::get().mass(pdgids.at(1)));
+    }
+    sqrts = vector<double>(fluxes.size(), (mom1 + mom2).mass());
+  }
+  CG_LOG << sqrts;
   if (rescl.size() != fluxes.size())
     rescl = vector<double>(fluxes.size(), rescl.at(0));
   if (!accept.empty()) {
@@ -83,6 +123,8 @@ int main(int argc, char* argv[]) {
       CG_LOG << "x (xi) acceptance cuts defined: " << xi_ranges << ".";
   }
 
+  //----- prepare the output file, start the computation of points
+
   out << "# fluxes: " << cepgen::utils::merge(fluxes, ",") << "\n"
       << "# two-photon mass range: " << mx_range;
   map<string, vector<cepgen::utils::Graph1D> > m_gr_fluxes;  // {collinear flux -> graph}
@@ -91,19 +133,17 @@ int main(int argc, char* argv[]) {
   auto integr = cepgen::AnalyticIntegratorFactory::get().build(
       cepgen::ParametersList().setName<string>(integrator).set<int>("mode", 0).set<int>("nodes", 2000));
   for (size_t i = 0; i < fluxes.size(); ++i) {
-    const auto& flux_name = fluxes.at(i);
+    const auto flux_names = cepgen::utils::split(fluxes.at(i), ':');
+    auto* flux1 = build_coll_flux(flux_names.at(0));
+    auto* flux2 = build_coll_flux(flux_names.size() > 1 ? flux_names.at(1) : flux_names.at(0));
     const auto s = sqrts.at(i) * sqrts.at(i);
-    const auto* flux =
-        dynamic_cast<cepgen::CollinearFlux*>(cepgen::PartonFluxFactory::get().build(flux_name).release());
-    if (flux->ktFactorised())
-      throw CG_FATAL("main") << "Flux '" << flux_name << "' is kt-dependant, and thus incompatible with this scheme.";
     for (const auto& xi_range : xi_ranges) {
       ostringstream oss;
-      oss << flux_name;
+      oss << fluxes.at(i);
       if (xi_range.valid())
         oss << " (" << xi_range.min() << " < \\xi < " << xi_range.max() << ")";
-      m_gr_fluxes[flux_name].emplace_back();
-      m_gr_fluxes[flux_name].back().setTitle(oss.str());
+      m_gr_fluxes[fluxes.at(i)].emplace_back();
+      m_gr_fluxes[fluxes.at(i)].back().setTitle(oss.str());
     }
 
     for (int j = 0; j < num_points; ++j) {
@@ -111,21 +151,23 @@ int main(int argc, char* argv[]) {
       for (size_t k = 0; k < xi_ranges.size(); ++k) {
         const auto& xi_range = xi_ranges.at(k);
         auto lumi_wgg = integr->integrate(
-            [&xi_range, &mx, &s, &flux](double x) {
+            [&xi_range, &mx, &s, &flux1, &flux2](double x) {
               if (xi_range.valid() && (!xi_range.contains(x) || !xi_range.contains(mx * mx / x / s)))
                 return 0.;
-              return 2. * mx / x / s * flux->fluxMX2(x) * flux->fluxMX2(mx * mx / x / s);
+              return 2. * mx / x / s * flux1->fluxMX2(x) * flux2->fluxMX2(mx * mx / x / s);
             },
             cepgen::Limits(mx * mx / s, 1.));
         lumi_wgg *= rescl.at(i);
         values.at(j).emplace_back(lumi_wgg);
-        m_gr_fluxes[flux_name][k].addPoint(mx, lumi_wgg);
+        m_gr_fluxes[fluxes.at(i)][k].addPoint(mx, lumi_wgg);
       }
     }
   }
   for (int i = 0; i < num_points; ++i)
     out << "\n" << mxvals.at(i) << "\t" << cepgen::utils::merge(values.at(i), "\t");
   out.close();
+
+  //----- plot things if necessary
 
   if (!plotter.empty()) {
     auto plt = cepgen::DrawerFactory::get().build(plotter);
