@@ -52,8 +52,8 @@ namespace cepgen {
       virtual double computeFactorisedMatrixElement() = 0;  ///< Factorised matrix element (event weight)
       virtual void fillCentralParticlesKinematics() = 0;    ///< Set the kinematics of the outgoing central system
 
-      pdgids_t produced_parts_;                           ///< Type of particles produced in the final state
-      const std::unique_ptr<PhaseSpaceGenerator> psgen_;  ///< Kinematic variables generator for the phase space coverage
+      pdgids_t produced_parts_;                     ///< Type of particles produced in the final state
+      std::unique_ptr<PhaseSpaceGenerator> psgen_;  ///< Kinematic variables generator for the phase space coverage
     };
   }  // namespace proc
 }  // namespace cepgen
