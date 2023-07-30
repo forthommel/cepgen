@@ -91,11 +91,13 @@ namespace {
         .add_property("partonPdgId", &cepgen::PartonFlux::partonPdgId)
         .add_property("fragmenting", &cepgen::PartonFlux::fragmenting)
         .add_property("ktFactorised", &cepgen::PartonFlux::ktFactorised)
-        .add_property(
-            "flux",
+        .def(
+            "__call__",
             +[](const cepgen::PartonFlux& flux) {
               if (flux.ktFactorised())
                 return adapt_reference(&dynamic_cast<const cepgen::KTFlux&>(flux));
+              if (flux.integratedQ2())
+                return adapt_reference(&dynamic_cast<const cepgen::IntegratedPartonFlux&>(flux));
               return adapt_reference(&dynamic_cast<const cepgen::CollinearFlux&>(flux));
             },
             "Expose the flux evaluator object from its type");
@@ -111,6 +113,10 @@ namespace {
         "_CollinearFlux", "fractional momentum/virtuality-dependent parton flux evaluator", py::no_init)
         .def("fluxMX2", py::pure_virtual(&cepgen::CollinearFlux::fluxMX2))
         .def("fluxQ2", py::pure_virtual(&cepgen::CollinearFlux::fluxQ2));
+
+    py::class_<IntegratedPartonFluxWrap, py::bases<PartonFluxWrap>, boost::noncopyable>(
+        "_IntegratedPartonFlux", "fractional momentum-dependent parton flux evaluator", py::no_init)
+        .def("flux", py::pure_virtual(&cepgen::IntegratedPartonFlux::flux));
 
     EXPOSE_FACTORY(
         cepgen::PartonFluxFactory, std::string, "PartonFluxFactory", "a parton fluxes evaluator objects factory");

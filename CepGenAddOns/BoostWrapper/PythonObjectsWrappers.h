@@ -21,7 +21,7 @@
 
 #include <boost/python/wrapper.hpp>
 
-#include "CepGen/CollinearFluxes/CollinearFlux.h"
+#include "CepGen/CollinearFluxes/IntegratedPartonFlux.h"
 #include "CepGen/KTFluxes/KTFlux.h"
 
 namespace py = boost::python;
@@ -68,6 +68,14 @@ struct CollinearFluxWrap : cepgen::CollinearFlux, py::wrapper<cepgen::CollinearF
     if (py::override ov = this->get_override("fluxQ2"))
       return ov(x, q2);
     return cepgen::CollinearFlux::fluxQ2(x, q2);
+  }
+};
+
+struct IntegratedPartonFluxWrap : cepgen::IntegratedPartonFlux, py::wrapper<cepgen::IntegratedPartonFlux> {
+  double flux(double x) const override {
+    if (py::override ov = this->get_override("flux"))
+      return ov(x);
+    return cepgen::IntegratedPartonFlux::flux(x);
   }
 };
 
