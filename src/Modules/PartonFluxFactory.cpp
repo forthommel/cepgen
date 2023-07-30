@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2023-2025  Laurent Forthomme
+ *  Copyright (C) 2023-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@ ParametersDescription PartonFluxFactory::describeParameters(const std::string& n
     throw CG_FATAL("PartonFluxFactory:describeParameters") << "No name given to describe parton flux modelling.";
   if (utils::contains(CollinearFluxFactory::get().modules(), name))
     return CollinearFluxFactory::get().describeParameters(name, params);
+  if (utils::contains(IntegratedPartonFluxFactory::get().modules(), name))
+    return IntegratedPartonFluxFactory::get().describeParameters(name, params);
   if (utils::contains(KTFluxFactory::get().modules(), name))
     return KTFluxFactory::get().describeParameters(name, params);
   return ParametersDescription().setName(name);

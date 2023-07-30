@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2023-2025  Laurent Forthomme
+ *  Copyright (C) 2023-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,15 @@
     static const BUILDER_NAME(obj) gCollinearFlux##obj;                              \
   }                                                                                  \
   static_assert(true, "")
+/// Add a generic Q^2-integrated collinear parton flux evaluator builder definition
+#define REGISTER_INTEGRATED_PARTON_FLUX(name, obj)                                          \
+  namespace cepgen {                                                                        \
+    struct BUILDER_NAME(obj) {                                                              \
+      BUILDER_NAME(obj)() { IntegratedPartonFluxFactory::get().registerModule<obj>(name); } \
+    };                                                                                      \
+    static const BUILDER_NAME(obj) gIntPartonFlux##obj;                                     \
+  }                                                                                         \
+  static_assert(true, "")
 /// Add a generic KT-factorised flux evaluator builder definition
 #define REGISTER_KT_FLUX(name, id, obj)                                                          \
   namespace cepgen {                                                                             \
@@ -42,9 +51,12 @@
 
 namespace cepgen {
   class CollinearFlux;
+  class IntegratedPartonFlux;
   class KTFlux;
   /// A collinear parton fluxes objects factory
   DEFINE_FACTORY(CollinearFluxFactory, CollinearFlux, "Collinear parton flux estimators factory");
+  /// A virtuality-integrated collinear parton fluxes objects factory
+  DEFINE_FACTORY(IntegratedPartonFluxFactory, IntegratedPartonFlux, "Integrated parton flux estimators factory");
   /// A KT-factorised parton fluxes objects factory
   DEFINE_FACTORY(KTFluxFactory, KTFlux, "KT-factorised flux estimators factory");
 

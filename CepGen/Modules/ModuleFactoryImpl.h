@@ -28,6 +28,7 @@
 #include "CepGen/FormFactors/Parameterisation.h"
 #include "CepGen/Integration/Integrator.h"
 #include "CepGen/PartonFluxes/CollinearFlux.h"
+#include "CepGen/PartonFluxes/IntegratedPartonFlux.h"
 #include "CepGen/PartonFluxes/KTFlux.h"
 #include "CepGen/Physics/Coupling.h"
 #include "CepGen/Process/PartonsPhaseSpaceGenerator.h"
@@ -53,6 +54,7 @@ namespace cepgen {
   template class ModuleFactory<EventExporter>;
   template class ModuleFactory<formfac::Parameterisation>;
   template class ModuleFactory<GeneratorWorker>;
+  template class ModuleFactory<IntegratedPartonFlux>;
   template class ModuleFactory<Integrator>;
   template class ModuleFactory<KTFlux>;
   template class ModuleFactory<PartonsPhaseSpaceGenerator>;
