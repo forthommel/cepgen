@@ -71,4 +71,12 @@ struct CollinearFluxWrap : cepgen::CollinearFlux, py::wrapper<cepgen::CollinearF
   }
 };
 
+struct IntegratedPartonFluxWrap : cepgen::IntegratedPartonFlux, py::wrapper<cepgen::IntegratedPartonFlux> {
+  double flux(double x) const override {
+    if (py::override ov = this->get_override("flux"))
+      return ov(x);
+    return cepgen::IntegratedPartonFlux::flux(x);
+  }
+};
+
 #endif

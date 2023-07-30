@@ -23,6 +23,7 @@
 // collection of handled objects
 #include "CepGen/Cards/Handler.h"
 #include "CepGen/CollinearFluxes/CollinearFlux.h"
+#include "CepGen/CollinearFluxes/IntegratedPartonFlux.h"
 #include "CepGen/Core/GeneratorWorker.h"
 #include "CepGen/Event/Event.h"
 #include "CepGen/EventFilter/EventExporter.h"
@@ -128,6 +129,7 @@ namespace cepgen {
   template class ModuleFactory<GeneratorWorker, std::string>;
   template class ModuleFactory<Integrator, std::string>;
   template class ModuleFactory<AnalyticIntegrator, std::string>;
+  template class ModuleFactory<IntegratedPartonFlux, std::string>;
   template class ModuleFactory<KTFlux, std::string>;
   template class ModuleFactory<proc::Process, std::string>;
   template class ModuleFactory<sigrat::Parameterisation, int>;
