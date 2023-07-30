@@ -33,39 +33,39 @@ namespace cepgen {
   public:
     explicit IntegratedKTFlux(const ParametersList& params)
         : CollinearFlux(params),
+          integr_(AnalyticIntegratorFactory::get().build(params.get<ParametersList>("integrator"))),
+          flux_(PartonFluxFactory::get().buildKTFlux(steer<ParametersList>("ktFlux"))),
           kt2_range_(steer<Limits>("kt2range")),
-          flux_(*dynamic_cast<KTFlux*>(PartonFluxFactory::get().build(steer<ParametersList>("ktFlux")).release())),
           func_q2_([&](double kt2, void* params) {
             const auto& args = *static_cast<std::pair<double, double>*>(params);
-            return flux_.fluxQ2(args.first, kt2, args.second);
+            return flux_->fluxQ2(args.first, kt2, args.second);
           }),
           func_mx2_([&](double kt2, void* params) {
             const auto& args = *static_cast<std::pair<double, double>*>(params);
-            return flux_.fluxMX2(args.first, kt2, args.second);
-          }),
-          integr_(AnalyticIntegratorFactory::get().build(params.get<ParametersList>("analyticalIntegrator"))) {
-      if (!flux_.ktFactorised())
+            return flux_->fluxMX2(args.first, kt2, args.second);
+          }) {
+      if (!flux_->ktFactorised())
         throw CG_FATAL("GammaIntegrated") << "Input flux has to be unintegrated.";
       // initialise the functions to integrate
       CG_INFO("IntegratedKTFlux") << "kt flux-integrated collinear flux evaluator initialised.\n\t"
                                   << "Analytical integrator: " << integr_->name() << "\n\t"
                                   << "Q^2 integration range: " << kt2_range_ << " GeV^2\n\t"
-                                  << "Unintegrated flux: " << flux_.name() << ".";
+                                  << "Unintegrated flux: " << flux_->name() << ".";
     }
 
-    bool fragmenting() const override final { return flux_.fragmenting(); }
-    pdgid_t partonPdgId() const override final { return flux_.partonPdgId(); }
-    double mass2() const override final { return flux_.mass2(); }
+    bool fragmenting() const override final { return flux_->fragmenting(); }
+    pdgid_t partonPdgId() const override final { return flux_->partonPdgId(); }
+    double mass2() const override final { return flux_->mass2(); }
 
     static ParametersDescription description() {
       auto desc = CollinearFlux::description();
       desc.setDescription("kt-integrated photon flux");
-      desc.add<Limits>("kt2range", {0., 1.e4})
-          .setDescription("kinematic range for the parton transverse virtuality, in GeV^2");
+      desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"))
+          .setDescription("Steering parameters for the analytical integrator");
       desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("BudnevElasticKT"))
           .setDescription("Type of unintegrated kT-dependent parton flux");
-      desc.add<ParametersDescription>("analyticalIntegrator", ParametersDescription().setName<std::string>("gsl"))
-          .setDescription("Steering parameters for the analytical integrator");
+      desc.add<Limits>("kt2range", {0., 1.e4})
+          .setDescription("kinematic range for the parton transverse virtuality, in GeV^2");
       return desc;
     }
 
@@ -82,10 +82,10 @@ namespace cepgen {
     }
 
   private:
+    const std::unique_ptr<AnalyticIntegrator> integr_;
+    const std::unique_ptr<KTFlux> flux_;
     const Limits kt2_range_;
-    const KTFlux& flux_;
     const utils::Function1D func_q2_, func_mx2_;
-    std::unique_ptr<AnalyticIntegrator> integr_;
   };
 }  // namespace cepgen
-REGISTER_FLUX("IntegratedKTFlux", IntegratedKTFlux);
+REGISTER_FLUX("coll.IntegratedKTFlux", IntegratedKTFlux);

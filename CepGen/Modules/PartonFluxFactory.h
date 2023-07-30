@@ -35,8 +35,28 @@
 
 namespace cepgen {
   class PartonFlux;
-  /// A functional objects factory
-  DEFINE_FACTORY_STR(PartonFluxFactory, PartonFlux, "Parton flux estimators factory");
+  class KTFlux;
+  class CollinearFlux;
+  class IntegratedPartonFlux;
+  /// A parton fluxes objects factory
+  DEFINE_FACTORY_STR(BasePartonFluxFactory, PartonFlux, "Parton flux estimators factory");
+
+  struct PartonFluxFactory : BasePartonFluxFactory {
+    using BasePartonFluxFactory::BasePartonFluxFactory;
+    static PartonFluxFactory& get() {
+      static PartonFluxFactory instance;
+      return instance;
+    }
+
+    std::unique_ptr<KTFlux> buildKTFlux(const ParametersList&) const;
+    std::unique_ptr<CollinearFlux> buildCollinearFlux(const ParametersList&) const;
+    std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const ParametersList&) const;
+    std::unique_ptr<KTFlux> buildKTFlux(const std::string& name, const ParametersList& params = ParametersList()) const;
+    std::unique_ptr<CollinearFlux> buildCollinearFlux(const std::string& name,
+                                                      const ParametersList& params = ParametersList()) const;
+    std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const std::string& name,
+                                                              const ParametersList& params = ParametersList()) const;
+  };
 }  // namespace cepgen
 
 #endif

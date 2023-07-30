@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2023  Laurent Forthomme
+ *  Copyright (C) 2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #include <fstream>
 
 #include "CepGen/CollinearFluxes/CollinearFlux.h"
+#include "CepGen/CollinearFluxes/IntegratedPartonFlux.h"
 #include "CepGen/Generator.h"
 #include "CepGen/KTFluxes/KTFlux.h"
 #include "CepGen/Modules/DrawerFactory.h"
@@ -86,6 +87,9 @@ int main(int argc, char* argv[]) {
       if (fluxes.at(j)->ktFactorised()) {
         const auto& eval = dynamic_cast<const cepgen::KTFlux&>(*fluxes.at(j));
         flux = plot_vs_q2 ? eval.fluxQ2(x, kt2, q2) : eval.fluxMX2(x, kt2, mx2);
+      } else if (fluxes.at(j)->integratedQ2()) {
+        const auto& eval = dynamic_cast<const cepgen::IntegratedPartonFlux&>(*fluxes.at(j));
+        flux = eval.flux(x);
       } else {
         const auto& eval = dynamic_cast<const cepgen::CollinearFlux&>(*fluxes.at(j));
         flux = plot_vs_q2 ? eval.fluxQ2(x, q2) : eval.fluxMX2(x, mx2);

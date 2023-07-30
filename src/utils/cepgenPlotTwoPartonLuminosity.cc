@@ -18,7 +18,7 @@
 
 #include <fstream>
 
-#include "CepGen/CollinearFluxes/CollinearFlux.h"
+#include "CepGen/CollinearFluxes/IntegratedPartonFlux.h"
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Generator.h"
 #include "CepGen/Integration/AnalyticIntegrator.h"
@@ -33,15 +33,24 @@
 
 using namespace std;
 
-cepgen::CollinearFlux* build_coll_flux(const string& flux_name) {
-  auto* flux = dynamic_cast<cepgen::CollinearFlux*>(cepgen::PartonFluxFactory::get().build(flux_name).release());
-  if (!flux->ktFactorised())
-    return flux;
-  return dynamic_cast<cepgen::CollinearFlux*>(
-      cepgen::PartonFluxFactory::get()
-          .build("IntegratedKTFlux",
-                 cepgen::ParametersList().set("ktFlux", cepgen::ParametersList().setName<std::string>(flux_name)))
-          .release());
+cepgen::IntegratedPartonFlux* build_coll_flux(const string& flux_name) {
+  auto flux = cepgen::PartonFluxFactory::get().build(flux_name);
+  if (flux->integratedQ2())
+    return dynamic_cast<cepgen::IntegratedPartonFlux*>(flux.release());
+  if (flux->ktFactorised())
+    return cepgen::PartonFluxFactory::get()
+        .buildIntegratedFlux("integ.IntegratedFlux",
+                             cepgen::ParametersList().set<cepgen::ParametersList>(
+                                 "unintegratedFlux",
+                                 cepgen::ParametersList()
+                                     .setName<std::string>("coll.IntegratedKTFlux")
+                                     .set("ktFlux", cepgen::ParametersList().setName<std::string>(flux_name))))
+        .release();
+  return cepgen::PartonFluxFactory::get()
+      .buildIntegratedFlux("integ.IntegratedFlux",
+                           cepgen::ParametersList().set<cepgen::ParametersList>(
+                               "unintegratedFlux", cepgen::ParametersList().setName<std::string>(flux_name)))
+      .release();
 }
 
 int main(int argc, char* argv[]) {
@@ -133,7 +142,7 @@ int main(int argc, char* argv[]) {
   auto integr = cepgen::AnalyticIntegratorFactory::get().build(
       cepgen::ParametersList().setName<string>(integrator).set<int>("mode", 0).set<int>("nodes", 2000));
   for (size_t i = 0; i < fluxes.size(); ++i) {
-    const auto flux_names = cepgen::utils::split(fluxes.at(i), ':');
+    const auto flux_names = cepgen::utils::split(fluxes.at(i), '+');
     auto* flux1 = build_coll_flux(flux_names.at(0));
     auto* flux2 = build_coll_flux(flux_names.size() > 1 ? flux_names.at(1) : flux_names.at(0));
     const auto s = sqrts.at(i) * sqrts.at(i);
@@ -154,7 +163,7 @@ int main(int argc, char* argv[]) {
             [&xi_range, &mx, &s, &flux1, &flux2](double x) {
               if (xi_range.valid() && (!xi_range.contains(x) || !xi_range.contains(mx * mx / x / s)))
                 return 0.;
-              return 2. * mx / x / s * flux1->fluxMX2(x) * flux2->fluxMX2(mx * mx / x / s);
+              return 2. * mx / x / s * flux1->flux(x) * flux2->flux(mx * mx / x / s);
             },
             cepgen::Limits(mx * mx / s, 1.));
         lumi_wgg *= rescl.at(i);

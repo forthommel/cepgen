@@ -95,4 +95,4 @@ namespace cepgen {
   };
 }  // namespace cepgen
 
-REGISTER_FLUX("LHAPDFCollinearPartonFlux", LHAPDFCollinearPartonFlux);
+REGISTER_FLUX("coll.LHAPDFCollinearPartonFlux", LHAPDFCollinearPartonFlux);

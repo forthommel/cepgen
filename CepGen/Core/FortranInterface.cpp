@@ -76,7 +76,7 @@ double cepgen_kt_flux_(int& fmode, double& x, double& kt2, int& sfmode, double& 
         throw CG_FATAL("cepgen_kt_flux") << "Invalid flux modelling: " << mode << ".";
     }
   };
-  static auto* flux = dynamic_cast<KTFlux*>(PartonFluxFactory::get().build(flux_name(fmode), params).release());
+  static auto* flux = PartonFluxFactory::get().buildKTFlux(flux_name(fmode), params).release();
   return flux->fluxMX2(x, kt2, mout * mout);
 }
 

@@ -16,34 +16,30 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CepGen_Physics_PartonFlux_h
-#define CepGen_Physics_PartonFlux_h
+#ifndef CepGen_CollinearFluxes_IntegratedPartonFlux_h
+#define CepGen_CollinearFluxes_IntegratedPartonFlux_h
 
-#include "CepGen/Modules/NamedModule.h"
-#include "CepGen/Physics/ParticleProperties.h"
+#include <memory>
+
+#include "CepGen/CollinearFluxes/CollinearFlux.h"
 
 namespace cepgen {
-  class PartonFlux : public NamedModule<std::string> {
+  class AnalyticIntegrator;
+  class IntegratedPartonFlux : public PartonFlux {
   public:
-    explicit PartonFlux(const ParametersList&);
+    explicit IntegratedPartonFlux(const ParametersList&);
 
     static ParametersDescription description();
 
-    /// is the flux parton kT-dependent?
-    virtual bool ktFactorised() const { return false; }
-    /// is the flux integrated in Q^2?
-    virtual bool integratedQ2() const { return false; }
-    /// is the initiator particle fragmenting after the parton emission?
-    virtual bool fragmenting() const { return true; }
-    /// parton PDG identifier
-    virtual pdgid_t partonPdgId() const = 0;
-    /// initiator particle squared mass
-    virtual double mass2() const = 0;
+    /// Compute the collinear flux for this x value
+    virtual double flux(double x) const = 0;
+
+    bool ktFactorised() const override final { return false; }
+    bool integratedQ2() const override final { return true; }
 
   protected:
-    const double prefactor_;
-    const double mp_, mp2_;
-    const Limits x_range_{0., 1.};
+    /// Integration range for the flux
+    const Limits q2_range_{0., 1.e4};
   };
 }  // namespace cepgen
 
