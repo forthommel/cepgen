@@ -38,6 +38,7 @@ namespace cepgen {
     bool integratedQ2() const override final { return true; }
 
   protected:
+    bool computeQ2range(double x, Limits& q2min) const;
     /// Integration range for the flux
     const Limits q2_range_{0., 1.e4};
   };

@@ -31,4 +31,11 @@ namespace cepgen {
     desc.add<Limits>("q2Range", Limits{0., 20.});
     return desc;
   }
+
+  bool IntegratedPartonFlux::computeQ2range(double x, Limits& q2limits) const {
+    if (!x_range_.contains(x, true))
+      return false;
+    q2limits = Limits{mass2() * x * x / (1. - x), q2_range_.max()};
+    return q2_range_.contains(q2limits.min());
+  }
 }  // namespace cepgen

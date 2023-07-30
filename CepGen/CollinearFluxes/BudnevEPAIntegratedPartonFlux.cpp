@@ -41,14 +41,6 @@ namespace cepgen {
       desc.add<Limits>("q2Range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
       return desc;
     }
-
-  protected:
-    bool computeQ2min(double x, double& q2min) const {
-      if (!x_range_.contains(x, true))
-        return false;
-      q2min = mass2() * x * x / (1. - x);
-      return q2_range_.contains(q2min);
-    }
   };
 
   class BudnevEPALepton final : public BudnevEPA {
@@ -68,12 +60,12 @@ namespace cepgen {
     }
 
     double flux(double x) const override {
-      double q2min;
-      if (!computeQ2min(x, q2min))
+      Limits q2range;
+      if (!computeQ2range(x, q2range))
         return 0.;
       return std::max(0.,
-                      prefactor_ * (ml2_ * x * (1. / q2_range_.max() - 1. / q2min) +
-                                    (1. - x + 0.5 * x * x) / x * log(q2_range_.max() / q2min)));
+                      prefactor_ * (ml2_ * x * (1. / q2range.max() - 1. / q2range.min()) +
+                                    (1. - x + 0.5 * x * x) / x * log(q2range.max() / q2range.min())));
     }
 
   private:
@@ -100,10 +92,11 @@ namespace cepgen {
     }
 
     double flux(double x) const override {
-      double q2min;
-      if (!computeQ2min(x, q2min))
+      Limits q2range;
+      if (!computeQ2range(x, q2range))
         return 0.;
-      return std::max(0., prefactor_ * (phi(x, q2_range_.max() / q2scale_) - phi(x, q2min / q2scale_)) * (1 - x) / x);
+      return std::max(0.,
+                      prefactor_ * (phi(x, q2range.max() / q2scale_) - phi(x, q2range.min() / q2scale_)) * (1 - x) / x);
     }
 
   protected:

@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cmath>
 #include <memory>
 
 #include "CepGen/CollinearFluxes/IntegratedPartonFlux.h"
@@ -29,7 +30,8 @@ namespace cepgen {
     explicit AnalyticIntegratedPartonFlux(const ParametersList& params)
         : IntegratedPartonFlux(params),
           integr_(AnalyticIntegratorFactory::get().build(steer<ParametersList>("integrator"))),
-          unint_flux_(PartonFluxFactory::get().buildCollinearFlux(steer<ParametersList>("unintegratedFlux"))) {}
+          unint_flux_(PartonFluxFactory::get().buildCollinearFlux(steer<ParametersList>("unintegratedFlux"))),
+          log_q2_(steer<bool>("logQ2")) {}
 
     static ParametersDescription description() {
       auto desc = IntegratedPartonFlux::description();
@@ -37,11 +39,19 @@ namespace cepgen {
       desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"));
       desc.add<ParametersDescription>("unintegratedFlux",
                                       ParametersDescription().setName<std::string>("coll.PlainEPA"));
+      desc.add<bool>("logQ2", true)
+          .setDescription("integrate vs. log(Q^2) instead of Q^2 (useful for strongly peaking spectra)");
       return desc;
     }
 
     double flux(double x) const override {
-      return integr_->integrate([this, &x](double q2) { return unint_flux_->fluxQ2(x, q2); }, q2_range_);
+      Limits q2range;
+      if (!computeQ2range(x, q2range))
+        return 0.;
+      if (log_q2_)
+        return integr_->integrate([this, &x](double logq2) { return unint_flux_->fluxQ2(x, std::exp(logq2)); },
+                                  Limits{std::log(q2range.min()), std::log(q2range.max())});
+      return integr_->integrate([this, &x](double q2) { return unint_flux_->fluxQ2(x, q2); }, q2range);
     }
 
     bool fragmenting() const override { return unint_flux_->fragmenting(); }
@@ -51,6 +61,7 @@ namespace cepgen {
   protected:
     const std::unique_ptr<AnalyticIntegrator> integr_;
     const std::unique_ptr<CollinearFlux> unint_flux_;
+    const bool log_q2_;
   };
 }  // namespace cepgen
 REGISTER_FLUX("integ.IntegratedFlux", AnalyticIntegratedPartonFlux);
