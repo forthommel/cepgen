@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "CepGen/CollinearFluxes/IntegratedPartonFlux.h"
 #include "CepGen/FormFactors/Parameterisation.h"
 #include "CepGen/Generator.h"
 #include "CepGen/Modules/FormFactorsFactory.h"
@@ -96,6 +97,8 @@ namespace {
             +[](const cepgen::PartonFlux& flux) {
               if (flux.ktFactorised())
                 return adapt_reference(&dynamic_cast<const cepgen::KTFlux&>(flux));
+              if (flux.integratedQ2())
+                return adapt_reference(&dynamic_cast<const cepgen::IntegratedPartonFlux&>(flux));
               return adapt_reference(&dynamic_cast<const cepgen::CollinearFlux&>(flux));
             },
             "Expose the flux evaluator object from its type");
@@ -109,6 +112,15 @@ namespace {
                    std::string,
                    "CollinearFluxFactory",
                    "a collinear parton fluxes evaluator objects factory");
+
+    py::class_<IntegratedPartonFluxWrap, py::bases<PartonFluxWrap>, boost::noncopyable>(
+        "_IntegratedPartonFlux", "fractional momentum-dependent parton flux evaluator", py::no_init)
+        .def("flux", py::pure_virtual(&cepgen::IntegratedPartonFlux::flux));
+
+    EXPOSE_FACTORY(cepgen::IntegratedPartonFluxFactory,
+                   std::string,
+                   "IntegratedPartonFluxFactory",
+                   "a Q^2-integrated collinear parton fluxes evaluator objects factory");
 
     py::class_<KTFluxWrap, py::bases<PartonFluxWrap>, boost::noncopyable>(
         "_KTFlux",

@@ -27,6 +27,8 @@ namespace cepgen {
                                                               const ParametersList& params) const {
     if (utils::contains(CollinearFluxFactory::get().modules(), name))
       return CollinearFluxFactory::get().describeParameters(name, params);
+    if (utils::contains(IntegratedPartonFluxFactory::get().modules(), name))
+      return IntegratedPartonFluxFactory::get().describeParameters(name, params);
     if (utils::contains(KTFluxFactory::get().modules(), name))
       return KTFluxFactory::get().describeParameters(name, params);
     throw CG_FATAL("PartonFluxFactory:describeParameters")
