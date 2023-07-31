@@ -33,18 +33,34 @@ namespace cepgen {
 
     void CollinearPhaseSpaceGenerator::initialise() {
       auto& kin = process().kinematics();
-      auto set_flux_properties = [](const Beam& beam, std::unique_ptr<PartonFlux>& flux) {
+      auto set_flux_properties = [&kin](const Beam& beam, std::unique_ptr<PartonFlux>& flux) {
         auto params = beam.partonFluxParameters();
         if (params.name<std::string>().empty()) {
           if (beam.elastic()) {
             if (HeavyIon::isHI(beam.pdgId()))
-              params = PartonFluxFactory::get().describeParameters("BudnevEPAHI").validate(params);
+              params =
+                  PartonFluxFactory::get()
+                      .describeParameters(
+                          "coll.PlainEPA",
+                          ParametersList().set("formFactors", ParametersList().setName<std::string>("HeavyIonDipole")))
+                      .validate(params);
             else
-              params = PartonFluxFactory::get().describeParameters("BudnevEPAProton").validate(params);
+              params = PartonFluxFactory::get()
+                           .describeParameters("coll.PlainEPA",
+                                               ParametersList().set("formFactors",
+                                                                    ParametersList()
+                                                                        .setName<std::string>("InelasticNucleon")
+                                                                        .set("structureFunctions",
+                                                                             kin.incomingBeams().structureFunctions())))
+                           .validate(params);
           } else
-            params = PartonFluxFactory::get().describeParameters("BudnevEPAProton").validate(params);
+            params = PartonFluxFactory::get()
+                         .describeParameters("coll.PlainEPA",
+                                             ParametersList().set("formFactors", kin.incomingBeams().formFactors()))
+                         .validate(params);
           //TODO: fermions/pions
         }
+        CG_LOG << params;
         flux = std::move(PartonFluxFactory::get().build(params));
         if (!flux)
           throw CG_FATAL("CollinearPhaseSpaceGenerator:init")
