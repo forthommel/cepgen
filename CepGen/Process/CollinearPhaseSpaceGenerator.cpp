@@ -41,12 +41,12 @@ namespace cepgen {
               params =
                   PartonFluxFactory::get()
                       .describeParameters(
-                          "coll.PlainEPA",
+                          "coll.EPAFlux",
                           ParametersList().set("formFactors", ParametersList().setName<std::string>("HeavyIonDipole")))
                       .validate(params);
             else
               params = PartonFluxFactory::get()
-                           .describeParameters("coll.PlainEPA",
+                           .describeParameters("coll.EPAFlux",
                                                ParametersList().set("formFactors",
                                                                     ParametersList()
                                                                         .setName<std::string>("InelasticNucleon")
@@ -55,7 +55,7 @@ namespace cepgen {
                            .validate(params);
           } else
             params = PartonFluxFactory::get()
-                         .describeParameters("coll.PlainEPA",
+                         .describeParameters("coll.EPAFlux",
                                              ParametersList().set("formFactors", kin.incomingBeams().formFactors()))
                          .validate(params);
           //TODO: fermions/pions

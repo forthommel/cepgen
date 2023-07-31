@@ -38,7 +38,7 @@ namespace cepgen {
     static ParametersDescription description() {
       auto desc = IntegratedPartonFlux::description();
       desc.setDescription("Generic Budnev integrated EPA flux");
-      desc.add<Limits>("q2Range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
+      desc.add<Limits>("Q2range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
       return desc;
     }
   };
@@ -46,7 +46,7 @@ namespace cepgen {
   class BudnevEPALepton final : public BudnevEPA {
   public:
     explicit BudnevEPALepton(const ParametersList& params)
-        : BudnevEPA(params), ml2_(std::pow(PDG::get().mass(steer<int>("pdgId")), 2)) {
+        : BudnevEPA(params), ml2_(std::pow(PDG::get().mass(steer<pdgid_t>("pdgId")), 2)) {
       CG_INFO("BudnevEPALepton") << "Budnev EPA for photon-from-lepton elastic limit (lepton: "
                                  << PDG::get().name(steer<int>("pdgId")) << ").\n\t "
                                  << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
@@ -55,10 +55,11 @@ namespace cepgen {
     static ParametersDescription description() {
       auto desc = BudnevEPA::description();
       desc.setDescription("Lepton integrated EPA (Budnev)");
-      desc.addAs<int, pdgid_t>("pdgId", PDG::electron).setDescription("lepton PDG id");
+      desc.add<pdgid_t>("pdgId", PDG::electron).setDescription("lepton PDG id");
       return desc;
     }
 
+    double mass2() const override { return ml2_; }
     double flux(double x) const override {
       Limits q2range;
       if (!computeQ2range(x, q2range))
@@ -68,35 +69,28 @@ namespace cepgen {
                                     (1. - x + 0.5 * x * x) / x * log(q2range.max() / q2range.min())));
     }
 
-  private:
-    double mass2() const override { return ml2_; }
+  protected:
     const double ml2_;
   };
 
   class BudnevEPANucleon : public BudnevEPA {
   public:
     explicit BudnevEPANucleon(const ParametersList& params)
-        : BudnevEPA(params),
-          q2scale_(steer<double>("scale")),
-          a_(steer<double>("a")),
-          b_(steer<double>("b")),
-          c_(steer<double>("c")) {}
+        : BudnevEPA(params), q20_(steer<double>("q20")), mup_(steer<double>("mup")) {}
 
     static ParametersDescription description() {
       auto desc = BudnevEPA::description();
-      desc.add<double>("scale", 0.71);
-      desc.add<double>("a", 7.16);
-      desc.add<double>("b", -3.96);
-      desc.add<double>("c", 0.028);
+      desc.add<double>("q20", 0.71);
+      desc.add<double>("mup", 2.79).setDescription("proton magnetic moment");
       return desc;
     }
 
     double flux(double x) const override {
+      init();
       Limits q2range;
       if (!computeQ2range(x, q2range))
         return 0.;
-      return std::max(0.,
-                      prefactor_ * (phi(x, q2range.max() / q2scale_) - phi(x, q2range.min() / q2scale_)) * (1 - x) / x);
+      return std::max(0., prefactor_ * (phi(x, q2range.max() / q20_) - phi(x, q2range.min() / q20_)) * (1 - x) / x);
     }
 
   protected:
@@ -114,8 +108,19 @@ namespace cepgen {
     }
 
   private:
-    const double q2scale_;
-    const double a_, b_, c_;
+    void init() const {
+      if (init_)
+        return;
+      const auto mup2 = mup_ * mup_, tau = 4. * mass2() / q20_;
+      a_ = 0.25 * (1. + mup2) + tau;
+      b_ = 1. - tau;
+      c_ = (mup2 - 1.) * std::pow(b_, -4);
+      init_ = true;
+    }
+
+    const double q20_, mup_;
+    mutable bool init_{false};
+    mutable double a_{0.}, b_{0.}, c_{0.};
   };
 
   struct BudnevEPAProton final : public BudnevEPANucleon {
@@ -124,13 +129,13 @@ namespace cepgen {
                                  << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
     }
 
-    double mass2() const override { return mp2_; }
-
     static ParametersDescription description() {
       auto desc = BudnevEPANucleon::description();
       desc.setDescription("Proton integrated EPA (Budnev)");
+      desc.add<pdgid_t>("pdgId", PDG::proton);
       return desc;
     }
+    double mass2() const override { return mp2_; }
   };
 
   class BudnevEPAHI final : public BudnevEPANucleon {
@@ -146,16 +151,15 @@ namespace cepgen {
                                       << " GeV^2. It is currently " << q2_range_ << ".";
     }
 
-    double mass2() const override { return mass2_; }
-
     static ParametersDescription description() {
       auto desc = BudnevEPANucleon::description();
       desc.setDescription("HI integrated EPA (Budnev)");
       desc.addAs<pdgid_t, HeavyIon>("heavyIon", HeavyIon::Pb()).setDescription("type of heavy ion considered");
-      desc.add<Limits>("q2Range", {0., 1.e5}).setDescription("kinematic range for the parton virtuality, in GeV^2");
+      desc.add<Limits>("Q2range", {0., 1.e5});
       return desc;
     }
 
+    double mass2() const override { return mass2_; }
     double flux(double x) const override {
       const auto z = (unsigned short)hi_.Z;
       return z * BudnevEPANucleon::flux(x);
@@ -163,8 +167,7 @@ namespace cepgen {
 
   private:
     const HeavyIon hi_;
-    const double mass2_;
-    const double q2max_min_{1.e4};
+    const double mass2_, q2max_min_{1.e4};
   };
 }  // namespace cepgen
 REGISTER_FLUX("integ.BudnevEPALepton", BudnevEPALepton);

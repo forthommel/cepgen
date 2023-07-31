@@ -23,12 +23,13 @@
 
 namespace cepgen {
   IntegratedPartonFlux::IntegratedPartonFlux(const ParametersList& params)
-      : PartonFlux(params), q2_range_(steer<Limits>("q2Range")) {}
+      : PartonFlux(params), q2_range_(steer<Limits>("Q2range")) {}
 
   ParametersDescription IntegratedPartonFlux::description() {
-    auto desc = CollinearFlux::description();
+    auto desc = PartonFlux::description();
     desc.setDescription("Integrated parton flux evaluator");
-    desc.add<Limits>("q2Range", Limits{0., 20.});
+    desc.add<Limits>("Q2range", Limits{0., 20.})
+        .setDescription("integration bounds for the parton virtuality, in GeV^2");
     return desc;
   }
 

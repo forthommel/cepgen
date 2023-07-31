@@ -33,26 +33,6 @@
 
 using namespace std;
 
-cepgen::IntegratedPartonFlux* build_coll_flux(const string& flux_name) {
-  auto flux = cepgen::PartonFluxFactory::get().build(flux_name);
-  if (flux->integratedQ2())
-    return dynamic_cast<cepgen::IntegratedPartonFlux*>(flux.release());
-  if (flux->ktFactorised())
-    return cepgen::PartonFluxFactory::get()
-        .buildIntegratedFlux("integ.IntegratedFlux",
-                             cepgen::ParametersList().set<cepgen::ParametersList>(
-                                 "unintegratedFlux",
-                                 cepgen::ParametersList()
-                                     .setName<std::string>("coll.IntegratedKTFlux")
-                                     .set("ktFlux", cepgen::ParametersList().setName<std::string>(flux_name))))
-        .release();
-  return cepgen::PartonFluxFactory::get()
-      .buildIntegratedFlux("integ.IntegratedFlux",
-                           cepgen::ParametersList().set<cepgen::ParametersList>(
-                               "unintegratedFlux", cepgen::ParametersList().setName<std::string>(flux_name)))
-      .release();
-}
-
 int main(int argc, char* argv[]) {
   vector<string> fluxes;
   int num_points;
@@ -72,7 +52,7 @@ int main(int argc, char* argv[]) {
       .addOptionalArgument("integrator,i", "type of integration algorithm", &integrator, "gsl")
       .addOptionalArgument("sqrts,s", "two-proton centre of mass energy (GeV)", &sqrts, vector<double>{13.e3})
       .addOptionalArgument("mrange,m", "two-photon mass range", &mx_range, cepgen::Limits{0., 100.})
-      .addOptionalArgument("npoints,n", "number of x-points to scan", &num_points, 500)
+      .addOptionalArgument("npoints,n", "number of x-points to scan", &num_points, 50)
       .addOptionalArgument("output,o", "output file name", &output_file, "collflux.int.scan.output.txt")
       .addOptionalArgument("plotter,p", "type of plotter to user", &plotter, "")
       .addOptionalArgument("logx", "logarithmic x-scale", &logx, false)
@@ -143,16 +123,17 @@ int main(int argc, char* argv[]) {
       cepgen::ParametersList().setName<string>(integrator).set<int>("mode", 0).set<int>("nodes", 2000));
   for (size_t i = 0; i < fluxes.size(); ++i) {
     const auto flux_names = cepgen::utils::split(fluxes.at(i), '+');
-    auto* flux1 = build_coll_flux(flux_names.at(0));
-    auto* flux2 = build_coll_flux(flux_names.size() > 1 ? flux_names.at(1) : flux_names.at(0));
+    auto flux1 = cepgen::PartonFluxFactory::get().buildIntegratedFlux(flux_names.at(0));
+    auto flux2 = cepgen::PartonFluxFactory::get().buildIntegratedFlux(flux_names.size() > 1 ? flux_names.at(1)
+                                                                                            : flux_names.at(0));
+    ostringstream foss;
+    foss << flux1->name() << "/" << flux2->name();
     const auto s = sqrts.at(i) * sqrts.at(i);
     for (const auto& xi_range : xi_ranges) {
-      ostringstream oss;
-      oss << fluxes.at(i);
+      ostringstream oss(foss.str());
       if (xi_range.valid())
         oss << " (" << xi_range.min() << " < \\xi < " << xi_range.max() << ")";
-      m_gr_fluxes[fluxes.at(i)].emplace_back();
-      m_gr_fluxes[fluxes.at(i)].back().setTitle(oss.str());
+      m_gr_fluxes[fluxes.at(i)].emplace_back("", oss.str());
     }
 
     for (int j = 0; j < num_points; ++j) {

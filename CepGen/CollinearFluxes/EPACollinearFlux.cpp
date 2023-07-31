@@ -1,7 +1,7 @@
 /*
  *  CepGen: a central exclusive processes event generator
  *  Copyright (C) 2023  Laurent Forthomme
- *                2011  Nicolas Schul
+ *                2009-1022  Nicolas Schul, Jerome de Favereau de Jeneret
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,18 +27,15 @@
 #include "CepGen/Utils/Limits.h"
 
 namespace cepgen {
-  class PlainEPA : public CollinearFlux {
+  class EPACollinearFlux : public CollinearFlux {
   public:
-    explicit PlainEPA(const ParametersList& params)
-        : CollinearFlux(params),
-          ff_(FormFactorsFactory::get().build(steer<ParametersList>("formFactors"))),
-          q2_range_(steer<Limits>("q2range")) {}
+    explicit EPACollinearFlux(const ParametersList& params)
+        : CollinearFlux(params), ff_(FormFactorsFactory::get().build(steer<ParametersList>("formFactors"))) {}
 
     static ParametersDescription description() {
       auto desc = CollinearFlux::description();
       desc.setDescription("Plain form factors-dependent EPA flux");
       desc.add<ParametersDescription>("formFactors", ParametersDescription().setName<std::string>("StandardDipole"));
-      desc.add<Limits>("q2range", Limits{0.879, 2.});
       return desc;
     }
 
@@ -49,6 +46,8 @@ namespace cepgen {
       if (!x_range_.contains(x, true))
         return 0.;
       const auto q2min = mp2_ * x * x / (1. - x);
+      if (q2 < q2min)
+        return 0.;
       const auto form_factors = (*ff_)(q2);
       return prefactor_ * 1. / x * 1. / q2 *
              ((1. - x) * (1. - q2min / q2) * form_factors.FE + 0.5 * x * x * form_factors.FM);
@@ -57,8 +56,7 @@ namespace cepgen {
   protected:
     double mass2() const override { return mp2_; }
     const std::unique_ptr<formfac::Parameterisation> ff_;
-    const Limits q2_range_;
   };
 }  // namespace cepgen
 
-REGISTER_FLUX("coll.PlainEPA", PlainEPA);
+REGISTER_FLUX("coll.EPAFlux", EPACollinearFlux);
