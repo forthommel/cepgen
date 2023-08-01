@@ -37,11 +37,11 @@ namespace cepgen {
         if (params.name<std::string>().empty()) {
           if (beam.elastic()) {
             if (HeavyIon::isHI(beam.pdgId()))
-              params = PartonFluxFactory::get().describeParameters("ElasticHeavyIonKT").validate(params);
+              params = PartonFluxFactory::get().describeParameters("kt.ElasticHeavyIon").validate(params);
             else
-              params = PartonFluxFactory::get().describeParameters("BudnevElasticKT").validate(params);
+              params = PartonFluxFactory::get().describeParameters("kt.BudnevElastic").validate(params);
           } else
-            params = PartonFluxFactory::get().describeParameters("BudnevInelasticKT").validate(params);
+            params = PartonFluxFactory::get().describeParameters("kt.BudnevInelastic").validate(params);
           //TODO: fermions/pions
         }
         flux.reset(PartonFluxFactory::get().build(params).release());
