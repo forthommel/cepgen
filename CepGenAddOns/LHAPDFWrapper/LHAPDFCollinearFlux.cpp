@@ -18,81 +18,76 @@
 
 #include <LHAPDF/LHAPDF.h>
 
+#include <numeric>
+
 #include "CepGen/CollinearFluxes/CollinearFlux.h"
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Modules/PartonFluxFactory.h"
 #include "CepGen/Physics/PDG.h"
 
 namespace cepgen {
-  class LHAPDFCollinearPartonFlux : public CollinearFlux {
+  class LHAPDFCollinearFlux : public CollinearFlux {
   public:
-    explicit LHAPDFCollinearPartonFlux(const ParametersList& params)
+    explicit LHAPDFCollinearFlux(const ParametersList& params)
         : CollinearFlux(params),
           pdf_(LHAPDF::mkPDF(steer<std::string>("set"), steer<int>("member"))),
           pdgid_(steerAs<int, pdgid_t>("partonPdgId")),
-          from_remnant_(steer<bool>("fromRemnant")) {
+          extrapolate_pdf_(steer<bool>("extrapolatePDF")) {
       const auto& pdf_set = steer<std::string>("set");
       if (!pdf_)
-        throw CG_FATAL("LHAPDFCollinearPartonFlux") << "Failed to initialise the LHAPDF evaluator!\n"
-                                                    << "Parameters: " << params_;
-      if (from_remnant_ && pdf_->hasFlavor(pdgid_))
-        CG_WARNING("LHAPDFCollinearPartonFlux") << "Asked to retrieve distribution from sum imbalance of other "
-                                                   "contributions although the distribution is present in the '"
-                                                << pdf_set << "' PDF set.";
-      if (!from_remnant_ && !pdf_->hasFlavor(pdgid_))
-        throw CG_FATAL("LHAPDFCollinearPartonFlux")
+        throw CG_FATAL("LHAPDFCollinearFlux") << "Failed to initialise the LHAPDF evaluator!\n"
+                                              << "Parameters: " << params_;
+      if (extrapolate_pdf_ && pdf_->hasFlavor(pdgid_))
+        CG_WARNING("LHAPDFCollinearFlux") << "Asked to retrieve distribution from sum imbalance of other "
+                                             "contributions although the distribution is present in the '"
+                                          << pdf_set << "' PDF set.\n\t"
+                                          << "You may want to steer the 'extrapolatePDF' parameter to 'false'?";
+      if (!extrapolate_pdf_ && !pdf_->hasFlavor(pdgid_))
+        throw CG_FATAL("LHAPDFCollinearFlux")
             << "PDF set '" << pdf_set << "' does not contain parton with PDG identifier=" << pdgid_ << "!\n"
             << "PDGs handled: " << pdf_->flavors() << ".";
 
-      CG_INFO("LHAPDFCollinearPartonFlux")
-          << "LHAPDF evaluator for collinear parton flux initialised.\n\t"
-          << "Parton PDG identifier: " << pdgid_ << ", "
-          << "PDF set: " << steer<std::string>("set") << ", "
-          << "member: " << steer<int>("member") << ".\n\t"
-          << "x range: " << Limits{pdf_->xMin(), pdf_->xMax()} << ", "
-          << "Q^2 range: " << Limits{pdf_->q2Min(), pdf_->q2Max()} << " GeV^2.\n\t"
-          << "Interpolated from other flavours (" << pdf_->flavors() << "): " << from_remnant_ << ".";
+      CG_INFO("LHAPDFCollinearFlux") << "LHAPDF evaluator for collinear parton (" << (PDG::Id)pdgid_
+                                     << ") flux initialised.\n\t"
+                                     << "PDF set: " << steer<std::string>("set") << " (flavours: " << pdf_->flavors()
+                                     << "), member: " << steer<int>("member") << ".\n\t"
+                                     << "x range: " << Limits{pdf_->xMin(), pdf_->xMax()} << ", "
+                                     << "Q^2 range: " << Limits{pdf_->q2Min(), pdf_->q2Max()} << " GeV^2.\n\t"
+                                     << "Extrapolated from other flavours? " << extrapolate_pdf_ << ".";
     }
 
     static ParametersDescription description() {
       auto desc = CollinearFlux::description();
-      desc.setDescription("LHAPDF collinear photon flux");
-      //desc.add<std::string>("set", "NNPDF31_nnlo_pdfas").setDescription("PDFset to use");
-      //desc.add<std::string>("set", "LUXqed17_plus_PDF4LHC15_nnlo_100").setDescription("PDFset to use");
-      //desc.add<std::string>("set", "LUXlep-NNPDF31_nlo_as_0118_luxqed").setDescription("PDFset to use");
-      //desc.add<std::string>("set", "LUXqed_plus_PDF4LHC15_nnlo_100").setDescription("PDFset to use");
-      desc.add<std::string>("set", "cteq66").setDescription("PDFset to use");
+      desc.setDescription("LHAPDF coll.flux");
+      desc.add<std::string>("set", "LUXqed17_plus_PDF4LHC15_nnlo_100").setDescription("PDFset to use");
       desc.add<int>("member", 0).setDescription("PDF member");
       desc.addAs<int, pdgid_t>("partonPdgId", PDG::photon).setDescription("parton PDG identifier");
-      desc.add<bool>("fromRemnant", true)
-          .setDescription("extrapolate distribution from sum imbalance of other contributions?");
+      desc.add<bool>("extrapolatePDF", false)
+          .setDescription("has the PDF? or extrapolate distribution from sum imbalance of other contributions?");
       return desc;
     }
 
-    cepgen::pdgid_t partonPdgId() const override final { return pdgid_; }
+    pdgid_t partonPdgId() const override final { return pdgid_; }
     double mass2() const override final { return mp2_; }
 
     double fluxQ2(double x, double q2) const override {
-      if (!x_range_.contains(x, true))
+      if (x == 0. || !pdf_->inPhysicalRangeXQ2(x, q2))
         return 0.;
-      if (!pdf_->inRangeXQ2(x, q2))
-        return 0.;
-      if (from_remnant_) {
-        double xf = 0.;
-        auto xf_flav = pdf_->xfxQ2(x, q2);
-        for (const auto& flav : xf_flav)
-          if (flav.first != (int)pdgid_)
-            xf += flav.second;
-        return prefactor_ * xf / x;
-      }
-      return prefactor_ * pdf_->xfxQ2((int)pdgid_, x, q2) / x;
+      if (!extrapolate_pdf_)  // has parton PDF
+        return pdf_->xfxQ2((int)pdgid_, x, q2);
+      // extrapolate from other flavours imbalance
+      double xf = 1.;
+      for (const auto& flav : pdf_->xfxQ2(x, q2))
+        if (flav.first != (int)pdgid_)
+          xf -= flav.second;
+      return xf;
     }
 
   private:
-    std::unique_ptr<LHAPDF::PDF> pdf_;
+    const std::unique_ptr<LHAPDF::PDF> pdf_;
     const pdgid_t pdgid_;
-    const bool from_remnant_;
+    const bool extrapolate_pdf_;
   };
 }  // namespace cepgen
 
-REGISTER_FLUX("coll.LHAPDFCollinearPartonFlux", LHAPDFCollinearPartonFlux);
+REGISTER_FLUX("coll.LHAPDF", LHAPDFCollinearFlux);
