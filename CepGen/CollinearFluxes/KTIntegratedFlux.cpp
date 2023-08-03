@@ -29,9 +29,9 @@
 #include "CepGen/Utils/Limits.h"
 
 namespace cepgen {
-  class IntegratedKTFlux : public CollinearFlux {
+  class KTIntegratedFlux : public CollinearFlux {
   public:
-    explicit IntegratedKTFlux(const ParametersList& params)
+    explicit KTIntegratedFlux(const ParametersList& params)
         : CollinearFlux(params),
           integr_(AnalyticIntegratorFactory::get().build(params.get<ParametersList>("integrator"))),
           flux_(PartonFluxFactory::get().buildKTFlux(steer<ParametersList>("ktFlux"))),
@@ -47,7 +47,7 @@ namespace cepgen {
       if (!flux_->ktFactorised())
         throw CG_FATAL("GammaIntegrated") << "Input flux has to be unintegrated.";
       // initialise the functions to integrate
-      CG_INFO("IntegratedKTFlux") << "kt flux-integrated collinear flux evaluator initialised.\n\t"
+      CG_INFO("KTIntegratedFlux") << "kt flux-integrated collinear flux evaluator initialised.\n\t"
                                   << "Analytical integrator: " << integr_->name() << "\n\t"
                                   << "Q^2 integration range: " << kt2_range_ << " GeV^2\n\t"
                                   << "Unintegrated flux: " << flux_->name() << ".";
@@ -59,7 +59,7 @@ namespace cepgen {
 
     static ParametersDescription description() {
       auto desc = CollinearFlux::description();
-      desc.setDescription("kt-integrated photon flux");
+      desc.setDescription("kt-integr. coll.flux");
       desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"))
           .setDescription("Steering parameters for the analytical integrator");
       desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("kt.BudnevElastic"))
@@ -88,4 +88,4 @@ namespace cepgen {
     const utils::Function1D func_q2_, func_mx2_;
   };
 }  // namespace cepgen
-REGISTER_FLUX("coll.IntegratedKTFlux", IntegratedKTFlux);
+REGISTER_FLUX("coll.IntegratedKT", KTIntegratedFlux);
