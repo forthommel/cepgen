@@ -47,17 +47,18 @@ namespace cepgen {
             else
               params = PartonFluxFactory::get()
                            .describeParameters("coll.EPAFlux",
-                                               ParametersList().set("formFactors",
-                                                                    ParametersList()
-                                                                        .setName<std::string>("InelasticNucleon")
-                                                                        .set("structureFunctions",
-                                                                             kin.incomingBeams().structureFunctions())))
+                                               ParametersList().set("formFactors", kin.incomingBeams().formFactors()))
                            .validate(params);
           } else
-            params = PartonFluxFactory::get()
-                         .describeParameters("coll.EPAFlux",
-                                             ParametersList().set("formFactors", kin.incomingBeams().formFactors()))
-                         .validate(params);
+            params =
+                PartonFluxFactory::get()
+                    .describeParameters(
+                        "coll.EPAFlux",
+                        ParametersList().set("formFactors",
+                                             ParametersList()
+                                                 .setName<std::string>("InelasticNucleon")
+                                                 .set("structureFunctions", kin.incomingBeams().structureFunctions())))
+                    .validate(params);
           //TODO: fermions/pions
         }
         CG_LOG << params;
