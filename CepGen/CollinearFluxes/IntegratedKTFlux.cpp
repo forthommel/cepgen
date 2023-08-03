@@ -62,7 +62,7 @@ namespace cepgen {
       desc.setDescription("kt-integrated photon flux");
       desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"))
           .setDescription("Steering parameters for the analytical integrator");
-      desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("BudnevElasticKT"))
+      desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("kt.BudnevElastic"))
           .setDescription("Type of unintegrated kT-dependent parton flux");
       desc.add<Limits>("kt2range", {0., 1.e4})
           .setDescription("kinematic range for the parton transverse virtuality, in GeV^2");
