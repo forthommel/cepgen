@@ -34,7 +34,7 @@ namespace cepgen {
           unint_flux_(PartonFluxFactory::get().buildCollinearFlux(steer<ParametersList>("unintegratedFlux"))),
           log_q2_(steer<bool>("logQ2")),
           fast_expo_(steer<bool>("fastExpo")) {
-      CG_INFO("AnalyticIntegratedPartonFlux")
+      CG_DEBUG("AnalyticIntegratedPartonFlux")
           << "Analytic integrated parton flux evaluator built with:\n"
           << " * integrator: " << integr_->parameters() << "\n"
           << " * unintegrated flux: " << unint_flux_->parameters() << "\n"
@@ -48,6 +48,7 @@ namespace cepgen {
           .setDescription("numerical integrator algorithm to use");
       desc.add<ParametersDescription>("unintegratedFlux", ParametersDescription().setName<std::string>("coll.EPAFlux"))
           .setDescription("(x, Q^2)-dependent flux to integrate with respect to Q^2");
+      desc.add<Limits>("q2range", {0., 20.});
       desc.add<bool>("logQ2", true)
           .setDescription("integrate vs. log(Q^2) instead of Q^2 (useful for strongly peaking spectra)");
       desc.add<bool>("fastExpo", false).setDescription("use a fast version of the exponential numerical evaluation");

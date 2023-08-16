@@ -38,7 +38,7 @@ namespace cepgen {
     static ParametersDescription description() {
       auto desc = IntegratedPartonFlux::description();
       desc.setDescription("Generic Budnev integrated EPA flux");
-      desc.add<Limits>("Q2range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
+      desc.add<Limits>("q2range", {0., 1.e4}).setDescription("kinematic range for the parton virtuality, in GeV^2");
       return desc;
     }
   };
@@ -47,9 +47,9 @@ namespace cepgen {
   public:
     explicit BudnevEPALepton(const ParametersList& params)
         : BudnevEPA(params), ml2_(std::pow(PDG::get().mass(steer<pdgid_t>("pdgId")), 2)) {
-      CG_INFO("BudnevEPALepton") << "Budnev EPA for photon-from-lepton elastic limit (lepton: "
-                                 << PDG::get().name(steer<int>("pdgId")) << ").\n\t "
-                                 << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
+      CG_DEBUG("BudnevEPALepton") << "Budnev EPA for photon-from-lepton elastic limit (lepton: "
+                                  << PDG::get().name(steer<int>("pdgId")) << ").\n\t "
+                                  << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
     }
 
     static ParametersDescription description() {
@@ -125,8 +125,8 @@ namespace cepgen {
 
   struct BudnevEPAProton final : public BudnevEPANucleon {
     explicit BudnevEPAProton(const ParametersList& params) : BudnevEPANucleon(params) {
-      CG_INFO("BudnevEPAProton") << "Budnev EPA for photon-from-proton elastic limit.\n\t"
-                                 << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
+      CG_DEBUG("BudnevEPAProton") << "Budnev EPA for photon-from-proton elastic limit.\n\t"
+                                  << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
     }
 
     static ParametersDescription description() {
@@ -144,8 +144,8 @@ namespace cepgen {
         : BudnevEPANucleon(params),
           hi_(HeavyIon::fromPdgId(steer<pdgid_t>("heavyIon"))),
           mass2_(hi_.mass() * hi_.mass()) {
-      CG_INFO("BudnevEPAHI") << "Budnev EPA for photon-from-heavy ion elastic limit (HI: " << hi_ << ").\n\t"
-                             << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
+      CG_DEBUG("BudnevEPAHI") << "Budnev EPA for photon-from-heavy ion elastic limit (HI: " << hi_ << ").\n\t"
+                              << "See V.M.Budnev, et al., Phys.Rep. 15C (1975) 181.";
       if (q2_range_.max() < q2max_min_)
         throw CG_FATAL("BudnevEPAHI") << "Invalid maximal Q^2. Its value should not be below " << q2max_min_
                                       << " GeV^2. It is currently " << q2_range_ << ".";
@@ -155,7 +155,7 @@ namespace cepgen {
       auto desc = BudnevEPANucleon::description();
       desc.setDescription("HI integrated EPA (Budnev)");
       desc.addAs<pdgid_t, HeavyIon>("heavyIon", HeavyIon::Pb()).setDescription("type of heavy ion considered");
-      desc.add<Limits>("Q2range", {0., 1.e5});
+      desc.add<Limits>("q2range", {0., 1.e5});
       return desc;
     }
 
