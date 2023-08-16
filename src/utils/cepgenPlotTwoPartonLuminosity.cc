@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
   cepgen::ArgumentsParser(argc, argv)
       .addOptionalArgument(
-          "flux,f", "(collinear) flux modelling(s)", &fluxes, cepgen::PartonFluxFactory::get().modules())
+          "flux,f", "(collinear) flux modelling(s)", &fluxes, cepgen::IntegratedPartonFluxFactory::get().modules())
       .addOptionalArgument("beams,b", "beams info (PDGid1:pz1[,PDGid2:pz2])", &beams, "")
       .addOptionalArgument("rescaling,r", "luminosity rescaling", &rescl, vector<double>{1.})
       .addOptionalArgument("integrator,i", "type of integration algorithm", &integrator, "gsl")
@@ -123,9 +123,9 @@ int main(int argc, char* argv[]) {
       cepgen::ParametersList().setName<string>(integrator).set<int>("mode", 0).set<int>("nodes", 2000));
   for (size_t i = 0; i < fluxes.size(); ++i) {
     const auto flux_names = cepgen::utils::split(fluxes.at(i), '+');
-    auto flux1 = cepgen::PartonFluxFactory::get().buildIntegratedFlux(flux_names.at(0));
-    auto flux2 = cepgen::PartonFluxFactory::get().buildIntegratedFlux(flux_names.size() > 1 ? flux_names.at(1)
-                                                                                            : flux_names.at(0));
+    auto flux1 = cepgen::IntegratedPartonFluxFactory::get().build(flux_names.at(0));
+    auto flux2 =
+        cepgen::IntegratedPartonFluxFactory::get().build(flux_names.size() > 1 ? flux_names.at(1) : flux_names.at(0));
     ostringstream foss;
     foss << flux1->name() << "/" << flux2->name();
     const auto s = sqrts.at(i) * sqrts.at(i);

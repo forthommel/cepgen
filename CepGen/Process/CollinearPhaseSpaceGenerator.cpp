@@ -39,21 +39,21 @@ namespace cepgen {
           if (beam.elastic()) {
             if (HeavyIon::isHI(beam.pdgId()))
               params =
-                  PartonFluxFactory::get()
+                  CollinearFluxFactory::get()
                       .describeParameters(
-                          "coll.EPAFlux",
+                          "EPAFlux",
                           ParametersList().set("formFactors", ParametersList().setName<std::string>("HeavyIonDipole")))
                       .validate(params);
             else
-              params = PartonFluxFactory::get()
-                           .describeParameters("coll.EPAFlux",
+              params = CollinearFluxFactory::get()
+                           .describeParameters("EPAFlux",
                                                ParametersList().set("formFactors", kin.incomingBeams().formFactors()))
                            .validate(params);
           } else
             params =
-                PartonFluxFactory::get()
+                CollinearFluxFactory::get()
                     .describeParameters(
-                        "coll.EPAFlux",
+                        "EPAFlux",
                         ParametersList().set("formFactors",
                                              ParametersList()
                                                  .setName<std::string>("InelasticNucleon")
@@ -62,7 +62,7 @@ namespace cepgen {
           //TODO: fermions/pions
         }
         CG_LOG << params;
-        flux = std::move(PartonFluxFactory::get().build(params));
+        flux = std::move(CollinearFluxFactory::get().build(params));
         if (!flux)
           throw CG_FATAL("CollinearPhaseSpaceGenerator:init")
               << "Failed to initiate a parton flux object with properties: " << params << ".";

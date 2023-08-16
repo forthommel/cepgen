@@ -34,7 +34,7 @@ namespace cepgen {
     explicit KTIntegratedFlux(const ParametersList& params)
         : CollinearFlux(params),
           integr_(AnalyticIntegratorFactory::get().build(params.get<ParametersList>("integrator"))),
-          flux_(PartonFluxFactory::get().buildKTFlux(steer<ParametersList>("ktFlux"))),
+          flux_(KTFluxFactory::get().build(steer<ParametersList>("ktFlux"))),
           kt2_range_(steer<Limits>("kt2range")),
           func_q2_([&](double kt2, void* params) {
             const auto& args = *static_cast<std::pair<double, double>*>(params);
@@ -62,7 +62,7 @@ namespace cepgen {
       desc.setDescription("kt-integr. coll.flux");
       desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"))
           .setDescription("Steering parameters for the analytical integrator");
-      desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("kt.BudnevElastic"))
+      desc.add<ParametersDescription>("ktFlux", ParametersDescription().setName<std::string>("BudnevElastic"))
           .setDescription("Type of unintegrated kT-dependent parton flux");
       desc.add<Limits>("kt2range", {0., 1.e4})
           .setDescription("kinematic range for the parton transverse virtuality, in GeV^2");
@@ -88,4 +88,4 @@ namespace cepgen {
     const utils::Function1D func_q2_, func_mx2_;
   };
 }  // namespace cepgen
-REGISTER_FLUX("coll.IntegratedKT", KTIntegratedFlux);
+REGISTER_COLLINEAR_FLUX("KTIntegrated", KTIntegratedFlux);

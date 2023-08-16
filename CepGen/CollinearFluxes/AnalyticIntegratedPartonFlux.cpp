@@ -31,7 +31,7 @@ namespace cepgen {
     explicit AnalyticIntegratedPartonFlux(const ParametersList& params)
         : IntegratedPartonFlux(params),
           integr_(AnalyticIntegratorFactory::get().build(steer<ParametersList>("integrator"))),
-          unint_flux_(PartonFluxFactory::get().buildCollinearFlux(steer<ParametersList>("unintegratedFlux"))),
+          unint_flux_(CollinearFluxFactory::get().build(steer<ParametersList>("unintegratedFlux"))),
           log_q2_(steer<bool>("logQ2")),
           fast_expo_(steer<bool>("fastExpo")) {
       CG_DEBUG("AnalyticIntegratedPartonFlux")
@@ -46,7 +46,7 @@ namespace cepgen {
       desc.setDescription("Integr.parton flux");
       desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"))
           .setDescription("numerical integrator algorithm to use");
-      desc.add<ParametersDescription>("unintegratedFlux", ParametersDescription().setName<std::string>("coll.EPAFlux"))
+      desc.add<ParametersDescription>("unintegratedFlux", ParametersDescription().setName<std::string>("EPAFlux"))
           .setDescription("(x, Q^2)-dependent flux to integrate with respect to Q^2");
       desc.add<Limits>("q2range", {0., 20.});
       desc.add<bool>("logQ2", true)
@@ -90,4 +90,4 @@ namespace cepgen {
     const bool log_q2_, fast_expo_;
   };
 }  // namespace cepgen
-REGISTER_FLUX("integ.IntegratedFlux", AnalyticIntegratedPartonFlux);
+REGISTER_INTEGRATED_PARTON_FLUX("IntegratedFlux", AnalyticIntegratedPartonFlux);

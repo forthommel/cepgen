@@ -8,21 +8,27 @@ from .containers_cfi import Module, Parameters
 
 class ProtonFlux:
     """Type of parton (from proton) flux modelling"""
-    PhotonElastic = Module('coll.IntegratedKT',
-        ktFlux = Module('kt.BudnevElastic')
+    PhotonElastic = Module('EPAFlux',
+        formFactors = Module('StandardDipole')
     )
-    PhotonInelastic = Module('coll.IntegratedKT',
-        ktFlux = Module('kt.BudnevElastic',
+    PhotonInelastic = Module('EPAFlux',
+        formFactors = Module('InelasticNucleon')
+    )
+    IntegratedPhotonElastic = Module('KTIntegrated',
+        ktFlux = Module('BudnevElastic')
+    )
+    IntegratedPhotonInelastic = Module('KTIntegrated',
+        ktFlux = Module('BudnevElastic',
             formFactors = Module('InelasticNucleon')
         )
     )
-    LHAPDF = Module('coll.LHAPDF')
+    LHAPDF = Module('LHAPDF')
 
 
 class HeavyIonFlux:
     """Type of parton (from heavy ion) flux modelling"""
-    PhotonElastic = Module('coll.IntegratedKT',
-        ktFlux = Module('kt.BudnevElastic',
+    PhotonElastic = Module('KTIntegrated',
+        ktFlux = Module('BudnevElastic',
             formFactors = Module('HeavyIonDipole')
         )
     )
@@ -30,8 +36,8 @@ class HeavyIonFlux:
 
 class ElectronFlux:
     """Type of parton (from electron) flux modelling"""
-    PhotonElastic = Module('coll.IntegratedKT',
-        ktFlux = Module('kt.BudnevElastic',
+    PhotonElastic = Module('KTIntegrated',
+        ktFlux = Module('BudnevElastic',
             formFactors = Module('PointLikeFermion')
         )
     )

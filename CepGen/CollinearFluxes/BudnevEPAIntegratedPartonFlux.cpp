@@ -170,6 +170,6 @@ namespace cepgen {
     const double mass2_, q2max_min_{1.e4};
   };
 }  // namespace cepgen
-REGISTER_FLUX("integ.BudnevEPALepton", BudnevEPALepton);
-REGISTER_FLUX("integ.BudnevEPAHI", BudnevEPAHI);
-REGISTER_FLUX("integ.BudnevEPAProton", BudnevEPAProton);
+REGISTER_INTEGRATED_PARTON_FLUX("BudnevEPALepton", BudnevEPALepton);
+REGISTER_INTEGRATED_PARTON_FLUX("BudnevEPAHI", BudnevEPAHI);
+REGISTER_INTEGRATED_PARTON_FLUX("BudnevEPAProton", BudnevEPAProton);

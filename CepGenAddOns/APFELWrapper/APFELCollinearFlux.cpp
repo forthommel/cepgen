@@ -79,4 +79,4 @@ namespace cepgen {
   };
 }  // namespace cepgen
 
-REGISTER_FLUX("coll.APFEL", APFELCollinearFlux);
+REGISTER_COLLINEAR_FLUX("APFEL", APFELCollinearFlux);

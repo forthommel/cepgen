@@ -23,14 +23,32 @@
 
 /** \file */
 
-/// Add a generic parton flux evaluator builder definition
-#define REGISTER_FLUX(name, obj)                                               \
-  namespace cepgen {                                                           \
-    struct BUILDERNM(obj) {                                                    \
-      BUILDERNM(obj)() { PartonFluxFactory::get().registerModule<obj>(name); } \
-    };                                                                         \
-    static const BUILDERNM(obj) gPartonFlux##obj;                              \
-  }                                                                            \
+/// Add a generic KT-factorised flux evaluator builder definition
+#define REGISTER_KT_FLUX(name, obj)                                        \
+  namespace cepgen {                                                       \
+    struct BUILDERNM(obj) {                                                \
+      BUILDERNM(obj)() { KTFluxFactory::get().registerModule<obj>(name); } \
+    };                                                                     \
+    static const BUILDERNM(obj) gKTFlux##obj;                              \
+  }                                                                        \
+  static_assert(true, "")
+/// Add a generic collinear parton flux evaluator builder definition
+#define REGISTER_COLLINEAR_FLUX(name, obj)                                        \
+  namespace cepgen {                                                              \
+    struct BUILDERNM(obj) {                                                       \
+      BUILDERNM(obj)() { CollinearFluxFactory::get().registerModule<obj>(name); } \
+    };                                                                            \
+    static const BUILDERNM(obj) gCollinearFlux##obj;                              \
+  }                                                                               \
+  static_assert(true, "")
+/// Add a generic integrated parton flux evaluator builder definition
+#define REGISTER_INTEGRATED_PARTON_FLUX(name, obj)                                       \
+  namespace cepgen {                                                                     \
+    struct BUILDERNM(obj) {                                                              \
+      BUILDERNM(obj)() { IntegratedPartonFluxFactory::get().registerModule<obj>(name); } \
+    };                                                                                   \
+    static const BUILDERNM(obj) gIntegratedPartonFlux##obj;                              \
+  }                                                                                      \
   static_assert(true, "")
 
 namespace cepgen {
@@ -38,29 +56,21 @@ namespace cepgen {
   class KTFlux;
   class CollinearFlux;
   class IntegratedPartonFlux;
-  /// A parton fluxes objects factory
-  DEFINE_FACTORY_STR(BasePartonFluxFactory, PartonFlux, "Parton flux estimators factory");
+  /// A KT-factorised parton fluxes objects factory
+  DEFINE_FACTORY_STR(KTFluxFactory, KTFlux, "KT-factorised flux estimators factory");
+  /// A collinear parton fluxes objects factory
+  DEFINE_FACTORY_STR(CollinearFluxFactory, CollinearFlux, "Collinear parton flux estimators factory");
+  /// An integrated parton fluxes objects factory
+  DEFINE_FACTORY_STR(IntegratedPartonFluxFactory, IntegratedPartonFlux, "Integrated parton flux estimators factory");
 
-  struct PartonFluxFactory : BasePartonFluxFactory {
-    using BasePartonFluxFactory::BasePartonFluxFactory;
+  struct PartonFluxFactory {
     static PartonFluxFactory& get() {
       static PartonFluxFactory instance;
       return instance;
     }
 
-    std::vector<std::string> ktFluxes() const;
-    std::unique_ptr<KTFlux> buildKTFlux(const ParametersList&) const;
-    std::unique_ptr<KTFlux> buildKTFlux(const std::string& name, const ParametersList& params = ParametersList()) const;
-
-    std::vector<std::string> collinearFluxes() const;
-    std::unique_ptr<CollinearFlux> buildCollinearFlux(const ParametersList&) const;
-    std::unique_ptr<CollinearFlux> buildCollinearFlux(const std::string& name,
-                                                      const ParametersList& params = ParametersList()) const;
-
-    std::vector<std::string> integratedFluxes() const;
-    std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const ParametersList&) const;
-    std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const std::string& name,
-                                                              const ParametersList& params = ParametersList()) const;
+    ParametersDescription describeParameters(const std::string& name,
+                                             const ParametersList& params = ParametersList()) const;
   };
 }  // namespace cepgen
 

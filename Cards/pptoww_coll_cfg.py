@@ -2,7 +2,7 @@ import Config.Core as cepgen
 import Config.collinearProcess_cfi as coll
 from Config.generator_cff import generator as _gen
 
-lhapdfLUXlep = coll.ProtonFlux.LHAPDF.clone('coll.LHAPDF',
+lhapdfLUXlep = coll.ProtonFlux.LHAPDF.clone('LHAPDF',
     set = 'LUXlep-NNPDF31_nlo_as_0118_luxqed',
     fromRemnant = False,
 )

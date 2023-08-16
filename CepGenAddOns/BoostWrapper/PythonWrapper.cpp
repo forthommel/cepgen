@@ -109,17 +109,27 @@ namespace {
         .def("fluxMX2", py::pure_virtual(&cepgen::KTFlux::fluxMX2))
         .def("fluxQ2", py::pure_virtual(&cepgen::KTFlux::fluxQ2));
 
+    EXPOSE_FACTORY(
+        cepgen::KTFluxFactory, std::string, "KTFluxFactory", "a kt-factorised parton fluxes evaluator objects factory");
+
     py::class_<CollinearFluxWrap, py::bases<PartonFluxWrap>, boost::noncopyable>(
         "_CollinearFlux", "fractional momentum/virtuality-dependent parton flux evaluator", py::no_init)
         .def("fluxMX2", py::pure_virtual(&cepgen::CollinearFlux::fluxMX2))
         .def("fluxQ2", py::pure_virtual(&cepgen::CollinearFlux::fluxQ2));
 
+    EXPOSE_FACTORY(cepgen::CollinearFluxFactory,
+                   std::string,
+                   "CollinearFluxFactory",
+                   "a collinear parton fluxes evaluator objects factory");
+
     py::class_<IntegratedPartonFluxWrap, py::bases<PartonFluxWrap>, boost::noncopyable>(
         "_IntegratedPartonFlux", "fractional momentum-dependent parton flux evaluator", py::no_init)
         .def("flux", py::pure_virtual(&cepgen::IntegratedPartonFlux::flux));
 
-    EXPOSE_FACTORY(
-        cepgen::PartonFluxFactory, std::string, "PartonFluxFactory", "a parton fluxes evaluator objects factory");
+    EXPOSE_FACTORY(cepgen::IntegratedPartonFluxFactory,
+                   std::string,
+                   "IntegratedPartonFluxFactory",
+                   "an integrated parton fluxes evaluator objects factory");
 
     py::class_<cepgen::PDG, boost::noncopyable>("PDG", "collection of particle definitions and properties", py::no_init)
         .def(

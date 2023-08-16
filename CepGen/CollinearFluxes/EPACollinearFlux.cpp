@@ -58,4 +58,4 @@ namespace cepgen {
   };
 }  // namespace cepgen
 
-REGISTER_FLUX("coll.EPAFlux", EPACollinearFlux);
+REGISTER_COLLINEAR_FLUX("EPAFlux", EPACollinearFlux);
