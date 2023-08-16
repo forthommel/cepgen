@@ -48,12 +48,17 @@ namespace cepgen {
       return instance;
     }
 
+    std::vector<std::string> ktFluxes() const;
     std::unique_ptr<KTFlux> buildKTFlux(const ParametersList&) const;
-    std::unique_ptr<CollinearFlux> buildCollinearFlux(const ParametersList&) const;
-    std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const ParametersList&) const;
     std::unique_ptr<KTFlux> buildKTFlux(const std::string& name, const ParametersList& params = ParametersList()) const;
+
+    std::vector<std::string> collinearFluxes() const;
+    std::unique_ptr<CollinearFlux> buildCollinearFlux(const ParametersList&) const;
     std::unique_ptr<CollinearFlux> buildCollinearFlux(const std::string& name,
                                                       const ParametersList& params = ParametersList()) const;
+
+    std::vector<std::string> integratedFluxes() const;
+    std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const ParametersList&) const;
     std::unique_ptr<IntegratedPartonFlux> buildIntegratedFlux(const std::string& name,
                                                               const ParametersList& params = ParametersList()) const;
   };

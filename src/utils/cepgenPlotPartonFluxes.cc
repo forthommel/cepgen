@@ -36,15 +36,15 @@ int main(int argc, char* argv[]) {
   vector<string> fluxes_names;
   int num_points;
   double kt2, mx, q2;
-  string output_file, plotter;
+  string mode, output_file, plotter;
   bool logx, logy, draw_grid, normalised;
   cepgen::Limits x_range, y_range;
 
   cepgen::initialise();
 
   cepgen::ArgumentsParser(argc, argv)
-      .addOptionalArgument(
-          "fluxes,f", "parton fluxe modellings", &fluxes_names, cepgen::PartonFluxFactory::get().modules())
+      .addArgument("mode,m", "mode (kt, coll, integ)", &mode)
+      .addOptionalArgument("fluxes,f", "parton fluxes modellings", &fluxes_names, vector<string>{})
       .addOptionalArgument("mx,M", "diffractive mass (GeV)", &mx, 1.5)
       .addOptionalArgument("q2,q", "parton virtuality (GeV^2)", &q2, -1.)
       .addOptionalArgument("xrange,x", "fractional loss range", &x_range, cepgen::Limits{0., 1.})
@@ -58,6 +58,17 @@ int main(int argc, char* argv[]) {
       .addOptionalArgument("draw-grid,g", "draw the x/y grid", &draw_grid, false)
       .addOptionalArgument("normalised", "plot xf(x) instead of f(x)", &normalised, false)
       .parse();
+
+  if (fluxes_names.empty()) {
+    if (mode == "kt")
+      fluxes_names = cepgen::PartonFluxFactory::get().ktFluxes();
+    else if (mode == "coll")
+      fluxes_names = cepgen::PartonFluxFactory::get().collinearFluxes();
+    else if (mode == "integ")
+      fluxes_names = cepgen::PartonFluxFactory::get().integratedFluxes();
+    else
+      throw CG_FATAL("main") << "Invalid plotting mode: '" << mode << "'.";
+  }
 
   const bool plot_vs_q2 = (q2 > 0.);
   const double mx2 = mx * mx;
