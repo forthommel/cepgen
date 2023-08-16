@@ -140,13 +140,14 @@ int main(int argc, char* argv[]) {
       const auto& mx = mxvals.at(j);
       for (size_t k = 0; k < xi_ranges.size(); ++k) {
         const auto& xi_range = xi_ranges.at(k);
-        auto lumi_wgg = integr->integrate(
-            [&xi_range, &mx, &s, &flux1, &flux2](double x) {
-              if (xi_range.valid() && (!xi_range.contains(x) || !xi_range.contains(mx * mx / x / s)))
-                return 0.;
-              return 2. * mx / x / s * flux1->flux(x) * flux2->flux(mx * mx / x / s);
-            },
-            cepgen::Limits(mx * mx / s, 1.));
+        auto lumi_wgg = 2. * mx / s *
+                        integr->integrate(
+                            [&xi_range, &mx, &s, &flux1, &flux2](double x) {
+                              if (xi_range.valid() && (!xi_range.contains(x) || !xi_range.contains(mx * mx / x / s)))
+                                return 0.;
+                              return flux1->flux(x) * flux2->flux(mx * mx / x / s) / x;
+                            },
+                            cepgen::Limits(mx * mx / s, 1.));
         lumi_wgg *= rescl.at(i);
         values.at(j).emplace_back(lumi_wgg);
         m_gr_fluxes[fluxes.at(i)][k].addPoint(mx, lumi_wgg);
