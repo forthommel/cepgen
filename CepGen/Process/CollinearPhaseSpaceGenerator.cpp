@@ -18,10 +18,8 @@
 
 #include "CepGen/CollinearFluxes/CollinearFlux.h"
 #include "CepGen/Core/Exception.h"
-#include "CepGen/Event/Event.h"
 #include "CepGen/Modules/PartonFluxFactory.h"
 #include "CepGen/Physics/Beam.h"
-#include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/HeavyIon.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/CollinearPhaseSpaceGenerator.h"
@@ -74,17 +72,22 @@ namespace cepgen {
         throw CG_FATAL("CollinearPhaseSpaceGenerator:init")
             << "Invalid incoming parton fluxes: " << std::vector<std::string>{pos_flux_->name(), neg_flux_->name()}
             << ".";
-      mpart1_ = PDG::get().mass(pos_flux_->partonPdgId());
-      mpart2_ = PDG::get().mass(neg_flux_->partonPdgId());
 
-      const auto log_lim_q2 = kin.cuts().initial.q2.truncate(Limits{1.e-5, 50.}).compute(std::log);
+      const auto log_lim_q2 = kin.cuts().initial.q2.truncate(Limits{1.e-10, 100.}).compute(std::log);
       process().defineVariable(m_t1_, Process::Mapping::exponential, log_lim_q2, "First incoming parton virtuality");
       process().defineVariable(m_t2_, Process::Mapping::exponential, log_lim_q2, "Second incoming parton virtuality");
     }
 
     bool CollinearPhaseSpaceGenerator::generatePartonKinematics() {
-      process().q1() = Momentum::fromPxPyPzM(0., 0., +std::sqrt(m_t1_), mpart1_);
-      process().q2() = Momentum::fromPxPyPzM(0., 0., -std::sqrt(m_t2_), mpart2_);
+      // gaussian smearing of kt can be introduced here
+      /*const auto pz1 = 0.5 * (m_t1_ - proc.mA2() - proc.mX2()) / (proc.pA().energy() - proc.pA().pz());
+      process().q1() = Momentum::fromPxPyPzM(0., 0., +pz1, std::sqrt(m_t1_));
+      const auto pz2 = 0.5 * (m_t2_ - proc.mB2() - proc.mY2()) / (proc.pB().energy() - proc.pB().pz());
+      process().q2() = Momentum::fromPxPyPzM(0., 0., -pz2, std::sqrt(m_t2_));*/
+      process().q1().setMass2(m_t1_);
+      process().q2().setMass2(m_t2_);
+      /*process().q1().setMass(std::sqrt(m_t1_));
+      process().q2().setMass(std::sqrt(m_t2_));*/
       return true;
     }
 

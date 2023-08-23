@@ -28,12 +28,12 @@
 namespace cepgen {
   namespace proc {
     FactorisedProcess::FactorisedProcess(const ParametersList& params, const pdgids_t& central)
-        : Process(params), produced_parts_(central) {
+        : Process(params),
+          produced_parts_(central),
+          psgen_(steer<bool>("ktFactorised")
+                     ? std::unique_ptr<PhaseSpaceGenerator>(new KTPhaseSpaceGenerator(this))
+                     : std::unique_ptr<PhaseSpaceGenerator>(new CollinearPhaseSpaceGenerator(this))) {
       event().map()[Particle::CentralSystem].resize(central.size());
-      if (steer<bool>("ktFactorised"))
-        psgen_.reset(new KTPhaseSpaceGenerator(this));
-      else
-        psgen_.reset(new CollinearPhaseSpaceGenerator(this));
     }
 
     FactorisedProcess::FactorisedProcess(const FactorisedProcess& proc)

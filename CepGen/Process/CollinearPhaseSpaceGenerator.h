@@ -37,8 +37,6 @@ namespace cepgen {
       double fluxes() const override;
 
     protected:
-      double mpart1_{0.}, mpart2_{0.};
-
       // mapped variables
       double m_t1_{0.}, m_t2_{0.};
     };
