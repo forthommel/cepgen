@@ -17,6 +17,7 @@
  */
 
 #include <algorithm>
+#include <cstring>
 
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Event/Event.h"
@@ -36,9 +37,7 @@ namespace cepgen {
     public:
       explicit Herwig6Hadroniser(const ParametersList&);
 
-      void setRuntimeParameters(const Parameters&) override {}
-      void readString(const char* param) override {}
-      void init() override;
+      void initialise() override;
       bool run(Event& ev, double& weight, bool full) override;
 
       void setCrossSection(double xsec, double xsec_err) override {}
@@ -72,7 +71,7 @@ namespace cepgen {
         {Particle::Status::Incoming, 135},
     };
 
-    void Herwig6Hadroniser::init() {
+    void Herwig6Hadroniser::initialise() {
       hwefin_();
       myhwudat_();
       hwproc_.pbeam1 = hwproc_.pbeam2 = 6500.;
@@ -197,4 +196,5 @@ namespace cepgen {
   }  // namespace hadr
 }  // namespace cepgen
 // register hadroniser
-REGISTER_MODIFIER("herwig6", Herwig6Hadroniser)
+using cepgen::hadr::Herwig6Hadroniser;
+REGISTER_MODIFIER("herwig6", Herwig6Hadroniser);
