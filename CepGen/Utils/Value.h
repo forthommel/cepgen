@@ -23,18 +23,19 @@
 
 namespace cepgen {
   /// A scalar value with its uncertainty
+  template <typename T = double>
   class Value {
   public:
-    explicit Value(double val = 0., double unc = 0.);
+    explicit Value(const T& val = 0., const T& unc = 0.);
 
     friend std::ostream& operator<<(std::ostream&, const Value&);
 
     /// Central value extraction
-    operator double() const { return val_; }
+    operator T() const { return val_; }
     /// Absolute uncertainty around the central value
-    double uncertainty() const { return unc_; }
+    T uncertainty() const { return unc_; }
     /// Relative uncertainty around the central value
-    double relativeUncertainty() const;
+    T relativeUncertainty() const;
 
     /// Comparison operator
     bool operator<(const Value& oth) const { return val_ < oth.val_; }
@@ -42,29 +43,29 @@ namespace cepgen {
     //--- error propagation operators
 
     Value operator+(const Value&) const;
-    template <typename T>
-    inline Value operator+(T cst) const {
+    template <typename U>
+    inline Value operator+(const U& cst) const {
       return Value{val_ + cst, unc_};
     }
     Value operator-(const Value&) const;
-    template <typename T>
-    inline Value operator-(T cst) const {
+    template <typename U>
+    inline Value operator-(const U& cst) const {
       return Value{val_ - cst, unc_};
     }
     Value operator*(const Value&) const;
-    template <typename T>
-    inline Value operator*(T cst) const {
+    template <typename U>
+    inline Value operator*(const U& cst) const {
       return Value{val_ * cst, unc_ * cst};
     }
     Value operator/(const Value&) const;
-    template <typename T>
-    inline Value operator/(T cst) const {
+    template <typename U>
+    inline Value operator/(const U& cst) const {
       return Value{val_ / cst, unc_ / cst};
     }
 
   private:
-    double val_;  ///< Central value
-    double unc_;  ///< Uncertainty on value
+    T val_;  ///< Central value
+    T unc_;  ///< Uncertainty on value
   };
 }  // namespace cepgen
 

@@ -22,9 +22,10 @@
 #include "CepGen/Utils/Value.h"
 
 namespace cepgen {
-  Value::Value(double val, double unc) : val_(val), unc_(unc) {}
+  template <typename T>
+  Value::Value(const T& val, const T& unc) : val_(val), unc_(unc) {}
 
-  double Value::relativeUncertainty() const { return val_ == 0. ? 0. : unc_ / val_; }
+  T Value::relativeUncertainty() const { return val_ == 0. ? 0. : unc_ / val_; }
 
   Value Value::operator+(const Value& oth) const { return Value{val_ + oth.val_, std::hypot(unc_, oth.unc_)}; }
 
