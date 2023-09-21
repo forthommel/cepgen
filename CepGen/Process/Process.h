@@ -54,7 +54,7 @@ namespace cepgen {
       virtual double computeWeight() = 0;
       /// Fill the Event object with the particles' kinematics
       /// \param[in] symmetrise Symmetrise the event? (randomise the production of positively- and negatively-charged outgoing central particles)
-      virtual void fillKinematics(bool symmetrise = false) = 0;
+      virtual void fillKinematics(bool /*symmetrise*/ = false) {}
 
       void clear();       ///< Reset process prior to the phase space and variables definition
       void clearEvent();  ///< Restore the event object to its initial state
@@ -104,7 +104,7 @@ namespace cepgen {
     protected:
       static constexpr double NUM_LIMITS = 1.e-3;  ///< Numerical limits for sanity comparisons (MeV/mm-level)
 
-      virtual void addEventContent() = 0;  ///< Set the incoming and outgoing state to be expected in the process
+      virtual void addEventContent() {}    ///< Set the incoming and outgoing state to be expected in the process
       virtual void prepareKinematics() {}  ///< Compute the incoming state kinematics
 
       Momentum& pA();  ///< Positive-z incoming beam particle's 4-momentum
@@ -138,6 +138,7 @@ namespace cepgen {
         linear = 0,   ///< a linear \f${\rm d}x\f$ mapping
         exponential,  ///< an exponential \f$\frac{\dot{x}}{x} = \dot{\log x}\f$ mapping
         square,       ///< a square \f${\rm d}x^2=2x\cdot\dot{x}\f$ mapping
+        gaussian,     ///< a normal distribution mapping
         power_law     ///< a power-law mapping inherited from LPAIR
       };
       /// Human-friendly printout of the mapping type

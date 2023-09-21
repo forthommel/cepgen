@@ -168,11 +168,14 @@ namespace cepgen {
         case Mapping::exponential:
           jacob_weight = lim.range();
           break;
+        case Mapping::gaussian:
+          jacob_weight = lim.range() * std::sqrt(2. * M_PI);
+          break;
         case Mapping::power_law:
           jacob_weight = log(lim.max() / lim.min());
           break;
       }
-      const auto var_desc = descr.empty() ? utils::format("var%z", mapped_variables_.size()) : descr;
+      const auto var_desc = descr.empty() ? utils::format("var%zu", mapped_variables_.size()) : descr;
       mapped_variables_.emplace_back(MappingVariable{var_desc, lim, out, type, mapped_variables_.size()});
       point_coord_.emplace_back(0.);
       base_jacobian_ *= jacob_weight;
@@ -210,6 +213,11 @@ namespace cepgen {
           } break;
           case Mapping::square: {
             jacobian *= var.limits.x(xv);
+          } break;
+          case Mapping::gaussian: {
+            const auto val = var.limits.x(xv);
+            var.value = std::exp(-0.5 * val * val);
+            jacobian *= val * var.value;
           } break;
           case Mapping::power_law: {
             const double y = var.limits.max() / var.limits.min();
@@ -403,6 +411,8 @@ namespace cepgen {
           return os << "exponential";
         case Process::Mapping::square:
           return os << "squared";
+        case Process::Mapping::gaussian:
+          return os << "gaussian";
         case Process::Mapping::power_law:
           return os << "power law";
       }
