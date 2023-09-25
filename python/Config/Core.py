@@ -8,6 +8,9 @@ A collection of tools for Python steering cards definition
 from .containers_cfi import Module, Parameters, Sequence
 from .Logger_cfi import Logging
 
+#--- base Python process
+from .Process_cfi import Process
+
 #--- physics-level includes
 from .StructureFunctions_cfi import StructureFunctions
 from .SigmaRatio_cfi import SigmaRatio

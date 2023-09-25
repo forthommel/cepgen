@@ -1,9 +1,17 @@
-class PPtoFF(object):
+import Config.Core as cepgen
+
+
+class PPtoFF(cepgen.Process):
     def __init__(self):
+        super().__init__()
         print('PPtoFF process initialised')
+        self.addVariable('q2', range=(1.e-5, 10.), type=cepgen.Process.Variable.exponential)
+
+        self.mf2 = 0.10566**2
 
     def __repr__(self):
-        return 'PPtoFF process!!!!'
+        return 'PPtoFF process'
 
-    def __eval__(self, qt1, qt2, phi_qt1, phi_qt2, y1, y2, pt_diff, phi_pt_diff, mx, my):
-        return 1.
+    def __eval__(self):
+        q2 = self.variable['q2']
+        return 1./q2

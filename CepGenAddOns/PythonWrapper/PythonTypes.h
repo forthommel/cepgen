@@ -101,15 +101,9 @@ namespace cepgen {
     /// Build a Python tuple from a C++ tuple
     template <typename... Args>
     ObjectPtr newTuple(const std::tuple<Args...>& c_tuple) {
-      const auto tuple_size = sizeof...(Args);
-      ObjectPtr tuple(PyTuple_New(tuple_size));
-      /*for (size_t i = 0; i < tuple_size; ++i) {
-        auto val = std::get<i>(c_tuple);
-        PyTuple_SetItem(tuple.get(), i, set<decltype(val)>(val));
-      }*/
+      ObjectPtr tuple(PyTuple_New(sizeof...(Args)));
       Py_ssize_t i = 0;
-      std::apply([&tuple, &i](
-                     auto... vals) { ((PyTuple_SetItem(tuple.get(), i++, set<decltype(vals)>(vals).release())), ...); },
+      std::apply([&tuple, &i](auto... vals) { ((PyTuple_SetItem(tuple.get(), i++, set(vals).release())), ...); },
                  c_tuple);
       return tuple;
     }
