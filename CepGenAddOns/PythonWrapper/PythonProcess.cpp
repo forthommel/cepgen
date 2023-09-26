@@ -47,9 +47,17 @@ namespace cepgen {
         obj_ = python::call(obj);
         if (!obj_)
           throw PY_ERROR << "Failed to instantiate new class '" << class_name << "'.";
+        // send a few useful constants to the Python object
         python::setAttribute(obj_, "mp", Process::mp_);
         python::setAttribute(obj_, "units", constants::GEVM2_TO_PB);
         python::setAttribute(obj_, "processParameters", params_);
+        // retrieve the outgoing particles content from the Python object
+        const auto out_state = python::getVector<int>(python::getAttribute(obj_, "_outgoing"));
+        if (out_state.empty())
+          throw CG_FATAL("PythonProcess") << "Invalid multiplicity of particles produced: " << out_state << ".";
+        produced_parts_.clear();
+        for (const auto& part : out_state)
+          produced_parts_.emplace_back(part);
       }
       ProcessPtr clone() const override {
         auto proc = new PythonProcess(params_);
@@ -81,8 +89,7 @@ namespace cepgen {
     };
 
     void PythonProcess::prepareFactorisedPhaseSpace() {
-      auto vars_def = python::getAttribute(obj_, "_variables");
-      auto vars_coll = python::get<ParametersList>(vars_def);
+      const auto vars_coll = python::get<ParametersList>(python::getAttribute(obj_, "_variables"));
       for (auto& var : vars_coll.keys()) {
         const auto& var_attrs = vars_coll.get<ParametersList>(var);
         const auto& type = var_attrs.get<std::string>("type");

@@ -7,9 +7,11 @@ class Process(object):
         square = 'square'
         powerLaw = 'power_law'
 
-    def __init__(self):
+    def __init__(self, outgoing: list[int]):
         print('base object created')
         self._variables = cepgen.Parameters()
+        self._outgoing = outgoing
+
         self.variable = cepgen.Parameters()
 
     def __eval__(self):
