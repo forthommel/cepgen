@@ -24,6 +24,9 @@ namespace cepgen {
     /// Check if a number is positive and finite
     template <typename T>
     bool positive(const T& val);
+
+    /// Dirac delta function
+    double delta(double x, double epsilon = -1.);
   }  // namespace utils
 }  // namespace cepgen
 

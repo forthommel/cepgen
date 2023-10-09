@@ -28,6 +28,7 @@
 #include "CepGen/Physics/Coupling.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/StructureFunctions/Parameterisation.h"
+#include "CepGen/Utils/Math.h"
 
 namespace cepgen {
   namespace strfun {
@@ -37,40 +38,31 @@ namespace cepgen {
     public:
       explicit BaruahDasSarma(const ParametersList& params)
           : Parameterisation(params),
-            embedded_gluon_evol_(steer<bool>("embeddedGluonEvolution")),
-            integr_g_(embedded_gluon_evol_ ? AnalyticIntegratorFactory::get().build(steer<ParametersList>("integrator"))
-                                           : nullptr),
-            integr_f2_(AnalyticIntegratorFactory::get().build(steer<ParametersList>("integrator"))),
+            integr_(AnalyticIntegratorFactory::get().build(steer<ParametersList>("integrator"))),
             alpha_s_(AlphaSFactory::get().build(steer<ParametersList>("alphaS"))),
-            gluon_flux_(embedded_gluon_evol_
-                            ? nullptr
-                            : CollinearFluxFactory::get().build(steer<ParametersList>("externalGluonFlux"))),
+            gluon_flux_(CollinearFluxFactory::get().build(steer<ParametersList>("gluonFlux"))),
             nf_(steer<int>("numFlavours")),
             esq_(steer<double>("eSquare")),
-            lambda_g_(steer<double>("lambdaG")),
             beta0_(11. - 2. * nf_ / 3.) {}
 
       static ParametersDescription description() {
         auto desc = Parameterisation::description();
         desc.setDescription("Baruah-Das-Sarma");
-        desc.add<bool>("embeddedGluonEvolution", false);
         desc.add<ParametersDescription>("integrator", ParametersDescription().setName<std::string>("gsl"))
             .setDescription("Steering parameters for the analytical integrator");
         desc.add<ParametersDescription>("alphaS", AlphaSFactory::get().describeParameters("pegasus"))
             .setDescription("strong coupling evolution algorithm");
-        desc.add<ParametersDescription>("externalGluonFlux",
+        desc.add<ParametersDescription>("gluonFlux",
                                         ParametersDescription(ParametersList()
                                                                   .setName<std::string>("LHAPDF")
                                                                   .set<std::string>("set", "MSTW2008nnlo90cl")
                                                                   .set<pdgid_t>("partonPdgId", PDG::gluon)));
         desc.add<int>("numFlavours", 3).setDescription("number of active light flavours");
         desc.add<double>("eSquare", 5. / 18).setDescription("average squared charge for even number of flavours");
-        desc.add<double>("lambdaG", 1.08).setDescription("Regge gluon distribution function exponent");
         return desc;
       }
 
       void eval() override {
-        const auto delta = [](double x) { return x == 0.; };
         auto c2_1 = [&](double w) {
           const auto w1 = 1. - w, l0 = std::log(w), l1 = std::log(w1);
           return nf_ * ((2. - 4. * w * w1) * (l1 - l0) - 2. + 16. * w * w1);
@@ -79,7 +71,7 @@ namespace cepgen {
           const auto w1 = 1. - w, l0 = std::log(w), l1 = std::log(w1);
           return nf_ * ((6.445 + 209.4 * (1. - w)) * l1 * l1 * l1 - 24. * l1 * l1 + (149. / w - 1483.) * l1 +
                         l1 * l0 * (-871.8 * l1 - 724.1 * l0) + 5.319 * l0 * l0 * l0 - 59.48 * l0 * l0 - 284.8 * l0 +
-                        11.9 / w + 392.4 - 0.28 * delta(1. - w));
+                        11.9 / w + 392.4 - 0.28 * utils::delta(1. - w));
         };
         auto c2_3 = [&](double w) {
           const auto w1 = 1. - w, l0 = std::log(w), l1 = std::log(w1), fl11 = 1. /*FIXME charge factor*/;
@@ -89,7 +81,7 @@ namespace cepgen {
                         331'570 * x * x - 244'150 * x * l0 * l0 - 253.3 * x * l0 * l0 * l0 * l0 * l0 +
                         l0 * l1 * (138'230. - 237'010 * l0) - 11'860 * l0 - 700.8 * l0 * l0 - 1440 * l0 * l0 * l0 +
                         4951. / 162 * l0 * l0 * l0 * l0 - 134. / 9 * l0 * l0 * l0 * l0 * l0 -
-                        (6362.54 - 932.089 * l0) / x + 0.625 * delta(x1)) +
+                        (6362.54 - 932.089 * l0) / x + 0.625 * utils::delta(x1)) +
                  nf_ * nf_ *
                      (131. / 81 * l1 * l1 * l1 * l1 - 14.72 * l1 * l1 * l1 + 3.607 * l1 * l1 - 226.1 * l1 + 4.762 -
                       190 * x - 818.4 * x * x - 4019. * x * l0 * l0 - l0 * l1 * (791.5 + 4646 * l0) + 739. * l0 +
@@ -106,38 +98,19 @@ namespace cepgen {
           return prefactor * c2_1(w) + prefactor * prefactor * c2_2(w) + prefactor * prefactor * prefactor * c2_3(w);
         };
         setF2(args_.xbj * esq_ *
-              integr_f2_->integrate(
+              integr_->integrate(
                   [this, &c2](double w) -> double {
-                    return c2(w, args_.q2) * (embedded_gluon_evol_
-                                                  ? nnloGluonDistribution(args_.xbj / w, args_.q2)
-                                                  : (gluon_flux_->fluxQ2(args_.xbj / w, args_.q2) /*/ args_.xbj*/));
+                    return c2(w, args_.q2) * ((gluon_flux_->fluxQ2(args_.xbj / w, args_.q2) /*/ args_.xbj*/));
                   },
                   Limits{args_.xbj, 1.}));
       }
 
     private:
-      double nnloGluonDistribution(double x, double q2) const {
-        auto p = [this](double x) {
-          return 12. / beta0_ *
-                 ((11. / 12 - nf_ * 1. / 18) + std::log(1. - x) +
-                  integr_g_->integrate(
-                      [this](double w) {
-                        return (std::pow(w, 1. + lambda_g_) - 1.) / (1. - w) +
-                               std::pow(w, lambda_g_) * (w * (1. - w) + (1. - w) / w);
-                      },
-                      Limits{x, 1.}));
-        };
-        return g_funct_c_ * std::pow(q2, p(x)) / x;
-      }
-      double g_funct_c_{1.};
-
-      const bool embedded_gluon_evol_;
-      const std::unique_ptr<AnalyticIntegrator> integr_g_, integr_f2_;
+      const std::unique_ptr<AnalyticIntegrator> integr_;
       const std::unique_ptr<Coupling> alpha_s_;
       const std::unique_ptr<CollinearFlux> gluon_flux_;
       const int nf_;
       const double esq_;
-      const double lambda_g_;
       const double beta0_;
     };
   }  // namespace strfun

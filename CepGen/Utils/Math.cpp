@@ -29,5 +29,13 @@ namespace cepgen {
     template bool positive<double>(const double&);
     template bool positive<float>(const float&);
     template bool positive<int>(const int&);
+
+    double delta(double x, double epsilon) {
+      if (epsilon < 0.)
+        epsilon = 1.e-5;
+      if (fabs(x) < epsilon)
+        return 2. * M_1_PI / epsilon / epsilon * std::hypot(epsilon, x);
+      return 0.;
+    }
   }  // namespace utils
 }  // namespace cepgen
