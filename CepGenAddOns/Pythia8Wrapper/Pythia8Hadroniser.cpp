@@ -87,7 +87,8 @@ namespace cepgen {
     };
 
     void Pythia8Hadroniser::initialise() {
-      cg_evt_->initialise(runParameters());
+      const auto& beams = runParameters().kinematics().incomingBeams();
+      cg_evt_->initialise(beams.positive(), beams.negative());
 #if defined(PYTHIA_VERSION_INTEGER) && PYTHIA_VERSION_INTEGER < 8300
       pythia_->setLHAupPtr(cg_evt_.get());
 #else

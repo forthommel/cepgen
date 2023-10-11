@@ -22,6 +22,7 @@
 #include "CepGen/Event/Event.h"
 #include "CepGen/EventFilter/EventExporter.h"
 #include "CepGen/Modules/EventExporterFactory.h"
+#include "CepGen/Parameters.h"
 #include "CepGen/Utils/Caller.h"
 #include "CepGen/Utils/Filesystem.h"
 #include "CepGen/Utils/String.h"
@@ -82,7 +83,8 @@ namespace cepgen {
       oss_init << std::endl;  // LHEF is usually not as beautifully parsed as a standard XML...
                               // we're physicists, what do you expect?
       lhaevt_->addComments(oss_init.str());
-      lhaevt_->initialise(runParameters());
+      const auto& in_parts = runParameters().kinematics().incomingBeams();
+      lhaevt_->initialise(in_parts.positive(), in_parts.negative());
 #if PYTHIA_VERSION_INTEGER < 8300
       pythia_->setLHAupPtr(lhaevt_.get());
 #else
