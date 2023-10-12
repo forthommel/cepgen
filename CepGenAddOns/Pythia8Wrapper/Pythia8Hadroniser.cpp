@@ -162,9 +162,9 @@ namespace cepgen {
       // 1) the full event kinematics (i.e. with remnants) is to be specified,
       // 2) the remnants are to be fragmented, or
       // 3) the resonances are to be decayed.
-      if (!fast && !remn_fragm_ && !res_decay_)
-        return true;
       if (fast && !res_decay_)
+        return true;
+      if (!fast && !remn_fragm_ && !res_decay_)
         return true;
 
       //--- switch full <-> partial event
@@ -172,14 +172,18 @@ namespace cepgen {
         enable_hadr_ = !fast;
         initialise();
       }
+      CG_LOG << ev;
 
       //===========================================================================================
       // convert our event into a custom LHA format
       //===========================================================================================
 
-      cg_evt_->feedEvent(
-          ev,
-          fast ? Pythia8::CepGenEvent::Type::centralAndPartons : Pythia8::CepGenEvent::Type::centralAndBeamRemnants);
+      unsigned int type = Pythia8::CepGenEvent::Type::central;
+      if (fast)
+        type |= Pythia8::CepGenEvent::Type::partonsKT;
+      else
+        type |= Pythia8::CepGenEvent::Type::partonsCollinear;
+      cg_evt_->feedEvent(ev, type);
       if (debug_lhef_ && !fast)
         cg_evt_->eventLHEF();
 

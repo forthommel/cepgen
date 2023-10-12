@@ -45,9 +45,10 @@ int main() {
                 "second incoming beam pz");
 
   evt.dump();
-  for (const auto& mode : {Pythia8::CepGenEvent::Type::centralAndPartons,
-                           Pythia8::CepGenEvent::Type::centralAndFullBeamRemnants,
-                           Pythia8::CepGenEvent::Type::centralAndBeamRemnants}) {
+  for (const auto& mode : {Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsKT,
+                           Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsKT |
+                               Pythia8::CepGenEvent::Type::beamRemnants,
+                           Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsCollinear}) {
     py_evt.feedEvent(evt, mode);
     py_evt.listEvent();
     py_evt.dumpCorresp();
@@ -56,21 +57,23 @@ int main() {
         continue;
       const auto moth1 = *evt[py_evt.cepgenId(i)].mothers().begin(),
                  moth2 = *evt[py_evt.cepgenId(i)].mothers().rbegin();
-      CG_LOG << moth1 << "(" << py_evt.pythiaId(moth2) << "):" << moth2 << "(" << py_evt.pythiaId(moth1) << ")";
       CG_TEST_EQUAL(
-          py_evt.mother1(i), py_evt.pythiaId(moth1), cepgen::utils::format("[mode %d] part.%d mother 1", (int)mode, i));
+          py_evt.mother1(i), py_evt.pythiaId(moth1), cepgen::utils::format("[mode %d] part.%d mother 1", mode, i));
       CG_TEST_EQUAL(
-          py_evt.mother2(i), py_evt.pythiaId(moth2), cepgen::utils::format("[mod3 %d] part.%d mother 2", (int)mode, i));
+          py_evt.mother2(i), py_evt.pythiaId(moth2), cepgen::utils::format("[mode %d] part.%d mother 2", mode, i));
     }
   }
 
   gen.parametersRef().setProcess(cepgen::ProcessFactory::get().build(
       "lpair",
-      cepgen::ParametersList().set("kinematics",
-                                   cepgen::ParametersList().set<double>("cmEnergy", 13.e3).set<int>("mode", 3))));
+      cepgen::ParametersList().set(
+          "kinematics",
+          cepgen::ParametersList()
+              .set<double>("cmEnergy", 13.e3)
+              .setAs<int, cepgen::mode::Kinematics>("mode", cepgen::mode::Kinematics::InelasticElastic))));
 
   auto cg_pythia = cepgen::EventModifierFactory::get().build("pythia8");
-  cg_pythia->setCrossSection(cepgen::Value{1., 1.e-3});
+  cg_pythia->setCrossSection(cepgen::Value{1.46161e-1, 1.25691e-3});
   cg_pythia->initialise(gen.parametersRef());
   double evt_weight = 1.;
   cg_pythia->run(evt, evt_weight, true);

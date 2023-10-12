@@ -34,10 +34,11 @@ namespace Pythia8 {
   class CepGenEvent : public LHAup {
   public:
     /// List of particles to be included to the event content
-    enum struct Type {
-      centralAndPartons,          ///< only include initiators and central system
-      centralAndBeamRemnants,     ///< include undissociated beam remnants and central system
-      centralAndFullBeamRemnants  ///< include dissociated beam remnants and central system
+    enum Type : unsigned int {
+      central = (1 << 0),           ///< include central system
+      partonsKT = (1 << 1),         ///< include kt-dependent initiators
+      partonsCollinear = (1 << 2),  ///< include purely collinear initiators
+      beamRemnants = (1 << 3)       ///< include undissociated beam remnants
     };
     explicit CepGenEvent();
     /// Initialise this conversion object with CepGen parameters
@@ -45,7 +46,7 @@ namespace Pythia8 {
     /// Feed a new CepGen event to this conversion object
     /// \param[in] ev CepGen event to be fed
     /// \param[in] type Type of storage
-    void feedEvent(const cepgen::Event& ev, const Type& type);
+    void feedEvent(const cepgen::Event& ev, unsigned int type);
     /// Set the cross section for a given process
     /// \param[in] id Process identifier
     /// \param[in] cross_section Process cross section, in pb

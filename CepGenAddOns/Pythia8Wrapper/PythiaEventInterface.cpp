@@ -51,7 +51,7 @@ namespace Pythia8 {
     setXErr(id, cross_section_err);
   }
 
-  void CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type) {
+  void CepGenEvent::feedEvent(const cepgen::Event& ev, unsigned int type) {
     const auto &part1 = ev.oneWithRole(cepgen::Particle::Parton1), &part2 = ev.oneWithRole(cepgen::Particle::Parton2);
     const auto p4_part1 = momToVec4(part1.momentum()), p4_part2 = momToVec4(part2.momentum());
     const double scale = (part1.momentum() + part2.momentum()).mass();
@@ -59,11 +59,10 @@ namespace Pythia8 {
 
     unsigned short colour_index = MIN_COLOUR_INDEX;
 
-    if (type == Type::centralAndBeamRemnants) {  // full event content (with collinear partons)
+    if (type & Type::partonsCollinear) {  // full event content (with collinear partons)
       const auto &op1 = ev(cepgen::Particle::OutgoingBeam1)[0], &op2 = ev(cepgen::Particle::OutgoingBeam2)[0];
       const double x1 = cepgen::utils::xBj(std::fabs(part1.momentum().mass2()), mp2_, op1.momentum().mass2()),
                    x2 = cepgen::utils::xBj(std::fabs(part2.momentum().mass2()), mp2_, op2.momentum().mass2());
-      setIdX(part1.integerPdgId(), part2.integerPdgId(), x1, x2);
 
       //===========================================================================================
       // incoming valence quarks
@@ -93,6 +92,8 @@ namespace Pythia8 {
       addParticle(q2_pdg, -1, 0, 0, q2_col, 0, p4_iq2.px(), p4_iq2.py(), p4_iq2.pz(), p4_iq2.e(), p4_iq2.mCalc(), 0, 1);
       //===========================================================================================
 
+      setIdX(q1_pdg, q2_pdg, x1, x2);
+      //setIdX(part1.integerPdgId(), part2.integerPdgId(), x1, x2);
       setPdf(q1_pdg, q2_pdg, x1, x2, scale, 0., 0., false);  // flavour/x value of hard-process initiators
 
       //===========================================================================================
@@ -108,35 +109,37 @@ namespace Pythia8 {
             q2_pdg, 1, q1_id, q2_id, q2_col, 0, p4_oq2.px(), p4_oq2.py(), p4_oq2.pz(), p4_oq2.e(), p4_oq2.mCalc(), 0, 1);
       }
       //===========================================================================================
-    } else {  // addition of incoming partons (possibly with kT)
+    } else if (type & Type::partonsKT) {  // addition of incoming partons (possibly with kT)
       addCepGenParticle(part1, -2);
       addCepGenParticle(part2, -2);
-      if (type == Type::centralAndFullBeamRemnants)  // full beam remnants content
-        for (const auto& syst : {cepgen::Particle::OutgoingBeam1, cepgen::Particle::OutgoingBeam2})
-          for (const auto& p : ev(syst))
-            addCepGenParticle(p, INVALID_ID, findMothers(ev, p));
     }
+    if (type & Type::beamRemnants)  // full beam remnants content
+      for (const auto& syst : {cepgen::Particle::OutgoingBeam1, cepgen::Particle::OutgoingBeam2})
+        for (const auto& p : ev(syst))
+          addCepGenParticle(p, INVALID_ID, findMothers(ev, p));
 
     //=============================================================================================
     // central system
-    const unsigned short central_colour = colour_index++;
-    for (const auto& p : ev(cepgen::Particle::CentralSystem)) {
-      std::pair<int, int> colours = {0, 0}, mothers = {1, 2};
-      if (type != Type::centralAndBeamRemnants)
-        mothers = findMothers(ev, p);
-      try {
-        if (cepgen::PDG::get().colours(p.pdgId()) > 1) {
-          if (p.integerPdgId() > 0)  //--- particle
-            colours.first = central_colour;
-          else  //--- anti-particle
-            colours.second = central_colour;
+    if (type & Type::central) {
+      const unsigned short central_colour = colour_index++;
+      for (const auto& p : ev(cepgen::Particle::CentralSystem)) {
+        std::pair<int, int> colours = {0, 0}, mothers = {1, 2};
+        if (!(type & Type::partonsCollinear))
+          mothers = findMothers(ev, p);
+        try {
+          if (cepgen::PDG::get().colours(p.pdgId()) > 1) {
+            if (p.integerPdgId() > 0)  //--- particle
+              colours.first = central_colour;
+            else  //--- anti-particle
+              colours.second = central_colour;
+          }
+        } catch (const cepgen::Exception&) {
         }
-      } catch (const cepgen::Exception&) {
+        int status = 1;
+        if (type & Type::beamRemnants && p.status() == cepgen::Particle::Status::Resonance)
+          status = 2;
+        addCepGenParticle(p, status, mothers, colours);
       }
-      int status = 1;
-      if (type == Type::centralAndFullBeamRemnants && p.status() == cepgen::Particle::Status::Resonance)
-        status = 2;
-      addCepGenParticle(p, status, mothers, colours);
     }
     //=============================================================================================
   }

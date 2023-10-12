@@ -100,7 +100,9 @@ namespace cepgen {
     }
     /// Writer operator
     inline void operator<<(const Event& ev) override {
-      lhaevt_->feedEvent(compress_event_ ? ev : ev.compress(), Pythia8::CepGenEvent::Type::centralAndFullBeamRemnants);
+      lhaevt_->feedEvent(compress_event_ ? ev : ev.compress(),
+                         Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsKT |
+                             Pythia8::CepGenEvent::Type::beamRemnants);
       pythia_->next();
       lhaevt_->eventLHEF();
     }
