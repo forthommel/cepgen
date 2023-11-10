@@ -284,8 +284,10 @@ namespace cepgen {
             pythia_->event.list();
             CG_INFO("Pythia8Hadroniser:update") << "CepGen event content:";
             ev.dump();
-            CG_INFO("Pythia8Hadroniser:update") << "Correspondence:";
-            cg_evt_->dumpCorresp();
+            CG_INFO("Pythia8Hadroniser:update").log([this](auto& log) {
+              log << "Correspondence:";
+              cg_evt_->dumpCorresp(log.stream());
+            });
 
             throw CG_FATAL("Pythia8Hadroniser:update")
                 << "Event list corruption detected for (Pythia/CepGen) particle " << i << "/" << cg_id << ":\n\t"

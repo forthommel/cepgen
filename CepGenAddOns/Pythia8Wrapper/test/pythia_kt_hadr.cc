@@ -8,14 +8,16 @@
 #include "CepGen/Physics/Beam.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/Process.h"
+#include "CepGen/Utils/ArgumentsParser.h"
 #include "CepGen/Utils/Test.h"
 #include "CepGenAddOns/Common/EventUtils.h"
 #include "CepGenAddOns/Pythia8Wrapper/PythiaEventInterface.h"
 
 using namespace std;
 
-int main() {
-  //cepgen::initialise();
+int main(int argc, char* argv[]) {
+  cepgen::ArgumentsParser(argc, argv).parse();
+
   auto gen = cepgen::Generator();
 
   auto evt = cepgen::utils::generateLPAIREvent();
@@ -44,14 +46,16 @@ int main() {
                 evt.oneWithRole(cepgen::Particle::Role::IncomingBeam2).momentum().pz(),
                 "second incoming beam pz");
 
-  evt.dump();
+  CG_DEBUG("main") << evt;
+
   for (const auto& mode : {Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsKT,
                            Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsKT |
                                Pythia8::CepGenEvent::Type::beamRemnants,
                            Pythia8::CepGenEvent::Type::central | Pythia8::CepGenEvent::Type::partonsCollinear}) {
     py_evt.feedEvent(evt, mode);
     py_evt.listEvent();
-    py_evt.dumpCorresp();
+    CG_DEBUG("main").log([&py_evt](auto& log) { py_evt.dumpCorresp(log.stream()); });
+
     for (int i = 0; i < py_evt.sizePart(); ++i) {
       if (py_evt.cepgenId(i) == Pythia8::CepGenEvent::INVALID_ID)
         continue;

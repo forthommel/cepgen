@@ -81,7 +81,7 @@ namespace Pythia8 {
     /// \param[in] cg_id CepGen particle id
     void addCorresp(unsigned short py_id, unsigned short cg_id);
     /// Print all Pythia8 / CepGen Particles correspondences
-    void dumpCorresp() const;
+    void dumpCorresp(std::ostream&) const;
 
     static constexpr unsigned short INVALID_ID = 999;        ///< Invalid id association
     static constexpr unsigned short MIN_COLOUR_INDEX = 501;  ///< Minimal colour indexing number
