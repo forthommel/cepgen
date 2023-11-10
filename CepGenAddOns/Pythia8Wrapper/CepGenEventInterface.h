@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CepGenAddOns_EventInterfaces_PythiaEventInterface_h
-#define CepGenAddOns_EventInterfaces_PythiaEventInterface_h
+#ifndef CepGenAddOns_EventInterfaces_CepGenEventInterface_h
+#define CepGenAddOns_EventInterfaces_CepGenEventInterface_h
 
 #include <Pythia8/Pythia.h>
 
@@ -31,7 +31,7 @@ namespace cepgen {
 
 namespace Pythia8 {
   /// Interfacing between CepGen and Pythia8 event definitions
-  class CepGenEvent : public LHAup {
+  class CepGenEventInterface : public LHAup {
   public:
     /// List of particles to be included to the event content
     enum Type : unsigned int {
@@ -40,7 +40,7 @@ namespace Pythia8 {
       partonsCollinear = (1 << 2),  ///< include purely collinear initiators
       beamRemnants = (1 << 3)       ///< include undissociated beam remnants
     };
-    explicit CepGenEvent();
+    explicit CepGenEventInterface();
     /// Initialise this conversion object with CepGen parameters
     void initialise(const cepgen::Beam& pos_beam, const cepgen::Beam& neg_beam);
     /// Feed a new CepGen event to this conversion object
@@ -59,18 +59,12 @@ namespace Pythia8 {
     /// \param[in] alpha_qed \f$\alpha_{\rm em}\f$ for this process
     /// \param[in] alpha_qcd \f$\alpha_{\rm s}\f$ for this process
     void setProcess(int id, double cross_section, double q2_scale, double alpha_qed, double alpha_qcd);
+    /// Update the CepGen event content with the Pythia record
+    void updateEvent(const Pythia8::Event&, cepgen::Event&, double& weight, bool) const;
 
     /// Feed comments to the LHEF block
     void addComments(const std::string& comments);
 
-    /// Retrieve the CepGen particle index given its Pythia8 event id
-    /// \param[in] py_id Pythia8 particle id
-    /// \return CepGen particle id
-    unsigned short cepgenId(unsigned short py_id) const;
-    /// Retrieve the Pythia8 particle index given its CepGen event id
-    /// \param[in] cg_id CepGen particle id
-    /// \return Pythia8 particle id
-    unsigned short pythiaId(unsigned short cg_id) const;
     /// Add a CepGen particle to the event content
     void addCepGenParticle(const cepgen::Particle& part,
                            int status = INVALID_ID,
@@ -94,10 +88,28 @@ namespace Pythia8 {
 #endif
 
   private:
-    std::pair<int, int> findMothers(const cepgen::Event& ev, const cepgen::Particle& p) const;
+    static constexpr unsigned short PYTHIA_STATUS_IN_BEAM = 12;
+    static constexpr unsigned short PYTHIA_STATUS_IN_PARTON_KT = 61;
+
+    cepgen::Particle& addParticleToEvent(cepgen::Event&, cepgen::Particle::Role, const Particle&, const Vec4&) const;
+    /// Check if particle identifier is already in the list of handled PDGs ; if not, add it
+    void checkPDGid(const Particle& py_part) const;
+    cepgen::Particle::Role findRole(const cepgen::Event&, const Event&, const Particle&) const;
+    std::pair<int, int> findMothers(const cepgen::Event&, const cepgen::Particle&) const;
+    /// Retrieve the CepGen particle index given its Pythia8 event id
+    /// \param[in] py_id Pythia8 particle id
+    /// \return CepGen particle id
+    unsigned short cepgenId(unsigned short py_id) const;
+    /// Retrieve the Pythia8 particle index given its CepGen event id
+    /// \param[in] cg_id CepGen particle id
+    /// \return Pythia8 particle id
+    unsigned short pythiaId(unsigned short cg_id) const;
+
     const double mp_, mp2_;
     bool inel1_{false}, inel2_{false};
     std::unordered_map<unsigned short, unsigned short> py_cg_corresp_;
+    mutable short offset_{0};  //FIXME
+    mutable bool first_evt_{true};
   };
 }  // namespace Pythia8
 #endif
