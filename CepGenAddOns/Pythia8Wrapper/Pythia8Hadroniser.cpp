@@ -98,13 +98,11 @@ namespace cepgen {
 
       pythia_->settings.parm("Beams:idA", (long)kin.incomingBeams().positive().pdgId());
       pythia_->settings.parm("Beams:idB", (long)kin.incomingBeams().negative().pdgId());
-      // specify we will be using a LHA input
-      pythia_->settings.mode("Beams:frameType", 5);
+      pythia_->settings.mode("Beams:frameType", 5);  // specify we will be using a LHA input
       pythia_->settings.parm("Beams:eCM", kin.incomingBeams().sqrtS());
       min_ids_ = kin.minimumFinalState();
       if (debug_lhef_)
         cg_evt_->openLHEF("debug.lhe");
-      pythia_->settings.flag("ProcessLevel:resonanceDecays", res_decay_);
       if (pythia_->settings.flag("ProcessLevel:all") != enable_hadr_)
         pythia_->settings.flag("ProcessLevel:all", enable_hadr_);
 
@@ -142,14 +140,14 @@ namespace cepgen {
                                       << "The proton remnants output might hence be wrong.\n\t"
                                       << "Please update the Pythia version or disable this part.";
 #endif
-      if (correct_central_ && res_decay_)
-        CG_WARNING("Pythia8Hadroniser") << "Central system's kinematics correction enabled while resonances are\n\t"
-                                        << "expected to be decayed. Please check that this is fully intended.";
-
       if (!pythia_->init())
         throw CG_FATAL("Pythia8Hadroniser") << "Failed to initialise the Pythia8 core!\n\t"
                                             << "See the message above for more details.";
 
+      res_decay_ = pythia_->settings.flag("ProcessLevel:resonanceDecays");
+      if (correct_central_ && res_decay_)
+        CG_WARNING("Pythia8Hadroniser") << "Central system's kinematics correction enabled while resonances are\n\t"
+                                        << "expected to be decayed. Please check that this is fully intended.";
       if (debug_lhef_)
         cg_evt_->initLHEF();
     }

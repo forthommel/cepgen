@@ -164,27 +164,25 @@ namespace Pythia8 {
   }
 
   void CepGenEvent::addCepGenParticle(const cepgen::Particle& part,
-                                      int st,
-                                      const std::pair<int, int>& moth,
-                                      const std::pair<int, int>& col) {
+                                      int status,
+                                      const std::pair<int, int>& mothers,
+                                      const std::pair<int, int>& colours) {
     const auto p4 = momToVec4(part.momentum());
-    int pdg = part.integerPdgId();
-    if (st == INVALID_ID)
-      switch (part.status()) {
-        case cepgen::Particle::Status::Resonance:
-        case cepgen::Particle::Status::Fragmented:
-          st = 2;
-          break;
-        default: {
-          if (part.pdgId() == 21 && (int)part.status() == 12)
-            pdg = -21;  // workaround for HepMC2 interface
-          else
-            st = 1;
-        } break;
-      }
+    int pdgid = part.integerPdgId();
+    if (status == INVALID_ID) {
+      if (part.status() == cepgen::Particle::Status::Resonance || part.status() == cepgen::Particle::Status::Fragmented)
+        status = 2;
+      else if (part.pdgId() == cepgen::PDG::gluon && (int)part.status() == 12)
+        pdgid = -21;  // workaround for HepMC2 interface
+      else
+        status = 1;
+    }
+    const auto &moth1 = mothers.first, &moth2 = mothers.second;
+    const auto &col1 = colours.first, &col2 = colours.second;
+    const auto tau = 0., spin = 0., scale = 0.;
     addCorresp(sizePart(), part.id());
     addParticle(
-        pdg, st, moth.first, moth.second, col.first, col.second, p4.px(), p4.py(), p4.pz(), p4.e(), p4.mCalc(), 0, 0, 0);
+        pdgid, status, moth1, moth2, col1, col2, p4.px(), p4.py(), p4.pz(), p4.e(), p4.mCalc(), tau, spin, scale);
   }
 
   void CepGenEvent::addCorresp(unsigned short py_id, unsigned short cg_id) { py_cg_corresp_[py_id] = cg_id; }
