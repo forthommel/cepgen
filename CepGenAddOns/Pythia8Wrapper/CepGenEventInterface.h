@@ -38,7 +38,8 @@ namespace Pythia8 {
       central = (1 << 0),           ///< include central system
       partonsKT = (1 << 1),         ///< include kt-dependent initiators
       partonsCollinear = (1 << 2),  ///< include purely collinear initiators
-      beamRemnants = (1 << 3)       ///< include undissociated beam remnants
+      beamRemnants = (1 << 3),      ///< include undissociated beam remnants
+      incomingBeams = (1 << 4)      ///< include incoming primary beams
     };
     explicit CepGenEventInterface();
     /// Initialise this conversion object with CepGen parameters

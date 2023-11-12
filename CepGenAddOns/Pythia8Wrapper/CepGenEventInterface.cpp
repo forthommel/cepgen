@@ -58,16 +58,25 @@ namespace Pythia8 {
     const auto &parton1 = ev.oneWithRole(cepgen::Particle::Parton1),
                &parton2 = ev.oneWithRole(cepgen::Particle::Parton2);
     const auto p4_parton1 = momToVec4(parton1.momentum()), p4_parton2 = momToVec4(parton2.momentum());
-    const double scale = (parton1.momentum() + parton2.momentum()).mass();
+    const auto scale = (parton1.momentum() + parton2.momentum()).mass();
     setProcess(0, ev.metadata.at("weight"), scale, ev.metadata.at("alphaEM"), ev.metadata.at("alphaS"));
 
-    unsigned short colour_index = MIN_COLOUR_INDEX;
+    auto colour_index = MIN_COLOUR_INDEX;
 
+    if (type & Type::incomingBeams) {
+      const auto &ip1 = ev.oneWithRole(cepgen::Particle::IncomingBeam1),
+                 &ip2 = ev.oneWithRole(cepgen::Particle::IncomingBeam2);
+      const auto p4_ip1 = momToVec4(ip1.momentum()), p4_ip2 = momToVec4(ip2.momentum());
+      addParticle(
+          ip1.integerPdgId(), -9, 0, 0, 0, 0, p4_ip1.px(), p4_ip1.py(), p4_ip1.pz(), p4_ip1.e(), p4_ip1.mCalc(), 0, 0);
+      addParticle(
+          ip2.integerPdgId(), -9, 0, 0, 0, 0, p4_ip2.px(), p4_ip2.py(), p4_ip2.pz(), p4_ip2.e(), p4_ip2.mCalc(), 0, 0);
+    }
     if (type & Type::partonsCollinear) {  // full event content (with collinear partons)
       const auto &op1 = ev(cepgen::Particle::Role::OutgoingBeam1)[0],
                  &op2 = ev(cepgen::Particle::Role::OutgoingBeam2)[0];
-      const double x1 = cepgen::utils::xBj(std::fabs(parton1.momentum().mass2()), mp2_, op1.momentum().mass2()),
-                   x2 = cepgen::utils::xBj(std::fabs(parton2.momentum().mass2()), mp2_, op2.momentum().mass2());
+      const auto x1 = cepgen::utils::xBj(std::fabs(parton1.momentum().mass2()), mp2_, op1.momentum().mass2()),
+                 x2 = cepgen::utils::xBj(std::fabs(parton2.momentum().mass2()), mp2_, op2.momentum().mass2());
 
       //===========================================================================================
       // incoming valence quarks
@@ -311,7 +320,6 @@ namespace Pythia8 {
     }
   }
 
-  /// Check if particle identifier is already in the list of handled PDGs ; if not, add it
   void CepGenEventInterface::checkPDGid(const Particle& py_part) const {
     if (cepgen::PDG::get().has(py_part.id()))
       return;

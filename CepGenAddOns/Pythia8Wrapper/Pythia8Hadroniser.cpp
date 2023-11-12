@@ -85,19 +85,18 @@ namespace cepgen {
     };
 
     void Pythia8Hadroniser::initialise() {
-      const auto& beams = runParameters().kinematics().incomingBeams();
+      const auto& kin = runParameters().kinematics();
+      const auto& beams = kin.incomingBeams();
       cg_evt_interface_->initialise(beams.positive(), beams.negative());
 #if defined(PYTHIA_VERSION_INTEGER) && PYTHIA_VERSION_INTEGER < 8300
       pythia_->setLHAupPtr(cg_evt_interface_.get());
 #else
       pythia_->setLHAupPtr(cg_evt_interface_);
 #endif
-      const auto& kin = runParameters().kinematics();
-
-      pythia_->settings.parm("Beams:idA", (long)kin.incomingBeams().positive().pdgId());
-      pythia_->settings.parm("Beams:idB", (long)kin.incomingBeams().negative().pdgId());
+      pythia_->settings.parm("Beams:idA", (long)beams.positive().pdgId());
+      pythia_->settings.parm("Beams:idB", (long)beams.negative().pdgId());
       pythia_->settings.mode("Beams:frameType", 5);  // specify we will be using a LHA input
-      pythia_->settings.parm("Beams:eCM", kin.incomingBeams().sqrtS());
+      pythia_->settings.parm("Beams:eCM", beams.sqrtS());
       pythia_->settings.flag("LesHouches:matchInOut", false);
       pythia_->settings.flag("BeamRemnants:primordialKT", false);
       min_ids_ = kin.minimumFinalState();
@@ -114,7 +113,7 @@ namespace cepgen {
       }
 
 #if defined(PYTHIA_VERSION_INTEGER) && PYTHIA_VERSION_INTEGER >= 8226
-      switch (kin.incomingBeams().mode()) {
+      switch (beams.mode()) {
         case mode::Kinematics::ElasticElastic: {
           pythia_->settings.mode("BeamRemnants:unresolvedHadron", 3);
           pythia_->settings.flag("PartonLevel:MPI", false);
@@ -166,19 +165,17 @@ namespace cepgen {
         return true;
 
       //--- switch full <-> partial event
-      if (!fast != enable_hadr_) {
+      if (fast == enable_hadr_) {
         enable_hadr_ = !fast;
         initialise();
       }
 
       // convert the CepGen event into a custom LHA format
       unsigned int type = Pythia8::CepGenEventInterface::Type::central;
-      /*if (fast)
+      if (fast)
         type |= Pythia8::CepGenEventInterface::Type::partonsKT;
       else
-        type |= Pythia8::CepGenEventInterface::Type::partonsCollinear;*/
-      //type |= Pythia8::CepGenEventInterface::Type::partonsCollinear;
-      type |= Pythia8::CepGenEventInterface::Type::partonsKT;
+        type |= Pythia8::CepGenEventInterface::Type::partonsCollinear;
       //type |= Pythia8::CepGenEventInterface::Type::beamRemnants;
       cg_evt_interface_->feedEvent(ev, type);
       if (debug_lhef_ && !fast)
