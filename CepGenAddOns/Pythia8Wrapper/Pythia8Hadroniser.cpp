@@ -176,6 +176,7 @@ namespace cepgen {
         type |= Pythia8::CepGenEventInterface::Type::partonsKT;
       else
         type |= Pythia8::CepGenEventInterface::Type::partonsCollinear;
+      //type |= Pythia8::CepGenEventInterface::Type::partonsKT;
       //type |= Pythia8::CepGenEventInterface::Type::beamRemnants;
       cg_evt_interface_->feedEvent(ev, type);
       if (debug_lhef_ && !fast)

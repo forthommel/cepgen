@@ -77,6 +77,14 @@ namespace Pythia8 {
     void addCorresp(unsigned short py_id, unsigned short cg_id);
     /// Print all Pythia8 / CepGen Particles correspondences
     void dumpCorresp(std::ostream&) const;
+    /// Retrieve the CepGen particle index given its Pythia8 event id
+    /// \param[in] py_id Pythia8 particle id
+    /// \return CepGen particle id
+    unsigned short cepgenId(unsigned short py_id) const;
+    /// Retrieve the Pythia8 particle index given its CepGen event id
+    /// \param[in] cg_id CepGen particle id
+    /// \return Pythia8 particle id
+    unsigned short pythiaId(unsigned short cg_id) const;
 
     static constexpr unsigned short INVALID_ID = 999;        ///< Invalid id association
     static constexpr unsigned short MIN_COLOUR_INDEX = 501;  ///< Minimal colour indexing number
@@ -97,14 +105,6 @@ namespace Pythia8 {
     void checkPDGid(const Particle& py_part) const;
     cepgen::Particle::Role findRole(const cepgen::Event&, const Event&, const Particle&) const;
     std::pair<int, int> findMothers(const cepgen::Event&, const cepgen::Particle&) const;
-    /// Retrieve the CepGen particle index given its Pythia8 event id
-    /// \param[in] py_id Pythia8 particle id
-    /// \return CepGen particle id
-    unsigned short cepgenId(unsigned short py_id) const;
-    /// Retrieve the Pythia8 particle index given its CepGen event id
-    /// \param[in] cg_id CepGen particle id
-    /// \return Pythia8 particle id
-    unsigned short pythiaId(unsigned short cg_id) const;
 
     const double mp_, mp2_;
     bool inel1_{false}, inel2_{false};
