@@ -71,6 +71,11 @@ namespace cepgen {
       // register all process-dependent variables
       prepareFactorisedPhaseSpace();
 
+      // register the fractional momentum loss
+      const auto lim_x = kinematics().cuts().remnants.xi.truncate(Limits{0., 1.});
+      defineVariable(x1(), Mapping::linear, lim_x, "Positive-z parton beam momentum fraction");
+      defineVariable(x2(), Mapping::linear, lim_x, "Negative-z parton beam momentum fraction");
+
       // register the outgoing remnants' variables
       mX2() = pA().mass2();
       if (!kinematics().incomingBeams().positive().elastic())
