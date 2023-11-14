@@ -60,6 +60,7 @@ namespace cepgen {
       // factor 1/4 from jacobian of transformations
       static constexpr double prefactor_ = 0.25 * 0.0625 * M_1_PI * M_1_PI;
       double inv_sqrts_{0.};
+      Limits lim_rap_;
     };
   }  // namespace proc
 }  // namespace cepgen

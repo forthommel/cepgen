@@ -46,6 +46,7 @@ namespace cepgen {
 
       prepareProcessKinematics();
 
+      lim_rap_ = kinematics().cuts().central.rapidity_single.truncate(Limits{-6., 6.});
       inv_sqrts_ = inverseSqrtS();
     }
 
@@ -71,8 +72,7 @@ namespace cepgen {
                    xfrac = std::sqrt(std::pow(amt2_diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
         const auto y_c1 = +std::log(0.5 * (xfrac + amt2_diff) / amt1 / x2()),
                    y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1());
-        const auto lim_rap = kinematics().cuts().central.rapidity_single.truncate(Limits{-6., 6.});
-        if (!lim_rap.contains(y_c1) || !lim_rap.contains(y_c2))  // single particle rapidity
+        if (!lim_rap_.contains(y_c1) || !lim_rap_.contains(y_c2))  // single particle rapidity
           return 0.;
         if (!kinematics().cuts().central.rapidity_diff.contains(fabs(y_c1 - y_c2)))  // rapidity distance
           return 0.;
@@ -80,10 +80,13 @@ namespace cepgen {
         pc(0) = Momentum::fromPtYPhiM(p1t, y_c1, pt_c1.phi(), cs_prop_.mass);
         pc(1) = Momentum::fromPtYPhiM(p2t, y_c2, pt_c2.phi(), cs_prop_.mass);
 
-        CG_DEBUG_LOOP("Process2to4:computeFactorisedMatrixElement")
-            << "Closure test for x_i computation:\n"
-            << "\tx1(gen)=" << x1() << ", x1(comp)=" << (amt1 * exp(y_c1) + amt2 * exp(y_c2)) << "\n"
-            << "\tx2(gen)=" << x2() << ", x2(comp)=" << (amt1 * exp(-y_c1) + amt2 * exp(-y_c2)) << ".";
+        CG_DEBUG_LOOP("Process2to4:computeFactorisedMatrixElement").log([&](auto& log) {
+          const auto x1_comp = amt1 * exp(+y_c1) + amt2 * exp(+y_c2);
+          const auto x2_comp = amt1 * exp(-y_c1) + amt2 * exp(-y_c2);
+          log << "Closure test for x_i computation:\n"
+              << "\tx1(gen)=" << x1() << ", x1(comp)=" << x1_comp << ", diff=" << (x1_comp - x1()) << "\n"
+              << "\tx2(gen)=" << x2() << ", x2(comp)=" << x2_comp << ", diff=" << (x2_comp - x2()) << ".";
+        });
       }
 
       //--- window in central system invariant mass
