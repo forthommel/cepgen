@@ -34,7 +34,8 @@ namespace cepgen {
           psgen_(steer<bool>("ktFactorised")
                      ? std::unique_ptr<PhaseSpaceGenerator>(new KTPhaseSpaceGenerator(this))
                      : std::unique_ptr<PhaseSpaceGenerator>(new CollinearPhaseSpaceGenerator(this))),
-          store_alphas_(steer<bool>("storeAlphas")) {
+          store_alphas_(steer<bool>("storeAlphas")),
+          log_x_(steer<bool>("logX")) {
       event().map()[Particle::CentralSystem].resize(central.size());
     }
 
@@ -44,7 +45,8 @@ namespace cepgen {
           psgen_(proc.psgen_->ktFactorised()
                      ? std::unique_ptr<PhaseSpaceGenerator>(new KTPhaseSpaceGenerator(this))
                      : std::unique_ptr<PhaseSpaceGenerator>(new CollinearPhaseSpaceGenerator(this))),
-          store_alphas_(proc.store_alphas_) {}
+          store_alphas_(proc.store_alphas_),
+          log_x_(proc.log_x_) {}
 
     void FactorisedProcess::addEventContent() {
       Process::setEventContent({{Particle::IncomingBeam1, {kinematics().incomingBeams().positive().pdgId()}},
@@ -72,9 +74,15 @@ namespace cepgen {
       prepareFactorisedPhaseSpace();
 
       // register the fractional momentum loss
-      const auto lim_x = kinematics().cuts().remnants.xi.truncate(Limits{0., 1.});
-      defineVariable(x1(), Mapping::linear, lim_x, "Positive-z parton beam momentum fraction");
-      defineVariable(x2(), Mapping::linear, lim_x, "Negative-z parton beam momentum fraction");
+      if (log_x_) {
+        const auto log_lim_x = kinematics().cuts().remnants.xi.truncate(Limits{1.e-10, 1.}).compute(std::log);
+        defineVariable(x1(), Mapping::exponential, log_lim_x, "Positive-z parton beam momentum fraction");
+        defineVariable(x2(), Mapping::exponential, log_lim_x, "Negative-z parton beam momentum fraction");
+      } else {
+        const auto lim_x = kinematics().cuts().remnants.xi.truncate(Limits{0., 1.});
+        defineVariable(x1(), Mapping::linear, lim_x, "Positive-z parton beam momentum fraction");
+        defineVariable(x2(), Mapping::linear, lim_x, "Negative-z parton beam momentum fraction");
+      }
 
       // register the outgoing remnants' variables
       mX2() = pA().mass2();
@@ -125,6 +133,8 @@ namespace cepgen {
       desc.setDescription("Unnamed factorised process");
       desc.add<bool>("storeAlphas", false)
           .setDescription("store the electromagnetic and strong coupling constants to the event content?");
+      desc.add<bool>("logX", true)
+          .setDescription("generate logarithmically the x1/x2 parton fractional momentum loss?");
       return desc;
     }
   }  // namespace proc
