@@ -72,12 +72,13 @@ namespace cepgen {
         const auto amt2_diff = amt1 * amt1 - amt2 * amt2, xprod = x1() * x2(),
                    xfrac = std::sqrt(std::pow(amt2_diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
         const auto y_c1 = +std::log(0.5 * (xfrac + amt2_diff) / amt1 / x2()),
-                   y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1()), y_diff = y_c1 - y_c2;
+                   y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1());
         if (!lim_rap_.contains(y_c1) || !lim_rap_.contains(y_c2))  // single particle rapidity
           return 0.;
+        const auto y_diff = y_c1 - y_c2;
         if (!kinematics().cuts().central.rapidity_diff.contains(fabs(y_diff)))  // rapidity distance
           return 0.;
-        jacob = 2. * amt1 * amt2 * std::sinh(y_diff);
+        jacob = 1. / (2. * amt1 * amt2 * std::sinh(y_diff));
         if (!utils::positive(jacob))
           return 0.;
         // compute the four-momenta of the outgoing central particles
