@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2021  Laurent Forthomme
+ *  Copyright (C) 2018-2023  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,126 +19,137 @@
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Event/Event.h"
 #include "CepGen/Modules/ProcessFactory.h"
+#include "CepGen/Modules/RandomGeneratorFactory.h"
 #include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/Process2to4.h"
+#include "CepGen/Utils/RandomGenerator.h"
 #include "CepGen/Utils/String.h"
 
-namespace cepgen {
-  namespace proc {
-    /// \brief Compute the matrix element for a CE \f$\gamma\gamma\rightarrow\gamma\gamma\f$ process using \f$k_{\rm T}\f$-factorization approach
-    class PPtoAA : public Process2to4 {
-    public:
-      PPtoAA(const ParametersList& params = ParametersList());
+using namespace cepgen;
 
-      ProcessPtr clone() const override { return ProcessPtr(new PPtoAA(*this)); }
-
-      static ParametersDescription description() {
-        auto desc = Process2to4::description();
-        desc.setDescription("ɣɣ → ɣɣ light-by-light process");
-        return desc;
-      }
-
-      enum class Polarisation { full = 0, LL = 1, LT = 2, TL = 3, TT = 4 };
-      enum class Method { sm = 0, alp = 1 };
-
-    private:
-      void prepareProcessKinematics() override {}
-      double computeCentralMatrixElement() const override;
-
-      double smOnShellME() const;
-      double alpOnShellME() const;
-
-      Method method_;
-      Polarisation pol_state_;
-      std::vector<short> pol_gam1_, pol_gam2_;
-
-      /// List of parameters for axion-like particles exchanges
-      ParametersList par_alp_;
-    };
-
-    PPtoAA::PPtoAA(const ParametersList& params)
-        : Process2to4(params, {PDG::photon, PDG::photon}, PDG::photon),
-          method_((Method)params.get<int>("method", 1)),
-          pol_state_((Polarisation)params.get<int>("polarisationStates", 0)),
-          par_alp_(params.get<ParametersList>("alpParameters")) {
-      switch (method_) {
-        case Method::sm:
-        default: {
-          //FIXME
-          switch (pol_state_) {
-            case Polarisation::LL:
-              pol_gam1_ = pol_gam2_ = {0};
-              break;
-            case Polarisation::LT:
-              pol_gam1_ = {0};
-              pol_gam2_ = {-1, 1};
-              break;
-            case Polarisation::TL:
-              pol_gam1_ = {-1, 1};
-              pol_gam2_ = {0};
-              break;
-            case Polarisation::TT:
-              pol_gam1_ = pol_gam2_ = {-1, 1};
-              break;
-            default:
-            case Polarisation::full:
-              pol_gam1_ = pol_gam2_ = {-1, 1};
-              break;
-          }
-        } break;
-        case Method::alp:
-          pol_gam1_ = pol_gam2_ = {0};
-          break;
-      }
-      CG_DEBUG("PPtoAA:mode") << "matrix element computation method: " << (int)method_ << ".";
+/// \brief Compute the matrix element for a CE \f$\gamma\gamma\rightarrow\gamma\gamma\f$ process using \f$k_{\rm T}\f$-factorization approach
+class PPtoAA : public cepgen::proc::Process2to4 {
+public:
+  explicit PPtoAA(const ParametersList& params)
+      : Process2to4(params, PDG::photon),
+        method_((Method)params.get<int>("method", 1)),
+        pol_state_((Polarisation)params.get<int>("polarisationStates", 0)),
+        par_alp_(params.get<ParametersList>("alpParameters")),
+        rnd_gen_(RandomGeneratorFactory::get().build(steer<ParametersList>("randomGenerator"))) {
+    switch (method_) {
+      case Method::sm:
+      default: {
+        //FIXME
+        switch (pol_state_) {
+          case Polarisation::LL:
+            pol_gam1_ = pol_gam2_ = {0};
+            break;
+          case Polarisation::LT:
+            pol_gam1_ = {0};
+            pol_gam2_ = {-1, 1};
+            break;
+          case Polarisation::TL:
+            pol_gam1_ = {-1, 1};
+            pol_gam2_ = {0};
+            break;
+          case Polarisation::TT:
+            pol_gam1_ = pol_gam2_ = {-1, 1};
+            break;
+          default:
+          case Polarisation::full:
+            pol_gam1_ = pol_gam2_ = {-1, 1};
+            break;
+        }
+      } break;
+      case Method::alp:
+        pol_gam1_ = pol_gam2_ = {0};
+        break;
     }
+    CG_DEBUG("PPtoAA:mode") << "matrix element computation method: " << (int)method_ << ".";
+  }
 
-    double PPtoAA::computeCentralMatrixElement() const {
-      switch (method_) {
-        case Method::sm:
-          throw CG_FATAL("PPtoAA") << "Process not yet handled!";
-          return smOnShellME();
-        case Method::alp:
-          return alpOnShellME();
-        default:
-          throw CG_FATAL("PPtoAA") << "Process not yet handled!";
-      }
+  proc::ProcessPtr clone() const override { return proc::ProcessPtr(new PPtoAA(parameters())); }
+
+  static ParametersDescription description() {
+    auto desc = Process2to4::description();
+    desc.setDescription("ɣɣ → ɣɣ light-by-light process");
+    desc.add<ParametersDescription>("alpParameters", ALPParameters::description());
+    desc.add<ParametersDescription>("randomGenerator", ParametersDescription().setName<std::string>("stl"))
+        .setDescription("random number generator engine");
+    return desc;
+  }
+
+  enum class Polarisation { full = 0, LL = 1, LT = 2, TL = 3, TT = 4 };
+  enum class Method { sm = 0, alp = 1 };
+
+private:
+  void prepareProcessKinematics() override {}
+  double computeCentralMatrixElement() const override {
+    switch (method_) {
+      case Method::sm:
+        throw CG_FATAL("PPtoAA") << "Process not yet handled!";
+        return smOnShellME();
+      case Method::alp:
+        return alpOnShellME();
+      default:
+        throw CG_FATAL("PPtoAA") << "Process not yet handled!";
     }
+  }
 
-    double PPtoAA::smOnShellME() const { return 0.; }
+  double smOnShellME() const { return 0.; }
+  double alpOnShellME() const;
 
-    double PPtoAA::alpOnShellME() const {
-      const double s_hat = shat();
-
-      const double mA = par_alp_.get<double>("mass"), gA = par_alp_.get<double>("coupling");
-      const bool pseudoscalar = par_alp_.get<bool>("pseudoScalar", true);
-
-      const double norma = (0.5 * gA) * (s_hat * 0.5);
-      double ampli_pp = norma, ampli_mm = (pseudoscalar ? +1. : -1.) * norma;
-
-      const double width = gA * gA * pow(mA, 3) / 64. * M_1_PI;
-
-      const double mminr = mA - 10. * width, mmaxr = mA + 10. * width;
-      const double almin = atan(-(mA * mA - mminr * mminr) / width / mA);
-      const double almax = atan(-(mA * mA - mmaxr * mmaxr) / width / mA);
-
-      const double norm = almax - almin;
-
-      const double al1 = almin + (almax - almin) * drand();
-      const double mout = sqrt(tan(al1) * mA * width + mA * mA);
-
-      //--- compute Jacobian
-      double jalp = (almax - almin) * width * mA * (1. + pow(tan(al1), 2));
-      //--- up to this point just change of variables
-      //--- now BW
-      jalp *= mout * width / norm;
-      jalp /= (pow(mA * mA - mout * mout, 2) + mout * mout * width * width);
-
-      return (ampli_pp * ampli_pp + ampli_mm * ampli_mm) * jalp;
+  const Method method_;
+  const Polarisation pol_state_;
+  /// List of parameters for axion-like particles exchanges
+  struct ALPParameters : SteeredObject<ALPParameters> {
+    explicit ALPParameters(const ParametersList& params)
+        : SteeredObject(params),
+          mass(steer<double>("mass")),
+          mass2(mass * mass),
+          coupling(steer<double>("coupling")),
+          width(coupling * coupling * mass * mass * mass / 64. * M_1_PI),
+          width2(width * width),
+          pseudo_scalar(steer<double>("pseudoScalar")) {}
+    static ParametersDescription description() {
+      auto desc = ParametersDescription();
+      desc.setDescription("collection of parameters for the axion-like particle description");
+      desc.add<double>("mass", 0.).setDescription("intermediate particle mass, in GeV/c^2");
+      desc.add<double>("coupling", 0.).setDescription("intermediate particle coupling value");
+      desc.add<bool>("pseudoScalar", false).setDescription("intermediate particle spin");
+      return desc;
     }
-  }  // namespace proc
-}  // namespace cepgen
+    const double mass, mass2, coupling;
+    const double width, width2;
+    const bool pseudo_scalar;
+  } par_alp_;
+  const std::unique_ptr<utils::RandomGenerator> rnd_gen_;
+
+  std::vector<short> pol_gam1_, pol_gam2_;
+};
+
+double PPtoAA::alpOnShellME() const {
+  const auto s_hat = shat();
+
+  const auto norma = (0.5 * par_alp_.coupling) * (s_hat * 0.5);
+  const auto ampli_pp = norma, ampli_mm = (par_alp_.pseudo_scalar ? +1. : -1.) * norma;
+
+  const Limits mass_range{par_alp_.mass - 10. * par_alp_.width, par_alp_.mass + 10. * par_alp_.width},
+      al_range = mass_range.compute(
+          [this](double ext) { return std::atan((ext * ext - par_alp_.mass2) / par_alp_.width / par_alp_.mass); });
+  const auto norm = al_range.range();
+  const auto al1 = rnd_gen_->uniform(al_range.min(), al_range.max());
+  const auto mout = std::sqrt(std::tan(al1) * par_alp_.mass * par_alp_.width + par_alp_.mass2);
+
+  //--- compute Jacobian
+  auto jalp = norm * par_alp_.width * par_alp_.mass * (1. + std::pow(std::tan(al1), 2));
+  //--- up to this point just change of variables
+  //--- now BW
+  jalp *= mout * par_alp_.width / norm;
+  jalp /= (std::pow(par_alp_.mass2 - mout * mout, 2) + mout * mout * par_alp_.width2);
+
+  return (ampli_pp * ampli_pp + ampli_mm * ampli_mm) * jalp / s_hat / s_hat;
+}
 // register process
-typedef cepgen::proc::PPtoAA PPtoAA;
 REGISTER_PROCESS("pptoaa", PPtoAA);
