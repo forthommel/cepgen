@@ -51,6 +51,7 @@ namespace cepgen {
     }
 
     double Process2to4::computeFactorisedMatrixElement() {
+      double jacob = 1.;
       {
         if (x1() == 0. || x2() == 0.)
           return 0.;
@@ -71,10 +72,13 @@ namespace cepgen {
         const auto amt2_diff = amt1 * amt1 - amt2 * amt2, xprod = x1() * x2(),
                    xfrac = std::sqrt(std::pow(amt2_diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
         const auto y_c1 = +std::log(0.5 * (xfrac + amt2_diff) / amt1 / x2()),
-                   y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1());
+                   y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1()), y_diff = y_c1 - y_c2;
         if (!lim_rap_.contains(y_c1) || !lim_rap_.contains(y_c2))  // single particle rapidity
           return 0.;
-        if (!kinematics().cuts().central.rapidity_diff.contains(fabs(y_c1 - y_c2)))  // rapidity distance
+        if (!kinematics().cuts().central.rapidity_diff.contains(fabs(y_diff)))  // rapidity distance
+          return 0.;
+        jacob = 2. * amt1 * amt2 * std::sinh(y_diff);
+        if (!utils::positive(jacob))
           return 0.;
         // compute the four-momenta of the outgoing central particles
         pc(0) = Momentum::fromPtYPhiM(p1t, y_c1, pt_c1.phi(), cs_prop_.mass);
@@ -140,7 +144,7 @@ namespace cepgen {
                                     << ", p = " << q2().p() << ".";
 
       if (const auto amat2 = computeCentralMatrixElement(); utils::positive(amat2))
-        return amat2 * prefactor_ * m_pt_diff_;
+        return amat2 * std::pow(x1() * x2() * s(), -2) * prefactor_ * m_pt_diff_ / jacob;
       return 0.;  // skip computing the prefactors if invalid
     }
 
