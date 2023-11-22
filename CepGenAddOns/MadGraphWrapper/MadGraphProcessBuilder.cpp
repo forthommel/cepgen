@@ -23,8 +23,11 @@
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/FactorisedProcess.h"
 #include "CepGen/Utils/AbortHandler.h"
+#include "CepGen/Utils/Math.h"
 #include "CepGenAddOns/MadGraphWrapper/MadGraphInterface.h"
 #include "CepGenAddOns/MadGraphWrapper/MadGraphProcess.h"
+#include "CepGenAddOns/MadGraphWrapper/MadGraphProcessFactory.h"
+#include "CepGenAddOns/MadGraphWrapper/Utils.h"
 
 using namespace cepgen;
 
@@ -34,8 +37,14 @@ public:
       : FactorisedProcess(params, {}) {
     if (load_library)
       loadMG5Library();
+    CG_DEBUG("MadGraphProcessBuilder") << "List of MadGraph process registered in the runtime database: "
+                                       << MadGraphProcessFactory::get().modules() << ".";
     // once MadGraph process library is loaded into runtime environment, can define its wrapper object
-    mg5_proc_.reset(new MadGraphProcess);
+    mg5_proc_ = MadGraphProcessFactory::get().build(mg5amc::normalise(steer<std::string>("process")));
+    if (mg5_proc_->centralSystem().empty())
+      throw CG_FATAL("MadGraphProcessBuilder")
+          << "Failed to retrieve produced particles system from MadGraph process:\n"
+          << mg5_proc_->description().validate(mg5_proc_->parameters()) << ".";
     psgen_->setCentral(mg5_proc_->centralSystem());
   }
 
@@ -59,12 +68,10 @@ public:
   }
 
   void prepareFactorisedPhaseSpace() override {
-    const auto& interm_part = mg5_proc_->intermediatePartons();
-    const auto flux_interm_part = std::array<pdgid_t, 2>{psgen_->partons().at(0), psgen_->partons().at(1)};
-    if (mg5_proc_->intermediatePartons() != flux_interm_part)
+    if (mg5_proc_->intermediatePartons() != psgen_->partons())
       throw CG_FATAL("MadGraphProcessBuilder")
-          << "MadGraph unpacked process incoming state (" << interm_part << ") "
-          << "is incompatible with user-steered incoming fluxes particles (" << flux_interm_part << ").";
+          << "MadGraph unpacked process incoming state (" << mg5_proc_->intermediatePartons() << ") "
+          << "is incompatible with user-steered incoming fluxes particles (" << psgen_->partons() << ").";
     if (const auto params_card = steer<std::string>("parametersCard"); !params_card.empty()) {
       CG_INFO("MadGraphProcessBuilder") << "Preparing process kinematics for card at \"" << params_card << "\".";
       mg5_proc_->initialise(params_card);
@@ -87,16 +94,16 @@ public:
     mg5_proc_->setMomentum(1, q2());   // second incoming parton
     mg5_proc_->setMomentum(2, pc(0));  // first outgoing central particle
     mg5_proc_->setMomentum(3, pc(1));  // second outgoing central particle
-
-    return mg5_proc_->eval() / shat() / shat();
+    if (const auto weight = mg5_proc_->eval(); utils::positive(weight))
+      return weight * std::pow(shat(), -2);
+    return 0.;
   }
 
 private:
   void loadMG5Library() {
     utils::AbortHandler();
     try {
-      const auto& lib_file = steer<std::string>("lib");
-      if (!lib_file.empty())
+      if (const auto& lib_file = steer<std::string>("lib"); !lib_file.empty())
         loadLibrary(lib_file);
       else {
         const MadGraphInterface interf(params_);
