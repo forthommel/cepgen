@@ -133,7 +133,7 @@ namespace cepgen {
       desc.setDescription("Unnamed factorised process");
       desc.add<bool>("storeAlphas", false)
           .setDescription("store the electromagnetic and strong coupling constants to the event content?");
-      desc.add<bool>("logX", true)
+      desc.add<bool>("logX", false)
           .setDescription("generate logarithmically the x1/x2 parton fractional momentum loss?");
       return desc;
     }
