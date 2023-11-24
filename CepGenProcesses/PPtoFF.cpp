@@ -156,7 +156,8 @@ double PPtoFF::offShellME() const {
   const auto compute_zs = [this, &mt1, &mt2](short pol, double x) -> std::pair<double, double> {
     const auto norm_pol = pol / std::abs(pol);
     const auto fact = inverseSqrtS() / x;
-    return std::make_pair(fact * mt1 * std::exp(norm_pol * m_y_c1_), fact * mt2 * std::exp(norm_pol * m_y_c2_));
+    return std::make_pair(fact * mt1 * std::exp(norm_pol * pc(0).rapidity()),
+                          fact * mt2 * std::exp(norm_pol * pc(1).rapidity()));
   };
   const auto compute_mat_element =
       [this](double zp, double zm, double q2, const Momentum& vec_pho, const Momentum& vec_qt) -> double {

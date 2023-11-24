@@ -51,10 +51,9 @@ namespace cepgen {
       ParticleProperties cs_prop_;  ///< PDG properties of the central outgoing particles
 
       cuts::Central single_limits_;  ///< Limits to be applied on single central system's particles
+      Limits lim_rap_;
 
       // mapped variables
-      double m_y_c1_{0.};         ///< Rapidity of the first central particle
-      double m_y_c2_{0.};         ///< Rapidity of the second central particle
       double m_pt_diff_{0.};      ///< Transverse momentum difference for the two central particle
       double m_phi_pt_diff_{0.};  ///< Azimuthal angle difference for the two central particles
 

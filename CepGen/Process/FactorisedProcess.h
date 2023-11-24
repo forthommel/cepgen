@@ -53,7 +53,10 @@ namespace cepgen {
 
       pdgids_t produced_parts_;                           ///< Type of particles produced in the final state
       const std::unique_ptr<PhaseSpaceGenerator> psgen_;  ///< Kinematic variables generator for the phase space coverage
+
+    private:
       const bool store_alphas_;
+      const bool log_x_;
     };
   }  // namespace proc
 }  // namespace cepgen
