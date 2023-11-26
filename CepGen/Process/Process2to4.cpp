@@ -63,21 +63,31 @@ namespace cepgen {
           return 0.;
         if (!kinematics().cuts().central.pt_diff.contains(std::fabs(p1t - p2t)))  // transverse momentum difference
           return 0.;
-        const auto amt1 = utils::fastHypot(cs_prop_.mass, p1t) / sqrtS(),
-                   amt2 = utils::fastHypot(cs_prop_.mass, p2t) / sqrtS();
+        const auto amt1 = utils::fastHypot(cs_prop_.mass, p1t) * inverseSqrtS(),
+                   amt2 = utils::fastHypot(cs_prop_.mass, p2t) * inverseSqrtS();
+        if (amt1 <= 0. || amt2 <= 0.)
+          return 0.;
+        const auto m2diff = amt1 * amt1 - amt2 * amt2;
         const auto xprod = x1() * x2();
-        const auto m2diff = amt1 * amt1 - amt2 * amt2,
-                   term1 = std::sqrt(std::pow(m2diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
-        const auto y_c1 = +std::log(0.5 * (term1 + m2diff) / amt1 / x2()),
-                   y_c2 = -std::log(0.5 * (term1 - m2diff) / amt2 / x1());
+        if (xprod <= 0.)
+          return 0.;
+        const auto term1 = std::pow(m2diff + xprod, 2), term2 = 4. * amt1 * amt1 * xprod;
+        if (term1 < term2)
+          return 0.;
+        const auto sqrt_term = std::sqrt(term1 - term2) + xprod;
+        if (sqrt_term <= m2diff)
+          return 0.;
+        const auto y_c1 = +std::log(0.5 * (sqrt_term + m2diff) / amt1 / x2()),
+                   y_c2 = -std::log(0.5 * (sqrt_term - m2diff) / amt2 / x1());
+        const auto y_diff = y_c1 - y_c2;
         if (!lim_rap_.contains(y_c1) || !lim_rap_.contains(y_c2))  // single rapidity
           return 0.;
-        if (!kinematics().cuts().central.rapidity_diff.contains(std::fabs(y_c1 - y_c2)))  // rapidity distance
+        if (!kinematics().cuts().central.rapidity_diff.contains(std::fabs(y_diff)))  // rapidity distance
           return 0.;
         //--- four-momenta of the outgoing central particles
         pc(0) = Momentum::fromPtYPhiM(p1t, y_c1, pt_c1.phi(), cs_prop_.mass);
         pc(1) = Momentum::fromPtYPhiM(p2t, y_c2, pt_c2.phi(), cs_prop_.mass);
-        ext_jacobian = 2. * amt1 * amt2 * std::cosh(y_c1 - y_c2);
+        ext_jacobian = 2. * amt1 * amt2 * std::sinh(y_diff);
       }
 
       //--- window in central system invariant mass
