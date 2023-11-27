@@ -51,6 +51,8 @@ namespace cepgen {
 
     double Process2to4::computeFactorisedMatrixElement() {
       double ext_jacobian = 1.;
+      if (x1() <= 0. || x2() <= 0.)
+        return 0.;
       {
         const auto qt_sum = (q1() + q2()).transverse();  // two-parton system
         const auto pt_diff = Momentum::fromPtEtaPhiE(m_pt_diff_, 0., m_phi_pt_diff_);
@@ -75,7 +77,7 @@ namespace cepgen {
         if (term1 < term2)
           return 0.;
         const auto sqrt_term = std::sqrt(term1 - term2) + xprod;
-        if (sqrt_term <= m2diff)
+        if (sqrt_term <= std::fabs(m2diff))
           return 0.;
         const auto y_c1 = +std::log(0.5 * (sqrt_term + m2diff) / amt1 / x2()),
                    y_c2 = -std::log(0.5 * (sqrt_term - m2diff) / amt2 / x1());
