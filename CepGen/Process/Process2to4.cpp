@@ -74,17 +74,15 @@ namespace cepgen {
         if (xprod <= 0.)
           return 0.;
         const auto term1 = std::pow(m2diff + xprod, 2), term2 = 4. * amt1 * amt1 * xprod;
-        if (term1 < term2)
-          return 0.;
-        const auto sqrt_term = std::sqrt(term1 - term2) + xprod;
+        const auto sqrt_term = std::sqrt(std::fabs(term1 - term2)) + xprod;
         if (sqrt_term <= std::fabs(m2diff))
           return 0.;
         const auto y_c1 = +std::log(0.5 * (sqrt_term + m2diff) / amt1 / x2()),
                    y_c2 = -std::log(0.5 * (sqrt_term - m2diff) / amt2 / x1());
-        const auto y_diff = y_c1 - y_c2;
         if (!lim_rap_.contains(y_c1) || !lim_rap_.contains(y_c2))  // single rapidity
           return 0.;
-        if (!kinematics().cuts().central.rapidity_diff.contains(std::fabs(y_diff)))  // rapidity distance
+        const auto y_diff = std::fabs(y_c1 - y_c2);
+        if (!kinematics().cuts().central.rapidity_diff.contains(y_diff))  // rapidity distance
           return 0.;
         //--- four-momenta of the outgoing central particles
         pc(0) = Momentum::fromPtYPhiM(p1t, y_c1, pt_c1.phi(), cs_prop_.mass);

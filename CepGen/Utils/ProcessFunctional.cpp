@@ -38,8 +38,7 @@ namespace cepgen {
     }
 
     double ProcessFunctional::operator()(double x1, double x2) {
-      const auto x_mean = std::sqrt(x1 * x2);
-      integrand_->process().kinematics().cuts().remnants.xi = {x_mean, x_mean};
+      integrand_->process().kinematics().cuts().remnants.xi = Limits::constant(std::sqrt(x1 * x2));
       integrand_->process().initialise();
       return integr_->integrate(*integrand_);
     }
