@@ -33,15 +33,16 @@ using namespace std;
 int main(int argc, char* argv[]) {
   string input_card, plotter;
   int npoints;
-  bool draw_grid, log;
+  bool draw_grid, logx, logy;
   cepgen::Limits s_range;
 
   cepgen::ArgumentsParser(argc, argv)
       .addArgument("input,i", "input card", &input_card)
-      .addOptionalArgument("s-range,s", "range of s", &s_range, cepgen::Limits{1., 10.})
+      .addOptionalArgument("s-range,s", "range of s", &s_range, cepgen::Limits{10., 100.})
       .addOptionalArgument("num-points,n", "number of points to probe", &npoints, 100)
       .addOptionalArgument("draw-grid,g", "draw the x/y grid", &draw_grid, false)
-      .addOptionalArgument("log,l", "logarithmic axis", &log, false)
+      .addOptionalArgument("logx", "logarithmic x-scale", &logx, false)
+      .addOptionalArgument("logy,l", "logarithmic y-scale", &logy, false)
       .addOptionalArgument("plotter,p", "type of plotter to user", &plotter, "")
       .parse();
 
@@ -54,7 +55,7 @@ int main(int argc, char* argv[]) {
   const auto sqrts = gen.parametersRef().process().kinematics().incomingBeams().sqrtS();
 
   cepgen::utils::Graph1D gr_s_scan("test_scan");
-  for (const auto& s : s_range.generate(npoints)) {
+  for (const auto& s : s_range.generate(npoints, logx)) {
     const auto x = std::sqrt(s) / sqrts;
     gr_s_scan.addPoint(s, pf(x, x));
   }
@@ -64,7 +65,9 @@ int main(int argc, char* argv[]) {
     cepgen::utils::Drawer::Mode dm;
     if (draw_grid)
       dm |= cepgen::utils::Drawer::Mode::grid;
-    if (log)
+    if (logx)
+      dm |= cepgen::utils::Drawer::Mode::logx;
+    if (logy)
       dm |= cepgen::utils::Drawer::Mode::logy;
     gr_s_scan.xAxis().setLabel("s (GeV^{2})");
     gr_s_scan.yAxis().setLabel("d$\\sigma$/d$\\hat{s}$ (pb/GeV^{2})");
