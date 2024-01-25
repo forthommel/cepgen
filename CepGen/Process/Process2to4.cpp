@@ -53,7 +53,8 @@ namespace cepgen {
     double Process2to4::computeFactorisedMatrixElement() {
       double jacob = 1.;
       {
-        if (x1() == 0. || x2() == 0.)
+        const auto xprod = x1() * x2();
+        if (!utils::positive(xprod))
           return 0.;
         const auto qt_sum = (q1() + q2()).transverse();  // two-parton system
         const auto pt_diff = Momentum::fromPtEtaPhiE(m_pt_diff_, 0., m_phi_pt_diff_);
@@ -69,8 +70,7 @@ namespace cepgen {
         // compute central particles rapidity
         const auto amt1 = utils::fastHypot(cs_prop_.mass, p1t) * inv_sqrts_,
                    amt2 = utils::fastHypot(cs_prop_.mass, p2t) * inv_sqrts_, amt2_diff = amt1 * amt1 - amt2 * amt2;
-        const auto xprod = x1() * x2(),
-                   xfrac = std::sqrt(std::pow(amt2_diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
+        const auto xfrac = std::sqrt(std::pow(amt2_diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
         const auto y_c1 = +std::log(0.5 * (xfrac + amt2_diff) / amt1 / x2()),
                    y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1());
         if (!lim_rap_.contains(y_c1) || !lim_rap_.contains(y_c2))  // single particle rapidity
