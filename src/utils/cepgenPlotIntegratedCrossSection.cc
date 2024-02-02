@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2023  Laurent Forthomme
+ *  Copyright (C) 2023-2024  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@
 
 #include "CepGen/Cards/Handler.h"
 #include "CepGen/Core/Exception.h"
+#include "CepGen/Core/RunParameters.h"
 #include "CepGen/Generator.h"
 #include "CepGen/Modules/DrawerFactory.h"
-#include "CepGen/Parameters.h"
 #include "CepGen/Process/Process.h"
 #include "CepGen/Utils/ArgumentsParser.h"
 #include "CepGen/Utils/Drawer.h"
@@ -47,12 +47,12 @@ int main(int argc, char* argv[]) {
       .parse();
 
   cepgen::Generator gen;
-  gen.setParameters(cepgen::card::Handler::parseFile(input_card));
+  gen.setRunParameters(cepgen::card::Handler::parseFile(input_card));
 
   auto pf = cepgen::proc::ProcessFunctional(
-      cepgen::ParametersList{}, dynamic_cast<cepgen::proc::FactorisedProcess&>(gen.parametersRef().process()));
+      cepgen::ParametersList{}, dynamic_cast<cepgen::proc::FactorisedProcess&>(gen.runParameters().process()));
 
-  const auto sqrts = gen.parametersRef().process().kinematics().incomingBeams().sqrtS();
+  const auto sqrts = gen.runParameters().process().kinematics().incomingBeams().sqrtS();
 
   cepgen::utils::Graph1D gr_s_scan("test_scan");
   for (const auto& s : s_range.generate(npoints, logx)) {
