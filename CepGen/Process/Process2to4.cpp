@@ -70,6 +70,8 @@ namespace cepgen {
         // compute central particles rapidity
         const auto amt1 = utils::fastHypot(cs_prop_.mass, p1t) * inv_sqrts_,
                    amt2 = utils::fastHypot(cs_prop_.mass, p2t) * inv_sqrts_, amt2_diff = amt1 * amt1 - amt2 * amt2;
+        if (!utils::positive(amt1 * amt2))
+          return 0.;
         const auto xfrac = std::sqrt(std::pow(amt2_diff + xprod, 2) - 4. * amt1 * amt1 * xprod) + xprod;
         const auto y_c1 = +std::log(0.5 * (xfrac + amt2_diff) / amt1 / x2()),
                    y_c2 = -std::log(0.5 * (xfrac - amt2_diff) / amt2 / x1());
@@ -78,7 +80,7 @@ namespace cepgen {
         const auto y_diff = std::fabs(y_c1 - y_c2);
         if (!kinematics().cuts().central.rapidity_diff.contains(y_diff))  // rapidity distance
           return 0.;
-        jacob = 2. * amt1 * amt2 * std::sinh(y_diff);
+        jacob = amt1 * amt2 * std::sinh(y_diff);
         if (!utils::positive(jacob))
           return 0.;
         // compute the four-momenta of the outgoing central particles
@@ -145,7 +147,7 @@ namespace cepgen {
                                     << ", p = " << q2().p() << ".";
 
       if (const auto amat2 = computeCentralMatrixElement(); utils::positive(amat2))
-        return amat2 * std::pow(x1() * x2() * s(), -2) * prefactor_ * m_pt_diff_ / jacob;
+        return amat2 * prefactor_ * m_pt_diff_ / jacob;
       return 0.;  // skip computing the prefactors if invalid
     }
 
