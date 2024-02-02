@@ -16,18 +16,48 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <ElementaryUtils/logger/CustomException.h>
+#include <partons/Partons.h>
+
+#include <cstring>
+
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Event/Event.h"
 #include "CepGen/Modules/ProcessFactory.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/Process.h"
+#include "CepGen/Utils/Environment.h"
+#include "CepGen/Utils/Filesystem.h"
+#include "CepGen/Utils/String.h"
 
 using namespace cepgen;
 
+static PARTONS::Partons* partons_ = nullptr;
+
 class PartonsProcess final : public cepgen::proc::Process {
 public:
-  explicit PartonsProcess(const ParametersList& params) : proc::Process(params) {}
-  PartonsProcess(const PartonsProcess& oth) : proc::Process(oth) {}
+  explicit PartonsProcess(const ParametersList& params) : proc::Process(params) {
+    if (!partons_)
+      partons_ = PARTONS::Partons::getInstance();
+    std::vector<std::string> args{fs::canonical("/proc/self/exe").parent_path().parent_path() / "partons" /
+                                  "partons.properties"};
+    const auto arguments = steer<ParametersList>("arguments");
+    for (const auto& key : arguments.keys())
+      args.emplace_back(utils::format("--%s=%s", key.data(), arguments.getString(key).data()));
+    std::vector<char*> argv;
+    std::transform(args.begin(), args.end(), std::back_inserter(argv), [](const std::string& str) -> char* {
+      char* out = new char[str.size() + 1];
+      std::strcpy(out, str.data());
+      return out;
+    });
+    try {
+      partons_->init(args.size(), argv.data());
+    } catch (const ElemUtils::CustomException& exc) {
+      throw CG_FATAL("PartonsProcess") << "Fatal Partons exception: " << exc.what();
+    }
+  }
+
+  virtual ~PartonsProcess() { partons_->close(); }
 
   proc::ProcessPtr clone() const override { return proc::ProcessPtr(new PartonsProcess(*this)); }
 

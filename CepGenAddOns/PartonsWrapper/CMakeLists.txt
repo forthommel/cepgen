@@ -16,3 +16,6 @@ cpack_add_component(partons
     DISPLAY_NAME "CepGen Partons wrappers library"
     DESCRIPTION "Collection of CepGen wrappers to the Partons library"
     DEPENDS lib)
+set(CMAKE_PARTONS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data)
+configure_file(data/partons.properties.in ${PROJECT_BINARY_DIR}/partons/partons.properties @ONLY)
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/partons/tmp)
