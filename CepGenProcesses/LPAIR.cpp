@@ -246,26 +246,23 @@ private:
 
   ///////////////////////////////////////////////////////////////////
   // variables computed for each phase space point computation
-  double w31_{0.};         ///< first beam final-initial squared mass difference
-  double w52_{0.};         ///< second beam final-initial squared mass difference
+  double s1_{0.}, s2_{0.};
+  double sa1_{0.}, sa2_{0.};
+  double p1k2_{0.}, p2k1_{0.};
+  std::array<double, 2> deltas1_, deltas2_;
   double ec4_{0.};         ///< central system energy
   double pc4_{0.};         ///< central system 3-momentum norm
   double pt4_{0.};         ///< central system transverse momentum
   double mc4_{0.};         ///< central system invariant mass
   double cos_theta4_{0.};  ///< central system polar angle cosine
   double sin_theta4_{0.};  ///< central system polar angle sine
-  double p1k2_{0.}, p2k1_{0.};
-  double q1dq_{0.}, q1dq2_{0.};
-  double s1_{0.}, s2_{0.};
-  double sa1_{0.}, sa2_{0.};
+  double delta4_{0.};
+  double q2dq_{0.};
   double epsilon_{0.};
   double alpha4_{0.}, beta4_{0.}, gamma4_{0.};
   double alpha5_{0.}, gamma5_{0.}, alpha6_{0.}, gamma6_{0.};
   double bb_{0.};
   double gram_{0.};
-  /// Deltas such as \f$\delta_5=m_4^2-t_1\f$ as defined in Vermaseren's paper
-  /// \cite Vermaseren:1982cz for the full definition of these quantities
-  std::array<double, 5> deltas_;
   /**
    * Invariant used to tame divergences in the matrix element computation. It is defined as
    * \f[\Delta = \left(p_1\cdot p_2\right)\left(q_1\cdot q_2\right)-\left(p_1\cdot q_2\right)\left(p_2\cdot q_1\right)\f]
@@ -278,8 +275,15 @@ private:
 //---------------------------------------------------------------------------------------------
 
 double LPAIR::pickin() {
-  const auto map_expo = [](double expo, const Limits& lim, const std::string& var_name = "") {
-    /**
+  const auto generate_kinematics = [this](double mi2_1,
+                                          double mf2_1,
+                                          std::array<double, 2>& deltas_1,
+                                          double mi2_2,
+                                          double mf2_2,
+                                          std::array<double, 2>& deltas_2)
+      -> std::tuple<double, double, double, double, double, double, double, double, double> {
+    const auto map_expo = [](double expo, const Limits& lim, const std::string& var_name = "") {
+      /**
      * Define modified variables of integration to avoid peaks integrations (see \cite Vermaseren:1982cz for details)
      * Return a set of two modified variables of integration to maintain the stability of the integrand. These two new variables are :
      * - \f$y_{out} = x_{min}\left(\frac{x_{max}}{x_{min}}\right)^{exp}\f$ the new variable
@@ -289,156 +293,165 @@ double LPAIR::pickin() {
      * \param[in] var_name The variable name
      * \return A pair containing the value and the bin width the new variable definition
      */
-    const double y = lim.max() / lim.min(), out = lim.min() * std::pow(y, expo), dout = out * std::log(y);
-    CG_DEBUG_LOOP("LPAIR:map") << "Mapping variable \"" << var_name << "\" in range (" << lim << ")"
-                               << " (max/min = " << y << ")\n\t"
-                               << "exponent = " << expo << " => "
-                               << "x = " << out << ", dx = " << dout;
-    return std::make_pair(out, dout);
-  };
-  const auto [s2_val, s2_width] =
-      map_expo(m_u_s2_, Limits{mc4_ + mY(), sqrtS() - mX()}.compute([](double lim) { return lim * lim; }), "s2");
-  s2_ = s2_val;
-  if (s2_width <= 0.)
-    return 0.;
-
-  const double sp = s() + mX2() - s2_, d3 = s2_ - mB2();
-  const double rl2 = sp * sp - 4. * s() * mX2();  // lambda(s, m3**2, sigma)
-  if (!utils::positive(rl2)) {
-    CG_DEBUG_LOOP("LPAIR:pickin") << "Invalid rl2 = " << rl2 << ".";
-    return 0.;
-  }
-  // definition from eq. (A.4) and (A.5) in [1]
-  const auto t1_max = mA2() + mX2() - 0.5 * (ss_ * sp + sl1_ * std::sqrt(rl2)) / s(),
-             t1_min = (w31_ * d3 + (d3 - w31_) * (d3 * mA2() - w31_ * mB2()) / s()) / t1_max;
-  const auto [t1_val, t1_width] =
-      map_expo(m_u_t1_, Limits{t1_min, t1_max}, "t1");  // definition of the first photon propagator (t1 < 0)
-  t1() = t1_val;
-  if (t1_width >= 0.)
-    return 0.;
-
-  const auto r1 = s2_ - t1() + mB2(), r2 = s2_ - m_w4_ + mY2(),
-             rl4 = (r1 * r1 - 4. * s2_ * mB2()) * (r2 * r2 - 4. * s2_ * mY2());
-  if (!utils::positive(rl4)) {
-    CG_DEBUG_LOOP("LPAIR:pickin") << "Invalid rl4 = " << rl4 << ".";
-    return 0.;
-  }
-
-  const auto d4 = m_w4_ - t1();
-  // t2max, t2min definitions from eq. (A.12) and (A.13) in [1]
-  const auto t2_max = mB2() + mY2() - 0.5 * (r1 * r2 + std::sqrt(rl4)) / s2_,
-             t2_min = (w52_ * d4 + (d4 - w52_) * (d4 * mB2() - w52_ * t1()) / s2_) / t2_max;
-  const auto [t2_val, t2_width] =
-      map_expo(m_u_t2_, Limits{t2_min, t2_max}, "t2");  // definition of the second photon propagator (t2 < 0)
-  t2() = t2_val;
-  if (t2_width >= 0.)
-    return 0.;
-
-  const auto r3 = m_w4_ - t1() - t2();
-  if (gamma4_ = t1() * t2() - 0.25 * r3 * r3; gamma4_ >= 0.) {
-    CG_WARNING("LPAIR:pickin") << "gamma4 = " << gamma4_ << " >= 0";
-    return 0.;
-  }
-
-  const auto compute_deltas =
-      [this](double var, short sign, double t_1, double mi2_1, double mf2_1, double t_2, double mi2_2, double mf2_2)
-      -> std::tuple<double, double, double, double> {
-    const auto del1 = t_1 - mi2_2, del2 = t_1 - mi2_1 - mf2_1, del3 = m_w4_ - mf2_2;
-    const auto m2diff = mf2_1 - mi2_1;
-    const auto compute_sa = [](double t, double mi2, double mf2) {
-      return mi2 * t - 0.25 * std::pow(mf2 - mi2 - t, 2);
+      const double y = lim.max() / lim.min(), out = lim.min() * std::pow(y, expo), dout = out * std::log(y);
+      CG_DEBUG_LOOP("LPAIR:map") << "Mapping variable \"" << var_name << "\" in range (" << lim << ")"
+                                 << " (max/min = " << y << ")\n\t"
+                                 << "exponent = " << expo << " => "
+                                 << "x = " << out << ", dx = " << dout;
+      return std::make_pair(out, dout);
     };
-    const auto sa_1 = compute_sa(t_1, mi2_1, mf2_1), sa_2 = compute_sa(t_2, mi2_2, mf2_2);
-    const auto compute_boundaries = [](double sb, double sd, double se) {
-      std::pair<double, double> out;
-      if (std::fabs((sb - sd) / sd) >= 1.) {
-        out.first = sb - sd;
-        out.second = se / out.first;
-      } else {
-        out.second = sb + sd;
-        out.first = se / out.second;
-      }
+    auto out = std::make_tuple(0., 0., 0., 0., 0., 0., 0., 0., 0.);
+    const auto dm2_1 = mf2_1 - mi2_1, dm2_2 = mf2_2 - mi2_2;
+    const auto [s2, s2_width] = map_expo(
+        m_u_s2_,
+        Limits{mc4_ + std::sqrt(mf2_2), sqrtS() - std::sqrt(mi2_1)}.compute([](double lim) { return lim * lim; }),
+        "s2");
+    if (s2_width <= 0.)
       return out;
+
+    const double sp = s() + mf2_1 - s2, d3 = s2 - mi2_2;
+    const double rl2 = sp * sp - 4. * s() * mf2_1;  // lambda(s, m3**2, sigma)
+    if (!utils::positive(rl2)) {
+      CG_DEBUG_LOOP("LPAIR:pickin") << "Invalid rl2 = " << rl2 << ".";
+      return out;
+    }
+    // definition from eq. (A.4) and (A.5) in [1]
+    const auto t1_max = mi2_1 + mf2_1 - 0.5 * (ss_ * sp + sl1_ * std::sqrt(rl2)) / s(),
+               t1_min = (dm2_1 * d3 + (d3 - dm2_1) * (d3 * mi2_1 - dm2_1 * mi2_2) / s()) / t1_max;
+    const auto [t1, t1_width] =
+        map_expo(m_u_t1_, Limits{t1_min, t1_max}, "t1");  // definition of the first photon propagator (t1 < 0)
+    if (t1_width >= 0.)
+      return out;
+
+    const auto r1 = s2 - t1 + mi2_2, r2 = s2 - m_w4_ + mf2_2,
+               rl4 = (r1 * r1 - 4. * s2 * mi2_2) * (r2 * r2 - 4. * s2 * mf2_2);
+    if (!utils::positive(rl4)) {
+      CG_DEBUG_LOOP("LPAIR:pickin") << "Invalid rl4 = " << rl4 << ".";
+      return out;
+    }
+
+    const auto d4 = m_w4_ - t1;
+    // t2max, t2min definitions from eq. (A.12) and (A.13) in [1]
+    const auto t2_max = mi2_2 + mf2_2 - 0.5 * (r1 * r2 + std::sqrt(rl4)) / s2,
+               t2_min = (dm2_2 * d4 + (d4 - dm2_2) * (d4 * mi2_2 - dm2_2 * t1) / s2) / t2_max;
+    const auto [t2, t2_width] =
+        map_expo(m_u_t2_, Limits{t2_min, t2_max}, "t2");  // definition of the second photon propagator (t2 < 0)
+    if (t2_width >= 0.)
+      return out;
+
+    const auto r3 = m_w4_ - t1 - t2;
+    if (gamma4_ = t1 * t2 - 0.25 * r3 * r3; gamma4_ >= 0.) {
+      CG_WARNING("LPAIR:pickin") << "gamma4 = " << gamma4_ << " >= 0";
+      return out;
+    }
+
+    const auto compute_deltas = [this](double var,
+                                       short sign,
+                                       double t_1,
+                                       double mi2_1,
+                                       double mf2_1,
+                                       double t_2,
+                                       double mi2_2,
+                                       double mf2_2,
+                                       std::array<double, 2>& deltas) -> std::tuple<double, double> {
+      const auto del1 = t_1 - mi2_2, del2 = t_1 - mi2_1 - mf2_1, del3 = m_w4_ - mf2_2;
+      const auto m2diff = mf2_1 - mi2_1;
+      const auto compute_sa = [](double t, double mi2, double mf2) {
+        return mi2 * t - 0.25 * std::pow(mf2 - mi2 - t, 2);
+      };
+      const auto sa_1 = compute_sa(t_1, mi2_1, mf2_1), sa_2 = compute_sa(t_2, mi2_2, mf2_2);
+      const auto compute_boundaries = [](double sb, double sd, double se) {
+        std::pair<double, double> out;
+        if (std::fabs((sb - sd) / sd) >= 1.) {
+          out.first = sb - sd;
+          out.second = se / out.first;
+        } else {
+          out.second = sb + sd;
+          out.first = se / out.second;
+        }
+        return out;
+      };
+      if (mi2_1 == 0.) {
+        const auto var_max =
+            (s() * (t_1 * (s() + del1 - mf2_1) - mi2_2 * mf2_1) + mi2_2 * mf2_1 * (mf2_1 - del1)) / (s() + w12_) / del2;
+        deltas[0] = -0.25 * (var_max - var) * ss_ * del2;
+      } else {
+        const auto inv_w1 = 1. / mi2_1;
+        const auto sb = mf2_1 + 0.5 * (s() * (t_1 - m2diff) + w12_ * del2) * inv_w1,
+                   sd = sl1_ * std::sqrt(-sa_1) * inv_w1,
+                   se = (s() * (t_1 * (s() + del2 - mi2_2) - mi2_2 * m2diff) + mf2_1 * (mi2_2 * mf2_1 + w12_ * del1)) *
+                        inv_w1;
+        const auto [var_pm, var_max] = compute_boundaries(sb, sd, se);
+        deltas[0] = -0.25 * (var_max - var) * (var_pm - var) * mi2_1;
+      }
+      {
+        const auto inv_t = 1. / t_2;
+        const auto sb = mi2_2 + t_1 - 0.5 * (m_w4_ - t_1 - t_2) * (mf2_2 - mi2_2 - t_2) * inv_t,
+                   sd = 2. * sign * std::sqrt(sa_2 * gamma4_) * inv_t,
+                   se = del3 * del1 + (del3 - del1) * (del3 * mi2_2 - del1 * mf2_2) * inv_t;
+        const auto [var_mp, var_min] = compute_boundaries(sb, sd, se);
+        deltas[1] = -0.25 * (var_min - var) * (var_mp - var) * t_2;
+      }
+      return std::make_tuple(sa_1, 0.5 * (var - t_1 - mi2_2));
     };
-    double var_pm = 0., var_mp = 0., var_min = 0., var_max = 0.;
-    if (mi2_1 == 0.)
-      var_max =
-          (s() * (t_1 * (s() + del1 - mf2_1) - mi2_2 * mf2_1) + mi2_2 * mf2_1 * (mf2_1 - del1)) / ((s() + w12_) * del2);
-    else {
-      const auto inv_w1 = 1. / mi2_1;
-      const auto sb = mf2_1 + 0.5 * (s() * (t_1 - m2diff) + w12_ * del2) * inv_w1,
-                 sd = sl1_ * std::sqrt(-sa_1) * inv_w1,
-                 se = (s() * (t_1 * (s() + del2 - mi2_2) - mi2_2 * m2diff) + mf2_1 * (mi2_2 * mf2_1 + w12_ * del1)) *
-                      inv_w1;
-      std::tie(var_pm, var_max) = compute_boundaries(sb, sd, se);
+
+    const auto [sa1, p2k1] = compute_deltas(s2, -1, t1, mi2_1, mf2_1, t2, mi2_2, mf2_2, deltas_1);
+    if (sa1 >= 0.) {
+      CG_WARNING("LPAIR:pickin") << "sa1 = " << sa1 << " >= 0";
+      return out;
     }
-    {
-      const auto inv_t = 1. / t_2;
-      const auto sb = mi2_2 + t_1 - 0.5 * (m_w4_ - t_1 - t_2) * (mf2_2 - mi2_2 - t_2) * inv_t,
-                 sd = 2. * sign * std::sqrt(sa_2 * gamma4_) * inv_t,
-                 se = del3 * del1 + (del3 - del1) * (del3 * mi2_2 - del1 * mf2_2) * inv_t;
-      std::tie(var_mp, var_min) = compute_boundaries(sb, sd, se);
+
+    const auto dd = deltas_1[0] * deltas_1[1];
+    if (!utils::positive(dd)) {
+      CG_WARNING("LPAIR:pickin") << "Invalid dd = " << dd << ".";
+      return out;
     }
-    return std::make_tuple(-0.25 * (var_max - var) * (mi2_1 != 0. ? (var_pm - var) * mi2_1 : ss_ * del2),
-                           -0.25 * (var_min - var) * (var_mp - var) * t_2,
-                           sa_1,
-                           0.5 * (var - t_1 - mi2_2));
+
+    const auto ap = s2 * t1 - 0.25 * std::pow(s2 + t1 - mi2_2, 2);
+    if (utils::positive(ap)) {
+      CG_WARNING("LPAIR:pickin") << "ap = " << ap << " should be strictly negative.";
+      return out;
+    }
+    const auto inv_ap = 1. / ap;
+    const auto st = s2 - t1 - mi2_2;
+    delta_ = 0.5 *
+             ((mi2_2 * r3 + 0.5 * (dm2_2 - t2) * st) * (p12_ * t1 - 0.25 * (t1 - dm2_1) * st) -
+              std::cos(m_theta4_) * st * std::sqrt(dd)) *
+             inv_ap;
+
+    const auto s1 = t2 + mi2_1 + 2. * (p12_ * r3 - 2. * delta_) / st;
+    const auto jac = 0.125 * s2_width * t1_width * t2_width * 0.5 / (sl1_ * std::sqrt(-ap));
+    CG_DEBUG_LOOP("LPAIR:pickin") << "Jacobian value: " << jac << ".\n\t"
+                                  << "ds2=" << s2_width << ", dt1=" << t1_width << ", dt2=" << t2_width << ".";
+    gram_ = std::pow(std::sin(m_theta4_), 2) * dd * inv_ap;
+    const auto [sa2, p1k2] = compute_deltas(s1, +1, t2, mi2_2, mf2_2, t1, mi2_1, mf2_1, deltas_2);
+    if (sa2 >= 0.) {
+      CG_WARNING("LPAIR:pickin") << "sa2 = " << sa2 << " >= 0";
+      return out;
+    }
+    CG_DEBUG_LOOP("LPAIR:pickin") << std::scientific << "deltas = " << deltas_1 << ", " << deltas_2 << std::fixed;
+    if (delta4_ = deltas_1[0] + deltas_2[0] +
+                  ((p12_ * (t1 - dm2_1) * 0.5 - mi2_1 * p2k1) * (p2k1 * (t2 - dm2_2) - mi2_2 * r3) -
+                   delta_ * (2. * p12_ * p2k1 - mi2_2 * (t1 - dm2_1))) /
+                      p2k1;
+        !utils::positive(delta4_)) {
+      CG_WARNING("LPAIR:pickin") << "Invalid dd5=" << delta4_ << ", with deltas=" << deltas1_ << ", " << deltas2_
+                                 << ".";
+      return out;
+    }
+    return std::make_tuple(s1, t1, sa1, p2k1, s2, t2, sa2, p1k2, jac);
   };
 
-  if (std::tie(deltas_[0], deltas_[1], sa1_, p2k1_) = compute_deltas(s2_, -1, t1(), mA2(), mX2(), t2(), mB2(), mY2());
-      sa1_ >= 0.) {
-    CG_WARNING("LPAIR:pickin") << "sa1_ = " << sa1_ << " >= 0";
-    return 0.;
-  }
-
-  const auto dd = deltas_[0] * deltas_[1];
-  if (!utils::positive(dd)) {
-    CG_WARNING("LPAIR:pickin") << "Invalid dd = " << dd << ".";
-    return 0.;
-  }
-
-  const auto ap = s2_ * t1() - 0.25 * std::pow(s2_ + t1() - mB2(), 2);
-  if (utils::positive(ap)) {
-    CG_WARNING("LPAIR:pickin") << "ap = " << ap << " should be strictly negative.";
-    return 0.;
-  }
-  const auto inv_ap = 1. / ap;
-  const auto st = s2_ - t1() - mB2();
-  delta_ = 0.5 *
-           ((mB2() * r3 + 0.5 * (w52_ - t2()) * st) * (p12_ * t1() - 0.25 * (t1() - w31_) * st) -
-            std::cos(m_theta4_) * st * std::sqrt(dd)) *
-           inv_ap;
-
-  s1_ = t2() + mA2() + 2. * (p12_ * r3 - 2. * delta_) / st;
-
-  const auto jacobian = s2_width * t1_width * t2_width * 0.125 * 0.5 / (sl1_ * std::sqrt(-ap));
-  if (!utils::positive(jacobian)) {
-    CG_WARNING("LPAIR:pickin") << "Null Jacobian.\n\t"
-                               << "ds2=" << s2_width << ", dt1=" << t1_width << ", dt2=" << t2_width << ".";
-    return 0.;
-  }
-  CG_DEBUG_LOOP("LPAIR:pickin") << "ds2=" << s2_width << ", dt1=" << t1_width << ", dt2=" << t2_width << "\n\t"
-                                << "Jacobian=" << std::scientific << jacobian << std::fixed;
-
-  gram_ = std::pow(std::sin(m_theta4_), 2) * dd * inv_ap;
-
-  if (std::tie(deltas_[2], deltas_[3], sa2_, p1k2_) = compute_deltas(s1_, +1, t2(), mB2(), mY2(), t1(), mA2(), mX2());
-      sa2_ >= 0.) {
-    CG_WARNING("LPAIR:pickin") << "sa2_ = " << sa2_ << " >= 0";
-    return 0.;
-  }
-  CG_DEBUG_LOOP("LPAIR:pickin") << std::scientific << "deltas = " << deltas_ << std::fixed;
-
-  if (deltas_[4] = deltas_[0] + deltas_[2] +
-                   ((p12_ * (t1() - w31_) * 0.5 - mA2() * p2k1_) * (p2k1_ * (t2() - w52_) - mB2() * r3) -
-                    delta_ * (2. * p12_ * p2k1_ - mB2() * (t1() - w31_))) /
-                       p2k1_;
-      !utils::positive(deltas_[4])) {
-    CG_WARNING("LPAIR:pickin") << "Invalid dd5=" << deltas_[4] << ", with all deltas=" << deltas_ << ".";
-    return 0.;
-  }
-
-  return jacobian;
+  double jacobian;
+  if (beams_mode_ == mode::Kinematics::ElasticInelastic)
+    std::tie(s2_, t2(), sa2_, p1k2_, s1_, t1(), sa1_, p2k1_, jacobian) =
+        generate_kinematics(mB2(), mY2(), deltas2_, mA2(), mX2(), deltas1_);
+  else
+    std::tie(s1_, t1(), sa1_, p2k1_, s2_, t2(), sa2_, p1k2_, jacobian) =
+        generate_kinematics(mA2(), mX2(), deltas1_, mB2(), mY2(), deltas2_);
+  if (utils::positive(jacobian))
+    return jacobian;
+  return 0.;
 }
 
 //---------------------------------------------------------------------------------------------
@@ -463,7 +476,7 @@ bool LPAIR::orient() {
                                 << "               momentum: p4 = " << pc4_ << "\n\t"
                                 << "         invariant mass: m4 = " << mc4_ << ".";
 
-  pt4_ = mom_prefactor_ * std::sqrt(deltas_[4]);
+  pt4_ = mom_prefactor_ * std::sqrt(delta4_);
   if (sin_theta4_ = pt4_ / pc4_; !Limits{-1., 1.}.contains(sin_theta4_)) {
     CG_WARNING("LPAIR:orient") << "Invalid sin(theta4): " << sin_theta4_ << ".";
     return false;
@@ -486,7 +499,7 @@ bool LPAIR::orient() {
   const auto rr = mom_prefactor_ * std::sqrt(-gram_) / pt4_;
 
   //--- beam 1 -> 3
-  const auto ep3 = ep1_ - delta3_, pp3 = std::sqrt(ep3 * ep3 - mX2()), pt3 = mom_prefactor_ * std::sqrt(deltas_[0]);
+  const auto ep3 = ep1_ - delta3_, pp3 = std::sqrt(ep3 * ep3 - mX2()), pt3 = mom_prefactor_ * std::sqrt(deltas1_[0]);
   if (pt3 > pp3) {
     CG_WARNING("LPAIR:orient") << "Invalid momentum for outgoing beam 1.";
     return false;
@@ -501,7 +514,7 @@ bool LPAIR::orient() {
                                 << "momentum = " << pX() << ".";
 
   //--- beam 2 -> 5
-  const auto ep5 = ep2_ - delta5_, pp5 = std::sqrt(ep5 * ep5 - mY2()), pt5 = mom_prefactor_ * std::sqrt(deltas_[2]);
+  const auto ep5 = ep2_ - delta5_, pp5 = std::sqrt(ep5 * ep5 - mY2()), pt5 = mom_prefactor_ * std::sqrt(deltas2_[0]);
   if (pt5 > pp5) {
     CG_WARNING("LPAIR:orient") << "Invalid momentum for outgoing beam 2.";
     return false;
@@ -531,16 +544,13 @@ bool LPAIR::orient() {
 //---------------------------------------------------------------------------------------------
 
 double LPAIR::computeWeight() {
-  w31_ = mX2() - mA2();     // mass difference between the first outgoing particle and the first incoming particle
-  w52_ = mY2() - mB2();     // mass difference between the second outgoing particle and the second incoming particle
   mc4_ = std::sqrt(m_w4_);  // compute the two-photon energy for this point
 
   CG_DEBUG_LOOP("LPAIR:weight") << "Masses dump:\n\t"
                                 << "m1 = " << mA() << ", m2 = " << mB() << ", m3 = " << mX() << ", m4 = " << mc4_
                                 << ", m5 = " << mY() << ".\n\t"
                                 << "w1 = " << mA2() << ", w2 = " << mB2() << ", w3 = " << mX2() << ", w4 = " << m_w4_
-                                << ", w5 = " << mY2() << ".\n\t"
-                                << "w31 = " << w31_ << ", w52 = " << w52_ << ", w12 = " << w12_ << ".";
+                                << ", w5 = " << mY2() << ".";
 
   auto jacobian = pickin();
   if (!utils::positive(jacobian)) {
@@ -624,11 +634,10 @@ double LPAIR::computeWeight() {
   const double phi5 = pY().phi(), cos_phi5 = std::cos(phi5), sin_phi5 = std::sin(phi5);
 
   bb_ = t1() * t2() + (m_w4_ * sin2_theta6cm + 4. * ml2_ * cos2_theta6cm) * p_gam * p_gam;
-  q1dq_ = eg * (2. * ecm6 - mc4_) - 2. * p_gam * p6cm.pz();
-  q1dq2_ = 0.5 * (m_w4_ - t1() - t2());
+  q2dq_ = std::pow(eg * (2. * ecm6 - mc4_) - 2. * p_gam * p6cm.pz(), 2);
   CG_DEBUG_LOOP("LPAIR") << "ecm6 = " << ecm6 << ", mc4 = " << mc4_ << "\n\t"
                          << "eg = " << eg << ", pg = " << p_gam << "\n\t"
-                         << "q1dq = " << q1dq_ << ", q1dq2 = " << q1dq2_;
+                         << "q1dq^2 = " << q2dq_ << ".";
 
   const double hq = ec4_ * qcz / mc4_;
   const auto qve = Momentum::fromPxPyPzE(+qcx * cos_theta4_ + hq * sin_theta4_,
@@ -638,13 +647,13 @@ double LPAIR::computeWeight() {
 
   const double c1 = pX().pt() * (qve.px() * sin_phi3 - qve.py() * cos_phi3),
                c2 = pX().pt() * (qve.pz() * ep1_ - qve.energy() * p_cm_),
-               c3 = (w31_ * ep1_ * ep1_ + 2. * mA2() * delta3_ * ep1_ - mA2() * delta3_ * delta3_ +
+               c3 = ((mX2() - mA2()) * ep1_ * ep1_ + 2. * mA2() * delta3_ * ep1_ - mA2() * delta3_ * delta3_ +
                      pX().pt2() * ep1_ * ep1_) /
                     (pX().pz() * ep1_ + pX().energy() * p_cm_);
 
   const double b1 = pY().pt() * (qve.px() * sin_phi5 - qve.py() * cos_phi5),
                b2 = pY().pt() * (qve.pz() * ep2_ + qve.energy() * p_cm_),
-               b3 = (w52_ * ep2_ * ep2_ + 2. * mB2() * delta5_ * ep2_ - mB2() * delta5_ * delta5_ +
+               b3 = ((mY2() - mB2()) * ep2_ * ep2_ + 2. * mB2() * delta5_ * ep2_ - mB2() * delta5_ * delta5_ +
                      pY().pt2() * ep2_ * ep2_) /
                     (pY().pz() * ep2_ - pY().energy() * p_cm_);
 
@@ -695,16 +704,18 @@ double LPAIR::computeWeight() {
 //---------------------------------------------------------------------------------------------
 
 double LPAIR::periPP() const {
-  const double qqq = q1dq_ * q1dq_, qdq = 4. * ml2_ - m_w4_;
+  const double qdq = 4. * ml2_ - m_w4_;
   const auto m_em =
       16. *
-      Matrix{{(bb_ * (qqq - gamma4_ - qdq * (t1() + t2() + 2. * ml2_)) -
-               2. * (t1() + 2. * ml2_) * (t2() + 2. * ml2_) * qqq) *
-                  t1() * t2(),
-              2. * (-bb_ * (deltas_[1] + gamma6_) - 2. * (t1() + 2. * ml2_) * (sa2_ * qqq + alpha6_ * alpha6_)) * t1()},
-             {2. * (-bb_ * (deltas_[3] + gamma5_) - 2. * (t2() + 2. * ml2_) * (sa1_ * qqq + alpha5_ * alpha5_)) * t2(),
-              8. * (bb_ * (delta_ * delta_ - gram_) - std::pow(epsilon_ - delta_ * (qdq + q1dq2_), 2) -
-                    sa1_ * alpha6_ * alpha6_ - sa2_ * alpha5_ * alpha5_ - sa1_ * sa2_ * qqq)}};
+      Matrix{
+          {(bb_ * (q2dq_ - gamma4_ - qdq * (t1() + t2() + 2. * ml2_)) -
+            2. * (t1() + 2. * ml2_) * (t2() + 2. * ml2_) * q2dq_) *
+               t1() * t2(),
+           2. * (-bb_ * (deltas1_[1] + gamma6_) - 2. * (t1() + 2. * ml2_) * (sa2_ * q2dq_ + alpha6_ * alpha6_)) * t1()},
+          {2. * (-bb_ * (deltas2_[1] + gamma5_) - 2. * (t2() + 2. * ml2_) * (sa1_ * q2dq_ + alpha5_ * alpha5_)) * t2(),
+           8. *
+               (bb_ * (delta_ * delta_ - gram_) - std::pow(epsilon_ - delta_ * (qdq + 0.5 * (m_w4_ - t1() - t2())), 2) -
+                sa1_ * alpha6_ * alpha6_ - sa2_ * alpha5_ * alpha5_ - sa1_ * sa2_ * q2dq_)}};
 
   // compute the electric/magnetic form factors for the two considered parton momenta transfers
   const auto compute_form_factors = [this](bool elastic, double q2, double mi2, double mx2) -> Vector {
@@ -724,7 +735,7 @@ double LPAIR::periPP() const {
       std::pow(t1() * t2() * bb_, -2) *
       (compute_form_factors(kinematics().incomingBeams().positive().elastic(), -t1(), mA2(), mX2()).transposed() *
        m_em * compute_form_factors(kinematics().incomingBeams().negative().elastic(), -t2(), mB2(), mY2()))(0);
-  CG_DEBUG_LOOP("LPAIR:peripp") << "bb = " << bb_ << ", qqq = " << qqq << ", qdq = " << qdq << "\n\t"
+  CG_DEBUG_LOOP("LPAIR:peripp") << "bb = " << bb_ << ", q1dq^2 = " << q2dq_ << ", qdq = " << qdq << "\n\t"
                                 << "e-m matrix = " << m_em << "\n\t"
                                 << "=> PeriPP = " << peripp;
 
