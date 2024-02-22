@@ -84,6 +84,7 @@ public:
     mom_prefactor_ = 2. / sl1_;
     p12_ = 0.5 * (s() - mA2() - mB2());
     e1mp1_ = mA2() / (ep1_ + p_cm_);
+    e2mp2_ = mB2() / (ep2_ + p_cm_);
     {  // definition of boost-to-lab boost variables
       const Momentum cm = pA() + pB();
       gamma_cm_ = cm.energy() * inverseSqrtS();
@@ -145,10 +146,9 @@ public:
       if (symmetrise_ && mirror)
         mom->mirrorZ();
     }
-    CG_DEBUG_LOOP("LPAIR:gmufil") << "boosted+rotated PX=" << pX() << "\n\t"
-                                  << "boosted+rotated PY=" << pY() << "\n\t"
-                                  << "boosted+rotated P(l1)=" << pc(0) << "\n\t"
-                                  << "boosted+rotated P(l2)=" << pc(1);
+    CG_DEBUG_LOOP("LPAIR:gmufil") << "boosted+rotated momenta:\n\t"
+                                  << "PX=" << pX() << ", PY=" << pY() << "\n\t"
+                                  << "P(l1)=" << pc(0) << ", P(l2)=" << pc(1);
 
     // first outgoing beam
     auto& op1 = event().oneWithRole(Particle::OutgoingBeam1);
@@ -228,7 +228,7 @@ private:
   double ss_{0.};
   double p12_{0.};  ///< \f$p_{12} = \frac{1}{2}\left(s-m_{p_1}^2-m_{p_2}^2\right)\f$
   double sl1_{0.};
-  double e1mp1_{0.};
+  double e1mp1_{0.}, e2mp2_{0.};
   double p_cm_{0.}, mom_prefactor_{0.};
   double gamma_cm_{0.}, beta_gamma_cm_{0.};
 
@@ -259,7 +259,7 @@ private:
   double delta4_{0.};
   double q2dq_{0.};
   double epsilon_{0.};
-  double alpha4_{0.}, beta4_{0.}, gamma4_{0.};
+  double alpha4_{0.}, gamma4_{0.};
   double alpha5_{0.}, gamma5_{0.}, alpha6_{0.}, gamma6_{0.};
   double bb_{0.};
   double gram_{0.};
@@ -481,19 +481,20 @@ bool LPAIR::orient() {
     CG_WARNING("LPAIR:orient") << "Invalid sin(theta4): " << sin_theta4_ << ".";
     return false;
   }
-  const auto p14 = +0.5 * (s1_ + t1() - t2() - mX2());
-  cos_theta4_ = std::sqrt(1. - sin_theta4_ * sin_theta4_) * (ep1_ * ec4_ < p14 ? -1. : 1.);
-  const auto sin2_theta4 = sin_theta4_ * sin_theta4_;
-  alpha4_ = 1. - cos_theta4_;
-  beta4_ = 1. + cos_theta4_;
+  if (beams_mode_ == mode::Kinematics::ElasticInelastic) {
+    const auto p24 = 0.5 * (s2_ + t2() - t1() - mY2());
+    cos_theta4_ = std::sqrt(1. - sin_theta4_ * sin_theta4_) * (ep2_ * ec4_ < p24 ? -1. : 1.);
+  } else {
+    const auto p14 = 0.5 * (s1_ + t1() - t2() - mX2());
+    cos_theta4_ = std::sqrt(1. - sin_theta4_ * sin_theta4_) * (ep1_ * ec4_ < p14 ? -1. : 1.);
+  }
   if (cos_theta4_ < 0.)
-    beta4_ = sin2_theta4 / alpha4_;
+    alpha4_ = 1. - cos_theta4_;
   else
-    alpha4_ = sin2_theta4 / beta4_;
+    alpha4_ = sin_theta4_ * sin_theta4_ / (1. + cos_theta4_);
 
-  CG_DEBUG_LOOP("LPAIR:orient") << "cos(theta4) = " << cos_theta4_ << "\t"
-                                << "sin(theta4) = " << sin_theta4_ << "\n\t"
-                                << "alpha4 = " << alpha4_ << ", beta4 = " << beta4_;
+  CG_DEBUG_LOOP("LPAIR:orient") << "cos(theta4) = " << cos_theta4_ << ", sin(theta4) = " << sin_theta4_
+                                << " -> alpha4 = " << alpha4_ << ".";
 
   //----- outgoing beam states
   const auto rr = mom_prefactor_ * std::sqrt(-gram_) / pt4_;
@@ -568,21 +569,33 @@ double LPAIR::computeWeight() {
 
   // Let the most obscure part of this code begin...
 
-  const double e3mp3 = mX2() / (pX().energy() + pX().p());
-  const double theta_x = pX().theta(), al3 = std::pow(std::sin(theta_x), 2) / (1. + theta_x);
+  const double gamma4 = ec4_ / mc4_;
 
   // 2-photon system kinematics ?!
-  const double eg = (m_w4_ + t1() - t2()) / (2. * mc4_);
+  Momentum pg;
+  if (beams_mode_ == mode::Kinematics::ElasticInelastic) {
+    const double e5mp5 = pY().energy() - pY().p();
+    const double theta_y = pY().theta(), al5 = std::pow(std::sin(theta_y), 2) / (1. + theta_y);
+    pg = Momentum::fromPxPyPzE(0. - pY().px() * cos_theta4_ - (pY().p() * al5 + e5mp5 - e2mp2_ + delta5_) * sin_theta4_,
+                               0. - pY().py(),
+                               0. - gamma4 * pY().px() * sin_theta4_ +
+                                   (pY().p() * al5 + e5mp5 - e2mp2_) * gamma4 * cos_theta4_ -
+                                   gamma4 * delta5_ * alpha4_ + mc4_ * delta5_ / (ec4_ + pc4_),
+                               0.5 * (m_w4_ - t1() + t2()) / mc4_);
+  } else {
+    const double e3mp3 = pX().energy() - pX().p();
+    const double theta_x = pX().theta(), al3 = std::pow(std::sin(theta_x), 2) / (1. + theta_x);
+    pg = Momentum::fromPxPyPzE(0. - pX().px() * cos_theta4_ - (pX().p() * al3 + e3mp3 - e1mp1_ + delta3_) * sin_theta4_,
+                               0. - pX().py(),
+                               0. - gamma4 * pX().px() * sin_theta4_ +
+                                   (pX().p() * al3 + e3mp3 - e1mp1_) * gamma4 * cos_theta4_ -
+                                   gamma4 * delta3_ * alpha4_ + mc4_ * delta3_ / (ec4_ + pc4_),
+                               0.5 * (m_w4_ + t1() - t2()) / mc4_);
+  }
 
-  const double gamma4 = ec4_ / mc4_;
-  const Momentum pg(-pX().px() * cos_theta4_ - (pX().p() * al3 + e3mp3 - e1mp1_ + delta3_) * sin_theta4_,
-                    -pX().py(),
-                    -gamma4 * pX().px() * sin_theta4_ + (pX().p() * al3 + e3mp3 - e1mp1_) * gamma4 * cos_theta4_ +
-                        mc4_ * delta3_ / (ec4_ + pc4_) - gamma4 * delta3_ * alpha4_);
+  CG_DEBUG_LOOP("LPAIR") << "pg = " << pg << ".";
 
-  CG_DEBUG_LOOP("LPAIR") << "pg = " << pg;
-
-  const auto pt_gam = pg.pt(), p_gam = std::max(std::sqrt(eg * eg - t1()), pg.p() > 0.9 * pt_gam ? pg.p() : -999.);
+  const auto pt_gam = pg.pt(), p_gam = std::max(std::sqrt(pg.energy2() - t1()), pg.p() > 0.9 * pt_gam ? pg.p() : -999.);
   const auto cos_phi_gam = pg.px() / pt_gam, sin_phi_gam = pg.py() / pt_gam, sin_theta_gam = pt_gam / p_gam;
   const short theta_sign = pg.pz() > 0. ? 1 : -1;
   const auto cos_theta_gam = theta_sign * std::sqrt(1. - sin_theta_gam * sin_theta_gam);
@@ -595,6 +608,9 @@ double LPAIR::computeWeight() {
   const auto cos_theta6cm = Limits{-1., 1.}.trim(amap / bmap * (beta - 1.) / (beta + 1.)),
              cos2_theta6cm = cos_theta6cm * cos_theta6cm, sin2_theta6cm = 1. - cos2_theta6cm,
              theta6cm = std::acos(cos_theta6cm);
+  // First outgoing lepton's 3-momentum in the centre of mass system
+  const auto p6cm = Momentum::fromPThetaPhiE(pp6cm, theta6cm, m_phi6_cm_);
+  CG_DEBUG_LOOP("LPAIR") << "p3cm6 = " << p6cm;
 
   // match the Jacobian
   jacobian *= (amap + bmap * cos_theta6cm);
@@ -605,11 +621,6 @@ double LPAIR::computeWeight() {
     jacobian *= 1.;
   else
     jacobian *= 0.5;
-
-  // First outgoing lepton's 3-momentum in the centre of mass system
-  const auto p6cm = Momentum::fromPThetaPhiE(pp6cm, theta6cm, m_phi6_cm_);
-
-  CG_DEBUG_LOOP("LPAIR") << "p3cm6 = " << p6cm;
 
   const double h1 = p6cm.pz() * sin_theta_gam + p6cm.px() * cos_theta_gam;
   const double pc6z = p6cm.pz() * cos_theta_gam - p6cm.px() * sin_theta_gam;
@@ -622,9 +633,9 @@ double LPAIR::computeWeight() {
 
   // outgoing lepton's kinematics (in the two-photon CM frame)
   const auto pc4 = Momentum::fromPThetaPhiE(pc4_, std::acos(cos_theta4_), 0., ec4_);
-  pc(0) = Momentum(+pc6x * cos_theta4_ + h2 * sin_theta4_,
+  pc(0) = Momentum(0. + pc6x * cos_theta4_ + h2 * sin_theta4_,
                    p6cm.py() * cos_phi_gam + h1 * sin_phi_gam,
-                   -pc6x * sin_theta4_ + h2 * cos_theta4_,
+                   0. - pc6x * sin_theta4_ + h2 * cos_theta4_,
                    el6);
   pc(1) = pc4 - pc(0);
   CG_DEBUG_LOOP("LPAIR") << "Outgoing kinematics\n\t"
@@ -634,16 +645,18 @@ double LPAIR::computeWeight() {
   const double phi5 = pY().phi(), cos_phi5 = std::cos(phi5), sin_phi5 = std::sin(phi5);
 
   bb_ = t1() * t2() + (m_w4_ * sin2_theta6cm + 4. * ml2_ * cos2_theta6cm) * p_gam * p_gam;
-  q2dq_ = std::pow(eg * (2. * ecm6 - mc4_) - 2. * p_gam * p6cm.pz(), 2);
+  q2dq_ = std::pow(pg.energy() * (2. * ecm6 - mc4_) - 2. * p_gam * p6cm.pz(), 2);
   CG_DEBUG_LOOP("LPAIR") << "ecm6 = " << ecm6 << ", mc4 = " << mc4_ << "\n\t"
-                         << "eg = " << eg << ", pg = " << p_gam << "\n\t"
+                         << "pg = " << p_gam << "\n\t"
                          << "q1dq^2 = " << q2dq_ << ".";
 
   const double hq = ec4_ * qcz / mc4_;
-  const auto qve = Momentum::fromPxPyPzE(+qcx * cos_theta4_ + hq * sin_theta4_,
+  const auto qve = Momentum::fromPxPyPzE(0. + qcx * cos_theta4_ + hq * sin_theta4_,
                                          2. * pc(0).py(),
-                                         -qcx * sin_theta4_ + hq * cos_theta4_,
-                                         +qcz * pc4_ / mc4_);
+                                         0. - qcx * sin_theta4_ + hq * cos_theta4_,
+                                         0. + qcz * pc4_ / mc4_);
+
+  CG_DEBUG_LOOP("LPAIR") << "qve: " << qve << ".";
 
   const double c1 = pX().pt() * (qve.px() * sin_phi3 - qve.py() * cos_phi3),
                c2 = pX().pt() * (qve.pz() * ep1_ - qve.energy() * p_cm_),
@@ -656,6 +669,10 @@ double LPAIR::computeWeight() {
                b3 = ((mY2() - mB2()) * ep2_ * ep2_ + 2. * mB2() * delta5_ * ep2_ - mB2() * delta5_ * delta5_ +
                      pY().pt2() * ep2_ * ep2_) /
                     (pY().pz() * ep2_ - pY().energy() * p_cm_);
+
+  CG_DEBUG_LOOP("LPAIR") << "Dump of lateral-dependent parameters\n\t"
+                         << "c1-3: " << std::vector<double>{c1, c2, c3} << "\n\t"
+                         << "b1-3: " << std::vector<double>{b1, b2, b3} << ".";
 
   const double r12 = c2 * sin_phi3 + c3 * qve.py(), r13 = -c2 * cos_phi3 - c3 * qve.px();
   const double r22 = b2 * sin_phi5 + b3 * qve.py(), r23 = -b2 * cos_phi5 - b3 * qve.px();
@@ -673,8 +690,8 @@ double LPAIR::computeWeight() {
             (ep2_ * qve.energy() + p_cm_ * qve.pz()) * (cos_phi3 * cos_phi5 + sin_phi3 * sin_phi5) * pt3 * pt5 +
             (delta3_ * qve.pz() - qve.energy() * (p_cm_ - pY().pz())) * b3;
 
-  CG_DEBUG_LOOP("LPAIR") << "alpha5 = " << alpha5_ << "\n\t"
-                         << "alpha6 = " << alpha6_;
+  CG_DEBUG_LOOP("LPAIR") << "alpha5-6: " << std::vector<double>{alpha5_, alpha6_}
+                         << ", gamma5-6: " << std::vector<double>{gamma5_, gamma6_} << ".";
 
   ////////////////////////////////////////////////////////////////
   // END of GAMGAMLL subroutine in the FORTRAN version
@@ -736,7 +753,8 @@ double LPAIR::periPP() const {
       (compute_form_factors(kinematics().incomingBeams().positive().elastic(), -t1(), mA2(), mX2()).transposed() *
        m_em * compute_form_factors(kinematics().incomingBeams().negative().elastic(), -t2(), mB2(), mY2()))(0);
   CG_DEBUG_LOOP("LPAIR:peripp") << "bb = " << bb_ << ", q1dq^2 = " << q2dq_ << ", qdq = " << qdq << "\n\t"
-                                << "e-m matrix = " << m_em << "\n\t"
+                                << "e-m matrix = \n"
+                                << m_em << "\n\t"
                                 << "=> PeriPP = " << peripp;
 
   return peripp;
