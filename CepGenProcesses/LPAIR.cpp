@@ -93,9 +93,6 @@ public:
           << "gamma=" << gamma_cm_ << ", beta*gamma=" << beta_gamma_cm_;
     }
 
-    formfac_ = FormFactorsFactory::get().build(kinematics().incomingBeams().formFactors());
-    strfun_ = StructureFunctionsFactory::get().build(kinematics().incomingBeams().structureFunctions());
-
     //--- first define the squared mass range for the diphoton/dilepton system
     const auto w_limits = kinematics()
                               .cuts()
@@ -119,10 +116,30 @@ public:
           .remnants.mx.truncate(Limits{mp_ + PDG::get().mass(PDG::piPlus), sqrtS() - m_in - 2. * pair_.mass})
           .compute([](double m) { return m * m; });
     };
-    if (beams_mode_ != mode::Kinematics::ElasticElastic)  // first outgoing beam particle or remnant mass
-      defineVariable(mX2(), Mapping::power_law, mx_range(mA()), "MX2");
-    if (beams_mode_ == mode::Kinematics::InelasticInelastic)  // second outgoing beam particle or remnant mass
-      defineVariable(mY2(), Mapping::power_law, mx_range(mB()), "MY2");
+    switch (beams_mode_) {  // initialise the fluxes
+      case mode::Kinematics::ElasticElastic:
+        pos_flux_.reset(new ElasticFlux(kinematics().incomingBeams().positive().parameters()));
+        neg_flux_.reset(new ElasticFlux(kinematics().incomingBeams().negative().parameters()));
+        break;
+      case mode::Kinematics::InelasticElastic:
+        pos_flux_.reset(new InelasticFlux(kinematics().incomingBeams().negative().parameters()));
+        neg_flux_.reset(new ElasticFlux(kinematics().incomingBeams().positive().parameters()));
+        defineVariable(mX2(), Mapping::power_law, mx_range(mA()), "MX2");
+        break;
+      case mode::Kinematics::ElasticInelastic:
+        pos_flux_.reset(new InelasticFlux(kinematics().incomingBeams().positive().parameters()));
+        neg_flux_.reset(new ElasticFlux(kinematics().incomingBeams().negative().parameters()));
+        defineVariable(mX2(), Mapping::power_law, mx_range(mA()), "MX2");
+        break;
+      case mode::Kinematics::InelasticInelastic:
+        pos_flux_.reset(new InelasticFlux(kinematics().incomingBeams().positive().parameters()));
+        neg_flux_.reset(new InelasticFlux(kinematics().incomingBeams().negative().parameters()));
+        defineVariable(mX2(), Mapping::power_law, mx_range(mA()), "MX2");
+        defineVariable(mY2(), Mapping::power_law, mx_range(mB()), "MY2");
+        break;
+      default:
+        throw CG_FATAL("LPAIR:prepareKinematics") << "Invalid mode retrieved: " << beams_mode_ << ".";
+    }
   }
 
   void fillKinematics() override {
@@ -215,26 +232,8 @@ private:
                       sa2_ * alpha5_ * alpha5_ - sa1_ * sa2_ * q2dq_)}} *
         std::pow(4. / t1() / t2() / bb_, 2);
 
-    // compute the electric/magnetic form factors for the two considered parton momenta transfers
-    const auto compute_form_factors = [this](bool elastic, double q2, double mi2, double mx2) -> Vector {
-      if (elastic) {  // trivial case for elastic photon emission
-        const auto ff = (*formfac_)(q2);
-        return Vector{ff.FM, ff.FE};
-      }
-      if (!strfun_)
-        throw CG_FATAL("LPAIR:peripp")
-            << "Inelastic proton form factors computation requires a structure functions definition!";
-      const double xbj = utils::xBj(q2, mi2, mx2);
-      if (strfun_->name() == 11 /* SuriYennie */)  // this one requires its own object to deal with FM
-        return Vector{strfun_->FM(xbj, q2), strfun_->F2(xbj, q2) * xbj * mp_ / q2};
-      return Vector{-2. * strfun_->F1(xbj, q2) / q2, strfun_->F2(xbj, q2) * xbj / q2};
-    };
-    const auto u1 = beams_mode_ == mode::Kinematics::ElasticInelastic
-                        ? compute_form_factors(false, -t1(), mA2(), mX2())
-                        : compute_form_factors(kinematics().incomingBeams().positive().elastic(), -t1(), mA2(), mX2()),
-               u2 = beams_mode_ == mode::Kinematics::ElasticInelastic
-                        ? compute_form_factors(true, -t2(), mB2(), mY2())
-                        : compute_form_factors(kinematics().incomingBeams().negative().elastic(), -t2(), mB2(), mY2());
+    const auto xbj1 = utils::xBj(-t1(), mA2(), mX2()), xbj2 = utils::xBj(-t2(), mB2(), mY2());
+    const auto u1 = (*pos_flux_)(xbj1, -t1()), u2 = (*neg_flux_)(xbj2, -t2());
     const auto peripp = (u1.transposed() * m_em * u2)(0);
     CG_DEBUG_LOOP("LPAIR:peripp") << "bb = " << bb_ << ", qqq = " << q2dq_ << ", qdq = " << qdq << "\n\t"
                                   << "e-m matrix = " << m_em << "\n\t"
@@ -266,8 +265,41 @@ private:
   double p_cm_{0.}, mom_prefactor_{0.};
   double gamma_cm_{0.}, beta_gamma_cm_{0.};
 
-  std::unique_ptr<formfac::Parameterisation> formfac_;
-  std::unique_ptr<strfun::Parameterisation> strfun_;
+  struct Flux : SteeredObject<Flux> {
+    explicit Flux(const ParametersList& params) : SteeredObject(params) {}
+    virtual Vector operator()(double, double) const = 0;  ///< Electric/magnetic form factors given parton kinematics
+  };
+  /// Form factors-dependent expression for elastic photon emission
+  class ElasticFlux : public Flux {
+  public:
+    explicit ElasticFlux(const ParametersList& params)
+        : Flux(params), formfac_(FormFactorsFactory::get().build(steer<ParametersList>("formFactors"))) {}
+    Vector operator()(double, double q2) const override {
+      const auto ff = (*formfac_)(q2);
+      return Vector{ff.FM, ff.FE};
+    }
+
+  private:
+    const std::unique_ptr<formfac::Parameterisation> formfac_;
+  };
+  /// Structure functions-dependent expression for elastic photon emission
+  class InelasticFlux : public Flux {
+  public:
+    explicit InelasticFlux(const ParametersList& params)
+        : Flux(params),
+          strfun_(StructureFunctionsFactory::get().build(steer<ParametersList>("structureFunctions"))),
+          mp_(PDG::get().mass(PDG::proton)) {}
+    Vector operator()(double xbj, double q2) const override {
+      if (strfun_->name() == 11 /* SuriYennie */)  // this one requires its own object to deal with FM
+        return Vector{strfun_->FM(xbj, q2), strfun_->F2(xbj, q2) * xbj * mp_ / q2};
+      return Vector{-2. * strfun_->F1(xbj, q2) / q2, strfun_->F2(xbj, q2) * xbj / q2};
+    }
+
+  private:
+    const std::unique_ptr<strfun::Parameterisation> strfun_;
+    const double mp_;
+  };
+  std::unique_ptr<Flux> pos_flux_, neg_flux_;
 
   // mapped variables
   double m_u_t1_{0.};  ///< first parton normalised virtuality

@@ -136,8 +136,14 @@ namespace cepgen {
       set_part_fluxes_from_name(flux);
 
     //--- form factors
-    plist_pos.set<ParametersList>("formFactors", steer<ParametersList>("formFactors"));
-    plist_neg.set<ParametersList>("formFactors", steer<ParametersList>("formFactors"));
+    auto treat_form_factors = [this](pdgid_t pdgid) -> ParametersList {
+      auto base_ff = steer<ParametersList>("formFactors");
+      if (pdgid == PDG::electron)
+        base_ff = FormFactorsFactory::get().describeParameters("PointLikeFermion").parameters();
+      return base_ff.set<pdgid_t>("pdgId", pdgid);
+    };
+    plist_pos.set<ParametersList>("formFactors", treat_form_factors(pos_pdg));
+    plist_neg.set<ParametersList>("formFactors", treat_form_factors(neg_pdg));
 
     if (auto mode = steerAs<int, mode::Kinematics>("mode"); mode != mode::Kinematics::invalid) {
       plist_pos.set<bool>("elastic",
