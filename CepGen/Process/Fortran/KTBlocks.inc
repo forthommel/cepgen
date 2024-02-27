@@ -8,8 +8,8 @@ c     ================================================================
 
 c     =================================================================
       !> collection of fundamental physics constants
-      common/constants/am_p,units,pi
-      double precision am_p,units,pi
+      common/constants/am_p,pi
+      double precision am_p,pi
 
 c     =================================================================
 c     information on the full process

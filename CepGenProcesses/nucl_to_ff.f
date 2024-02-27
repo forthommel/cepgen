@@ -37,7 +37,6 @@ c     =================================================================
       double precision Phi20,Phi202,Phi21_x,Phi21_y,Phi212
       double precision Phi11_dot_e,Phi11_cross_e
       double precision Phi21_dot_e,Phi21_cross_e
-      double precision aintegral
 
       double precision px_plus,px_minus,py_plus,py_minus
       double precision r1,r2
@@ -121,17 +120,17 @@ c     =================================================================
       r1 = dsqrt(1.d0+am_A**2/inp_A**2)
       r2 = dsqrt(1.d0+am_B**2/inp_B**2)
 
-      ak10 = inp_A*r1
+      ak10 = dabs(inp_A)*r1
       ak1x = 0.d0
       ak1y = 0.d0
       ak1z = inp_A
 
-      ak20 = inp_B*r2
+      ak20 = dabs(inp_B)*r2
       ak2x = 0.d0
       ak2y = 0.d0
-      ak2z = -inp_B
+      ak2z = inp_B
 
-      s = 4.*inp_A*inp_B*(1.d0 + r1*r2)/2.d0+(am_A**2+am_B**2)
+      s = 4.*dabs(inp_A*inp_B)*(1.d0 + r1*r2)/2.d0+(am_A**2+am_B**2)
 
       p1_plus = (ak10+ak1z)/dsqrt(2.d0)
       p2_minus = (ak20-ak2z)/dsqrt(2.d0)
@@ -453,21 +452,9 @@ c     =================================================================
       coupling = coupling * 4.d0*pi*CepGen_alphaEM(dsqrt(amu2))
      &         * q_l**2 ! photon exchange
 
-c     =================================================================
-c     factor 2.*pi below from integration over phi_sum
-c     factor 1/4 below from jacobian of transformations
-c     factors 1/pi and 1/pi due to integration
-c     over d^2 kappa_1 d^2 kappa_2 instead d kappa_1^2 d kappa_2^2
-c     =================================================================
-
-      aintegral = (2.d0*pi)*1.d0/(16.d0*pi**2*(x1*x2*s)**2) * amat2
-     &          * coupling
-     &          * (1.d0/4.d0) * units
-     &          * 0.5d0 * 4.0d0 / (4.d0*pi)
-
 c     *****************************************************************
 c     =================================================================
-      nucl_to_ff = aintegral*q1t*q2t*ptdiff
+      nucl_to_ff = amat2*coupling*ptdiff
 c     =================================================================
 c     *****************************************************************
 

@@ -68,11 +68,9 @@ namespace cepgen {
   namespace proc {
     ParametersList FortranFactorisedProcess::kProcParameters;  ///< List of parameters to steer the process
 
-    FortranFactorisedProcess::FortranFactorisedProcess(const ParametersList& params,
-                                                       const std::function<double(void)>& func)
-        : FactorisedProcess(params, {PDG::muon, PDG::muon}), func_(func) {
+    FortranFactorisedProcess::FortranFactorisedProcess(const ParametersList& params, double (*func)(void))
+        : FactorisedProcess(params, {PDG::invalid, PDG::invalid}), func_(func) {
       constants_.m_p = Process::mp_;
-      constants_.units = constants::GEVM2_TO_PB;
       constants_.pi = M_PI;
     }
 
@@ -118,36 +116,35 @@ namespace cepgen {
       //-------------------------------------------------------------------------------------------
 
       //--- positive-z incoming beam
-      genparams_.inp1 = kinematics().incomingBeams().positive().momentum().pz();
-      //--- check if first incoming beam is a heavy ion
       if (HeavyIon::isHI(kinematics().incomingBeams().positive().pdgId())) {
         const auto in1 = HeavyIon::fromPdgId(kinematics().incomingBeams().positive().pdgId());
         genparams_.a_nuc1 = in1.A;
-        genparams_.z_nuc1 = (unsigned short)in1.Z;
-        if (genparams_.z_nuc1 > 1) {
+        if (genparams_.z_nuc1 = (unsigned short)in1.Z; genparams_.z_nuc1 > 1)
           event().oneWithRole(Particle::IncomingBeam1).setPdgId((pdgid_t)in1);
-          event().oneWithRole(Particle::OutgoingBeam1).setPdgId((pdgid_t)in1);
-        }
-      } else
+      } else {
+        //CG_LOG << "aaaaa" << kinematics().incomingBeams().positive().pdgId();
+        //event().oneWithRole(Particle::IncomingBeam1).setPdgId(kinematics().incomingBeams().positive().pdgId());
         genparams_.a_nuc1 = genparams_.z_nuc1 = 1;
+      }
+      genparams_.inp1 = kinematics().incomingBeams().positive().momentum().pz();
 
       //--- negative-z incoming beam
-      genparams_.inp2 = kinematics().incomingBeams().negative().momentum().pz();
-      //--- check if second incoming beam is a heavy ion
       if (HeavyIon::isHI(kinematics().incomingBeams().negative().pdgId())) {
         const auto in2 = HeavyIon::fromPdgId(kinematics().incomingBeams().negative().pdgId());
         genparams_.a_nuc2 = in2.A;
-        genparams_.z_nuc2 = (unsigned short)in2.Z;
-        if (genparams_.z_nuc2 > 1) {
+        if (genparams_.z_nuc2 = (unsigned short)in2.Z; genparams_.z_nuc2 > 1)
           event().oneWithRole(Particle::IncomingBeam2).setPdgId((pdgid_t)in2);
-          event().oneWithRole(Particle::OutgoingBeam2).setPdgId((pdgid_t)in2);
-        }
-      } else
+      } else {
+        //CG_LOG << "bbbbb" << kinematics().incomingBeams().negative().pdgId();
+        //event().oneWithRole(Particle::IncomingBeam2).setPdgId(kinematics().incomingBeams().negative().pdgId());
         genparams_.a_nuc2 = genparams_.z_nuc2 = 1;
+      }
+      genparams_.inp2 = kinematics().incomingBeams().negative().momentum().pz();
 
       // intermediate partons information
       genparams_.iflux1 = (int)kinematics().incomingBeams().positive().partonFluxParameters().name<int>();
       genparams_.iflux2 = (int)kinematics().incomingBeams().negative().partonFluxParameters().name<int>();
+      throw CG_LOG << event();
     }
 
     double FortranFactorisedProcess::computeFactorisedMatrixElement() {
@@ -172,32 +169,24 @@ namespace cepgen {
       // outgoing beam remnants
       //===========================================================================================
 
-      pX() = Momentum(evtkin_.px);
-      pY() = Momentum(evtkin_.py);
+      pX() = Momentum(evtkin_.px.data());
+      pY() = Momentum(evtkin_.py.data());
       // express these momenta per nucleon
       pX() *= 1. / genparams_.a_nuc1;
       pY() *= 1. / genparams_.a_nuc2;
 
       //===========================================================================================
-      // intermediate partons
-      //===========================================================================================
-
-      q1() = pA() - pX();
-      q2() = pB() - pY();
-      event().oneWithRole(Particle::Intermediate).setMomentum(q1() + q2());
-
-      //===========================================================================================
       // central system
       //===========================================================================================
 
-      auto oc = event()[Particle::CentralSystem];  // retrieve all references
-                                                   // to central system particles
+      auto oc = event()[Particle::CentralSystem];  // retrieve all references to central system particles
       for (int i = 0; i < evtkin_.nout; ++i) {
-        auto& p = oc[i].get();  // retrieve a reference to the specific particle
+        auto& p = oc.at(i).get();  // retrieve a reference to the specific particle
         p.setPdgId((long)evtkin_.pdg[i]);
         p.setStatus(Particle::Status::FinalState);
-        p.setMomentum(Momentum(evtkin_.pc[i]));
+        p.setMomentum(Momentum(evtkin_.pc.at(i).data()));
       }
+      CG_LOG << event();
     }
   }  // namespace proc
 }  // namespace cepgen

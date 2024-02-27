@@ -24,9 +24,8 @@ namespace cepgen {
   namespace ktblock {
     /// General physics constants
     struct Constants {
-      double m_p;    ///< Proton mass
-      double units;  ///< Conversion factor GeV\f$^2\to\f$ barn
-      double pi;     ///< \f$\pi\f$
+      double m_p;  ///< Proton mass
+      double pi;   ///< \f$\pi\f$
     };
     /// Generic run parameters
     struct GenParameters {
@@ -78,12 +77,12 @@ namespace cepgen {
     /// Single event kinematics
     struct EventKinematics {
       static constexpr size_t MAX_PART = 10;
-      int nout;                ///< Number of particles in central system
-      int pdg[MAX_PART];       ///< PDG ids of all particles in central system
-      int idum;                ///< Padding
-      double pc[MAX_PART][4];  ///< 4-momenta of all particles in central system
-      double px[4];            ///< 4-momentum of first outgoing proton state
-      double py[4];            ///< 4-momentum of second outgoing proton state
+      int nout;                                        ///< Number of particles in central system
+      std::array<int, MAX_PART> pdg;                   ///< PDG ids of all particles in central system
+      int idum;                                        ///< Padding
+      std::array<std::array<double, 4>, MAX_PART> pc;  ///< 4-momenta of all particles in central system
+      std::array<double, 4> px;                        ///< 4-momentum of first outgoing proton state
+      std::array<double, 4> py;                        ///< 4-momentum of second outgoing proton state
     };
   }  // namespace ktblock
 }  // namespace cepgen
