@@ -7,9 +7,7 @@ process = cepgen.Module('pptoff',
         mode = cepgen.ProcessMode.ElasticElastic,
         method = 0,
         pair = PDG.muon,
-        kinematicsGenerator = cepgen.Module('rambo',
-            partons = (22, 22)
-        )
+        kinematicsGenerator = cepgen.Module('ktrambo')
     ),
     inKinematics = cepgen.Parameters(
         pz = (6500., 6500.),

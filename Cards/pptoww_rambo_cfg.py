@@ -6,9 +6,7 @@ process = cepgen.Module('pptoww',
         mode = cepgen.ProcessMode.ElasticElastic,
         method = 1,  # on-shell (0) or off-shell (1) formula
         polarisationStates = 0,  # full
-        kinematicsGenerator = cepgen.Module('rambo',
-            partons = (22, 22)
-        )
+        kinematicsGenerator = cepgen.Module('ktrambo')
     ),
     inKinematics = cepgen.Parameters(
         cmEnergy = 13.e3,
