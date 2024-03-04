@@ -97,7 +97,19 @@ private:
   public:
     explicit Pythia8RandomWrapper(std::vector<double>& coords) : coords_(coords) {}
     void reset() { index_ = 0; }
-    double flat() override { return coords_.at(index_++); }
+    double flat() override {
+      if (index_ >= coords_.size()) {
+        CG_WARNING("Pythia8RandomWrapper:flat")
+            << "Coordinate index " << index_ << " exceeds the total number of dimensions, " << coords_.size()
+            << ", allocated to the Rambo phase space definition.";
+        //FIXME need to ensure the Rambo loop is not exceeding the number of dimensions of
+        // the phase space definition ; this requires a bit of treatment to the number of
+        // possible trials that can be performed and the multiplicity of external particles
+        // to the process.
+        return 0.;
+      }
+      return coords_.at(index_++);
+    }
 
   private:
     std::vector<double>& coords_;
