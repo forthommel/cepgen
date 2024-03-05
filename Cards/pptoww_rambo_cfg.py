@@ -1,4 +1,5 @@
 import Config.Core as cepgen
+from Config.PDG_cfi import PDG
 from Config.generator_cfi import generator as _gen
 
 process = cepgen.Module('pptoww',
@@ -9,8 +10,9 @@ process = cepgen.Module('pptoww',
         kinematicsGenerator = cepgen.Module('ktrambo')
     ),
     inKinematics = cepgen.Parameters(
+        pdgIds = (PDG.proton, PDG.proton),
         cmEnergy = 13.e3,
-        structureFunctions = cepgen.StructureFunctions.LUXlike,
+        structureFunctions = cepgen.StructureFunctions.luxLike,
     ),
     outKinematics = cepgen.Parameters(
         mx = (1.07, 1000.),
