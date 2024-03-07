@@ -24,7 +24,8 @@ void bsinit_();
 void bases_(double (*fxn)(double[]), double& s, double& sigma, double& ctime, int& it1, int& it2);
 void spinfo_(int&);
 void spring_(double (*func)(double*), int& mxtry);
-void xhinit_(int& id, double& dxmin, double& dxmax, int& nbin, char* tname);
+void xhfill_(int& id, double& dx, double& fx);
+void xhinit_(int& id, double& dxmin, double& dxmax, int& nbin, char* tname, int& _tname_len);
 void xhplot_(int& lu, int& ifg, int& ihist);
 
 static constexpr size_t mxdim = 50;

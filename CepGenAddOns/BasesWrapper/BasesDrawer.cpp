@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstring>
+
 #include "CepGen/Modules/DrawerFactory.h"
 #include "CepGen/Utils/Drawer.h"
 #include "CepGen/Utils/Graph.h"
@@ -38,12 +40,16 @@ namespace cepgen {
       const BasesDrawer& draw(const Graph1D&, const Mode&) const override { return *this; }
       const BasesDrawer& draw(const Graph2D&, const Mode&) const override { return *this; }
       const BasesDrawer& draw(const Hist1D& hist, const Mode&) const override {
-        int id = num_hist_++, nbins = hist.nbins();
+        int id = ++num_hist_, nbins = hist.nbins();
         double xmin = hist.range().min(), xmax = hist.range().max();
-        auto hist_name = hist.name();
-        //xhinit_(id, xmin, xmax, nbins, &(hist_name[0]));
-        auto* title = const_cast<char*>(" ");
-        xhinit_(id, xmin, xmax, nbins, title);
+        int hist_name_len = hist.name().size() - 1;
+        std::vector<char> hist_name(hist_name_len + 1);
+        std::strcpy(hist_name.data(), hist.name().c_str());
+        xhinit_(id, xmin, xmax, nbins, hist_name.data(), hist_name_len);
+        for (int i = 0; i < nbins; ++i) {
+          auto dx = hist.binRange(i).x(0.5), fx = (double)hist.value(i);
+          xhfill_(id, dx, fx);
+        }
         int lu = 6, ifg = 1;
         xhplot_(lu, ifg, id);
         return *this;
