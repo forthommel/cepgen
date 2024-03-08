@@ -101,6 +101,8 @@ namespace cepgen {
 
     pdgids_t central() const override { return particles_; }
 
+    void setCentral(const pdgids_t& cent) override { particles_ = cent; }
+
     double that() const override {
       return 0.5 * ((proc_->q1() - proc_->pc(0)).mass2() + (proc_->q2() - proc_->pc(1)).mass2());
     }
@@ -209,10 +211,10 @@ namespace cepgen {
 
     const std::unique_ptr<PartonsPhaseSpaceGenerator> part_psgen_;
     const std::vector<int> int_particles_;  ///< Type of particles produced in the final state (integer values)
-    const pdgids_t particles_;              ///< Type of particles produced in the final state (PDG ids)
 
     proc::FactorisedProcess* proc_{nullptr};  //NOT owning
 
+    pdgids_t particles_;           ///< Type of particles produced in the final state (PDG ids)
     cuts::Central single_limits_;  ///< Limits to be applied on single central system's particles
     // mapped variables
     double m_y_c1_{0.};         ///< Rapidity of the first central particle

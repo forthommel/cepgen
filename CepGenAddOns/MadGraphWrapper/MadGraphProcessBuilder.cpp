@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2023  Laurent Forthomme
+ *  Copyright (C) 2020-2024  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,31 +21,36 @@
 #include "CepGen/Generator.h"
 #include "CepGen/Modules/ProcessFactory.h"
 #include "CepGen/Physics/PDG.h"
-#include "CepGen/Process/Process2to4.h"
+#include "CepGen/Process/FactorisedProcess.h"
 #include "CepGen/Utils/AbortHandler.h"
 #include "CepGenAddOns/MadGraphWrapper/MadGraphInterface.h"
 #include "CepGenAddOns/MadGraphWrapper/MadGraphProcess.h"
 
 using namespace cepgen;
 
-class MadGraphProcessBuilder : public proc::Process2to4 {
+class MadGraphProcessBuilder : public proc::FactorisedProcess {
 public:
-  explicit MadGraphProcessBuilder(const ParametersList& params, bool load_library = true) : Process2to4(params, {}) {
+  explicit MadGraphProcessBuilder(const ParametersList& params, bool load_library = true)
+      : FactorisedProcess(params, {}) {
     if (load_library)
       loadMG5Library();
     // once MadGraph process library is loaded into runtime environment, can define its wrapper object
     mg5_proc_.reset(new MadGraphProcess);
-    produced_parts_ = mg5_proc_->centralSystem();
-    cs_prop_ = PDG::get()(produced_parts_.at(0));
-    CG_DEBUG("MadGraphProcessBuilder") << "MadGraph_aMC process created for:\n\t"
-                                       << "* interm. parts.: " << mg5_proc_->intermediatePartons() << "\n\t"
-                                       << "* central system: " << produced_parts_ << ".";
+    psgen_->setCentral(mg5_proc_->centralSystem());
   }
 
   proc::ProcessPtr clone() const override { return proc::ProcessPtr(new MadGraphProcessBuilder(parameters(), false)); }
 
+  void addEventContent() override {
+    Process::setEventContent({{Particle::IncomingBeam1, {kinematics().incomingBeams().positive().pdgId()}},
+                              {Particle::IncomingBeam2, {kinematics().incomingBeams().negative().pdgId()}},
+                              {Particle::OutgoingBeam1, {kinematics().incomingBeams().positive().pdgId()}},
+                              {Particle::OutgoingBeam2, {kinematics().incomingBeams().negative().pdgId()}},
+                              {Particle::CentralSystem, mg5_proc_->centralSystem()}});
+  }
+
   static ParametersDescription description() {
-    auto desc = Process2to4::description();
+    auto desc = FactorisedProcess::description();
     desc.setDescription("MadGraph_aMC process builder");
     desc.add<std::string>("lib", "").setDescription("Precompiled library for this process definition");
     desc.add<std::string>("parametersCard", "param_card.dat").setDescription("Runtime MadGraph parameters card");
@@ -53,11 +58,10 @@ public:
     return desc;
   }
 
-  void prepareProcessKinematics() override {
+  void prepareFactorisedPhaseSpace() override {
     const auto& interm_part = mg5_proc_->intermediatePartons();
-    const auto flux_interm_part = std::array<pdgid_t, 2>{psgen_->positiveFlux<PartonFlux>().partonPdgId(),
-                                                         psgen_->negativeFlux<PartonFlux>().partonPdgId()};
-    if (interm_part != flux_interm_part)
+    const auto flux_interm_part = std::array<pdgid_t, 2>{psgen_->partons().at(0), psgen_->partons().at(1)};
+    if (mg5_proc_->intermediatePartons() != flux_interm_part)
       throw CG_FATAL("MadGraphProcessBuilder")
           << "MadGraph unpacked process incoming state (" << interm_part << ") "
           << "is incompatible with user-steered incoming fluxes particles (" << flux_interm_part << ").";
@@ -66,7 +70,7 @@ public:
       mg5_proc_->initialise(params_card);
     }
   }
-  double computeCentralMatrixElement() const override {
+  double computeFactorisedMatrixElement() override {
     if (!mg5_proc_)
       CG_FATAL("MadGraphProcessBuilder:eval") << "Process not properly linked!";
     if (!kinematics().cuts().initial.contain(event()(Particle::Role::Parton1)) ||
