@@ -20,6 +20,7 @@
 #define CepGen_Utils_Caller_h
 
 #include <iosfwd>
+#include <sstream>
 #include <string>
 #include <vector>
 
