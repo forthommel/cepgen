@@ -26,23 +26,23 @@
 #include "CepGen/Physics/Kinematics.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Utils/Value.h"
-#include "CepGenAddOns/Pythia8Wrapper/PythiaEventInterface.h"
+#include "CepGenAddOns/Pythia8Wrapper/EventInterface.h"
 
 namespace cepgen {
-  namespace hadr {
+  namespace pythia8 {
     /// Interface to the Pythia8 hadronisation algorithm
     /// \note It can be used in a single particle decay mode as well as a full event hadronisation using the string model, as in Jetset.
-    class Pythia8Hadroniser : public Hadroniser {
+    class Hadroniser : public cepgen::hadr::Hadroniser {
     public:
-      explicit Pythia8Hadroniser(const ParametersList& plist)
-          : Hadroniser(plist),
+      explicit Hadroniser(const ParametersList& plist)
+          : cepgen::hadr::Hadroniser(plist),
             pythia_(new Pythia8::Pythia),
-            cg_evt_(new Pythia8::CepGenEvent),
+            cg_evt_(new pythia8::EventInterface),
             correct_central_(steer<bool>("correctCentralSystem")),
             debug_lhef_(steer<bool>("debugLHEF")),
             output_config_(steer<std::string>("outputConfig")) {}
 
-      virtual ~Pythia8Hadroniser() {
+      virtual ~Hadroniser() {
         if (!output_config_.empty())
           pythia_->settings.writeFile(output_config_, false);
         if (debug_lhef_)
@@ -53,7 +53,8 @@ namespace cepgen {
 
       void readString(const std::string& param) override {
         if (!pythia_->readString(param))
-          throw CG_FATAL("Pythia8Hadroniser") << "The Pythia8 core failed to parse the following setting:\n\t" << param;
+          throw CG_FATAL("pythia8:Hadroniser")
+              << "The Pythia8 core failed to parse the following setting:\n\t" << param;
       }
       void initialise() override;
       bool run(Event& ev, double& weight, bool fast) override;
@@ -74,8 +75,8 @@ namespace cepgen {
       void updateEvent(Event& ev, double& weight) const;
       Particle& addParticle(Event& ev, const Pythia8::Particle&, const Pythia8::Vec4& mom, unsigned short) const;
 
-      const std::unique_ptr<Pythia8::Pythia> pythia_;       ///< Pythia 8 core to be wrapped
-      const std::shared_ptr<Pythia8::CepGenEvent> cg_evt_;  ///< Event interface between CepGen and Pythia
+      const std::unique_ptr<Pythia8::Pythia> pythia_;          ///< Pythia 8 core to be wrapped
+      const std::shared_ptr<pythia8::EventInterface> cg_evt_;  ///< Event interface between CepGen and Pythia
 
       const bool correct_central_;
       const bool debug_lhef_;
@@ -86,7 +87,7 @@ namespace cepgen {
       bool first_evt_{true};
     };
 
-    void Pythia8Hadroniser::initialise() {
+    void Hadroniser::initialise() {
       cg_evt_->initialise(runParameters());
 #if defined(PYTHIA_VERSION_INTEGER) && PYTHIA_VERSION_INTEGER < 8300
       pythia_->setLHAupPtr(cg_evt_.get());
@@ -134,26 +135,25 @@ namespace cepgen {
         } break;
       }
 #else
-      CG_WARNING("Pythia8Hadroniser") << "Beam remnants framework for this version of Pythia "
-                                      << "(" << utils::format("%.3f", pythia_->settings.parm("Pythia:versionNumber"))
-                                      << ")\n\t"
-                                      << "does not support mixing of unresolved hadron states.\n\t"
-                                      << "The proton remnants output might hence be wrong.\n\t"
-                                      << "Please update the Pythia version or disable this part.";
+      CG_WARNING("pythia8:Hadroniser") << "Beam remnants framework for this version of Pythia " << "("
+                                       << utils::format("%.3f", pythia_->settings.parm("Pythia:versionNumber"))
+                                       << ")\n\t" << "does not support mixing of unresolved hadron states.\n\t"
+                                       << "The proton remnants output might hence be wrong.\n\t"
+                                       << "Please update the Pythia version or disable this part.";
 #endif
       if (correct_central_ && res_decay_)
-        CG_WARNING("Pythia8Hadroniser") << "Central system's kinematics correction enabled while resonances are\n\t"
-                                        << "expected to be decayed. Please check that this is fully intended.";
+        CG_WARNING("pythia8:Hadroniser") << "Central system's kinematics correction enabled while resonances are\n\t"
+                                         << "expected to be decayed. Please check that this is fully intended.";
 
       if (!pythia_->init())
-        throw CG_FATAL("Pythia8Hadroniser") << "Failed to initialise the Pythia8 core!\n\t"
-                                            << "See the message above for more details.";
+        throw CG_FATAL("pythia8:Hadroniser")
+            << "Failed to initialise the Pythia8 core!\n\t" << "See the message above for more details.";
 
       if (debug_lhef_)
         cg_evt_->initLHEF();
     }
 
-    bool Pythia8Hadroniser::run(Event& ev, double& weight, bool fast) {
+    bool Hadroniser::run(Event& ev, double& weight, bool fast) {
       //--- initialise the event weight before running any decay algorithm
       weight = 1.;
 
@@ -176,9 +176,9 @@ namespace cepgen {
       // convert our event into a custom LHA format
       //===========================================================================================
 
-      cg_evt_->feedEvent(
-          ev,
-          fast ? Pythia8::CepGenEvent::Type::centralAndPartons : Pythia8::CepGenEvent::Type::centralAndBeamRemnants);
+      cg_evt_->feedEvent(ev,
+                         fast ? pythia8::EventInterface::Type::centralAndPartons
+                              : pythia8::EventInterface::Type::centralAndBeamRemnants);
       if (debug_lhef_ && !fast)
         cg_evt_->eventLHEF();
 
@@ -205,11 +205,10 @@ namespace cepgen {
           break;
         }
       }
-      CG_DEBUG("Pythia8Hadroniser") << "Pythia8 hadronisation performed successfully.\n\t"
-                                    << "Number of trials: " << num_hadr_trials << "/" << max_trials_ << ".\n\t"
-                                    << "Particles multiplicity: " << ev.particles().size() << " → "
-                                    << pythia_->event.size() << ".\n\t"
-                                    << "  indices offset: " << offset_ << ".";
+      CG_DEBUG("pythia8:Hadroniser") << "Pythia8 hadronisation performed successfully.\n\t"
+                                     << "Number of trials: " << num_hadr_trials << "/" << max_trials_ << ".\n\t"
+                                     << "Particles multiplicity: " << ev.particles().size() << " → "
+                                     << pythia_->event.size() << ".\n\t" << "  indices offset: " << offset_ << ".";
 
       //===========================================================================================
       // update the event content with Pythia's output
@@ -219,10 +218,10 @@ namespace cepgen {
       return true;
     }
 
-    Particle& Pythia8Hadroniser::addParticle(Event& ev,
-                                             const Pythia8::Particle& py_part,
-                                             const Pythia8::Vec4& mom,
-                                             unsigned short role) const {
+    Particle& Hadroniser::addParticle(Event& ev,
+                                      const Pythia8::Particle& py_part,
+                                      const Pythia8::Vec4& mom,
+                                      unsigned short role) const {
       ParticleProperties prop;
       const pdgid_t pdg_id = py_part.idAbs();
       //--- define the particle if not already in the list of handled PDGs
@@ -251,13 +250,13 @@ namespace cepgen {
       return op;
     }
 
-    void Pythia8Hadroniser::updateEvent(Event& ev, double& weight) const {
+    void Hadroniser::updateEvent(Event& ev, double& weight) const {
       std::vector<unsigned short> central_parts;
 
       for (unsigned short i = 1 + offset_; i < pythia_->event.size(); ++i) {
         const Pythia8::Particle& p = pythia_->event[i];
         const unsigned short cg_id = cg_evt_->cepgenId(i - offset_);
-        if (cg_id != Pythia8::CepGenEvent::INVALID_ID) {
+        if (cg_id != pythia8::EventInterface::INVALID_ID) {
           //----- particle already in the event
           Particle& cg_part = ev[cg_id];
           //--- fragmentation result
@@ -274,19 +273,18 @@ namespace cepgen {
           }
           //--- particle is not what we expect
           if (p.idAbs() != abs(cg_part.integerPdgId())) {
-            CG_INFO("Pythia8Hadroniser:update") << "LHAEVT event content:";
+            CG_INFO("pythia8:Hadroniser:update") << "LHAEVT event content:";
             cg_evt_->listEvent();
-            CG_INFO("Pythia8Hadroniser:update") << "Pythia event content:";
+            CG_INFO("pythia8:Hadroniser:update") << "Pythia event content:";
             pythia_->event.list();
-            CG_INFO("Pythia8Hadroniser:update") << "CepGen event content:";
+            CG_INFO("pythia8:Hadroniser:update") << "CepGen event content:";
             ev.dump();
-            CG_INFO("Pythia8Hadroniser:update") << "Correspondence:";
+            CG_INFO("pythia8:Hadroniser:update") << "Correspondence:";
             cg_evt_->dumpCorresp();
 
-            throw CG_FATAL("Pythia8Hadroniser:update")
+            throw CG_FATAL("pythia8:Hadroniser:update")
                 << "Event list corruption detected for (Pythia/CepGen) particle " << i << "/" << cg_id << ":\n\t"
-                << "should be " << abs(p.id()) << ", "
-                << "got " << cg_part.integerPdgId() << "!";
+                << "should be " << abs(p.id()) << ", " << "got " << cg_part.integerPdgId() << "!";
           }
         }
         //--- check for messed up particles parentage and discard incoming beam particles
@@ -318,7 +316,7 @@ namespace cepgen {
             if (moth_id <= offset_)
               continue;
             const unsigned short moth_cg_id = cg_evt_->cepgenId(moth_id - offset_);
-            if (moth_cg_id != Pythia8::CepGenEvent::INVALID_ID)
+            if (moth_cg_id != pythia8::EventInterface::INVALID_ID)
               cg_part.addMother(ev[moth_cg_id]);
             else
               cg_part.addMother(addParticle(ev, pythia_->event[moth_id], p.p(), role));
@@ -333,22 +331,22 @@ namespace cepgen {
       }
     }
 
-    unsigned short Pythia8Hadroniser::findRole(const Event& ev, const Pythia8::Particle& p) const {
+    unsigned short Hadroniser::findRole(const Event& ev, const Pythia8::Particle& p) const {
       for (const auto& par_id : p.motherList()) {
         if (par_id == 1 && offset_ > 0)
           return (unsigned short)Particle::OutgoingBeam1;
         if (par_id == 2 && offset_ > 0)
           return (unsigned short)Particle::OutgoingBeam2;
         const unsigned short par_cg_id = cg_evt_->cepgenId(par_id - offset_);
-        if (par_cg_id != Pythia8::CepGenEvent::INVALID_ID)
+        if (par_cg_id != pythia8::EventInterface::INVALID_ID)
           return (unsigned short)ev(par_cg_id).role();
         return findRole(ev, pythia_->event[par_id]);
       }
       return (unsigned short)Particle::UnknownRole;
     }
 
-    ParametersDescription Pythia8Hadroniser::description() {
-      auto desc = Hadroniser::description();
+    ParametersDescription Hadroniser::description() {
+      auto desc = cepgen::hadr::Hadroniser::description();
       desc.setDescription("Interface to the Pythia 8 string hadronisation/fragmentation algorithm");
       desc.add<bool>("correctCentralSystem", false)
           .setDescription("Correct the kinematics of the central system whenever required");
@@ -357,8 +355,7 @@ namespace cepgen {
           .setDescription("Output filename for a backup of the last Pythia configuration snapshot");
       return desc;
     }
-  }  // namespace hadr
+  }  // namespace pythia8
 }  // namespace cepgen
-// register hadroniser
-using cepgen::hadr::Pythia8Hadroniser;
+using Pythia8Hadroniser = cepgen::pythia8::Hadroniser;
 REGISTER_MODIFIER("pythia8", Pythia8Hadroniser);

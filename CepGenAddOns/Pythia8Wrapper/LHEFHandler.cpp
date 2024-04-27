@@ -26,7 +26,7 @@
 #include "CepGen/Utils/Filesystem.h"
 #include "CepGen/Utils/String.h"
 #include "CepGen/Utils/Value.h"
-#include "CepGenAddOns/Pythia8Wrapper/PythiaEventInterface.h"
+#include "CepGenAddOns/Pythia8Wrapper/EventInterface.h"
 
 namespace cepgen {
   namespace pythia8 {
@@ -38,7 +38,7 @@ namespace cepgen {
       explicit LHEFHandler(const ParametersList& params)
           : EventExporter(params),
             pythia_(new Pythia8::Pythia),
-            lhaevt_(new Pythia8::CepGenEvent),
+            lhaevt_(new pythia8::EventInterface),
             compress_event_(steer<bool>("compress")),
             filename_(steer<std::string>("filename")) {
         if (utils::fileExtension(filename_) == ".gz") {
@@ -98,7 +98,7 @@ namespace cepgen {
 
       inline bool operator<<(const Event& ev) override {
         lhaevt_->feedEvent(compress_event_ ? ev : ev.compress(),
-                           Pythia8::CepGenEvent::Type::centralAndFullBeamRemnants);
+                           pythia8::EventInterface::Type::centralAndFullBeamRemnants);
         pythia_->next();
         lhaevt_->eventLHEF();
         return true;
@@ -109,7 +109,7 @@ namespace cepgen {
 
     private:
       const std::unique_ptr<Pythia8::Pythia> pythia_;
-      const std::shared_ptr<Pythia8::CepGenEvent> lhaevt_;
+      const std::shared_ptr<pythia8::EventInterface> lhaevt_;
       const bool compress_event_;
       std::string filename_;
       bool gzip_{false};
