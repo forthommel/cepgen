@@ -38,8 +38,11 @@ namespace cepgen {
         centralAndFullBeamRemnants  ///< include dissociated beam remnants and central system
       };
       explicit EventInterface();
-      /// Initialise this conversion object with CepGen parameters
-      void initialise(const RunParameters&);
+
+      static void checkPDGid(const Pythia8::Particle&);  ///< Register particle properties if not found
+
+      void initialise(const RunParameters&);  ///< Initialise this conversion object with CepGen parameters
+
       /// Feed a new CepGen event to this conversion object
       /// \param[in] ev CepGen event to be fed
       /// \param[in] type Type of storage
@@ -57,8 +60,7 @@ namespace cepgen {
       /// \param[in] alpha_qcd \f$\alpha_{\rm s}\f$ for this process
       void setProcess(int id, double cross_section, double q2_scale, double alpha_qed, double alpha_qcd);
 
-      /// Feed comments to the LHEF block
-      void addComments(const std::string& comments);
+      void addComments(const std::string& comments);  ///< Feed comments to the LHEF block
 
       /// Retrieve the CepGen particle index given its Pythia8 event id
       /// \param[in] py_id Pythia8 particle id
@@ -77,8 +79,7 @@ namespace cepgen {
       /// \param[in] py_id Pythia8 particle id
       /// \param[in] cg_id CepGen particle id
       void addCorresp(unsigned short py_id, unsigned short cg_id);
-      /// Print all Pythia8 / CepGen Particles correspondences
-      void dumpCorresp() const;
+      void dumpCorresp() const;  ///< Print all Pythia8/CepGen Particles correspondences
 
       static constexpr unsigned short INVALID_ID = 999;        ///< Invalid id association
       static constexpr unsigned short MIN_COLOUR_INDEX = 501;  ///< Minimal colour indexing number
