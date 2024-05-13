@@ -103,9 +103,7 @@ namespace cepgen {
         lhaevt_->eventLHEF();
         return true;
       }
-      inline void setCrossSection(const Value& cross_section) override {
-        lhaevt_->setCrossSection(0, cross_section, cross_section.uncertainty());
-      }
+      inline void setCrossSection(const Value& cross_section) override { lhaevt_->setCrossSection(0, cross_section); }
 
     private:
       const std::unique_ptr<Pythia8::Pythia> pythia_;

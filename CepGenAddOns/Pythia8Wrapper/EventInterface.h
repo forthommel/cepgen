@@ -24,9 +24,10 @@
 #include <unordered_map>
 
 namespace cepgen {
-  class RunParameters;
   class Event;
   class Particle;
+  class RunParameters;
+  class Value;
   namespace pythia8 {
     /// Interfacing between CepGen and Pythia8 event definitions
     class EventInterface : public Pythia8::LHAup {
@@ -46,9 +47,8 @@ namespace cepgen {
 
       /// Set the cross section for a given process
       /// \param[in] id Process identifier
-      /// \param[in] cross_section Process cross section, in pb
-      /// \param[in] cross_section_err Uncertainty on process cross section, in pb
-      void setCrossSection(int id, double cross_section, double cross_section_err);
+      /// \param[in] cross_section Process cross section and uncertainty, in pb
+      void setCrossSection(int id, const Value& cross_section);
       /// Specify new process attributes
       /// \param[in] id Process identifier
       /// \param[in] cross_section Process cross section, in pb
