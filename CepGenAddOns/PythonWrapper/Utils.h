@@ -22,7 +22,7 @@
 namespace cepgen {
   namespace python {
     /// Translate a filename into a python-compatible path
-    std::string pythonPath(const std::string&);
+    std::pair<std::string, std::string> pythonPath(const std::string&);
     std::vector<std::wstring> info();
   }  // namespace python
 }  // namespace cepgen

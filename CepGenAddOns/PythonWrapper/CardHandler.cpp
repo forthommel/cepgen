@@ -57,13 +57,14 @@ namespace cepgen {
           : Handler(params), env_(new Environment(params_)), plist_(params_.operator[]<ParametersList>("parsed")) {}
 
       CardHandler& parseFile(const std::string& file) override {
-        const auto filename = pythonPath(file);
-        env_->setProgramName(filename);
-        auto cfg = ObjectPtr::importModule(filename) /* new */;
-        if (!cfg)
-          throw PY_ERROR << "Failed to import the configuration card '" << filename << "'\n"
+        const auto [python_path, python_mod] = pythonPath(file);
+        env_->setProgramName(python_path);
+        if (auto cfg = ObjectPtr::importModule(python_path) /* new */; cfg)
+          parseParameters(cfg);
+        else
+          throw PY_ERROR << "Failed to import the module '" << python_mod << "' from the configuration card '"
+                         << python_path << "'\n"
                          << " (parsed from '" << file << "').";
-        parseParameters(cfg);
         parse();
         return *this;
       }
@@ -94,6 +95,7 @@ namespace cepgen {
       void parseParameters(const ObjectPtr& cfg) {
         CG_ASSERT(cfg);
         for (const auto& attr : cfg.attribute("__dir__")().vector<std::string>()) {
+          CG_LOG << attr;
           if (attr[0] == '_')
             continue;
           const auto obj = cfg.attribute(attr);

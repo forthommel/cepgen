@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
 
   try {
     auto env = cepgen::python::Environment(cepgen::ParametersList{});
-    const auto path = cepgen::python::pythonPath(output_file);
-    env.setProgramName(path);
-    auto obj = cepgen::python::ObjectPtr::importModule(path);
+    const auto [py_path, py_mod_name] = cepgen::python::pythonPath(output_file);
+    env.setProgramName(py_path);
+    auto obj = cepgen::python::ObjectPtr::importModule(py_path);
     CG_TEST(obj != nullptr, "Module import");
     if (!obj)
       return -1;

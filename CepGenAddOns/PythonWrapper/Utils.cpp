@@ -26,17 +26,16 @@
 
 namespace cepgen {
   namespace python {
-    std::string pythonPath(const std::string& file) {
-      const auto dir = fs::path{file}.remove_filename();
-      if (!dir.empty()) {
+    std::pair<std::string, std::string> pythonPath(const std::string& file) {
+      if (const auto dir = fs::path{file}.remove_filename(); !dir.empty()) {
         CG_DEBUG("Python") << "Adding {" << dir << "} to the default search paths.";
         utils::env::append("PYTHONPATH", dir);
       }
-
-      const auto filename = utils::replaceAll(fs::path{file}.replace_extension("").string() /* remove the extension */,
-                                              {{"../", ".."}, {"/", "."}});
-      CG_DEBUG("Python") << "Python path: " << filename;
-      return filename;
+      const auto python_path = utils::replaceAll(
+          fs::path{file}.replace_extension("").string() /* remove the .py extension */, {{"../", ".."}, {"/", "."}});
+      const auto python_mod_name = fs::path{file}.filename().replace_extension("").string();
+      CG_DEBUG("Python") << "Python path: '" << python_path << "', module name: '" << python_mod_name << "'.";
+      return std::make_pair(python_path, python_mod_name);
     }
 
     std::vector<std::wstring> info() {
