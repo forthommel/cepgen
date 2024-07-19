@@ -1,5 +1,3 @@
-from Config.containers_cfi import Parameters
-
 herwigPartonContent = (
     # PDF info
     'create ThePEG::LHAPDF /Herwig/Partons/LHAPDF ThePEGLHAPDF.so',
@@ -45,6 +43,7 @@ herwigEventHandling = (
     'set /Herwig/EventHandlers/lheHandler:WeightOption UnitWeight',
     #'set /Herwig/EventHandlers/lheHandler:ConsistencyLevel Never', # do not check the event charge/kinematics
     'set /Herwig/EventHandlers/lheHandler:PartonExtractor /Herwig/Partons/PPExtractor',
+    #'set /Herwig/EventHandlers/lheHandler:PartonExtractor /Herwig/Partons/QCDExtractor',
     'set /Herwig/EventHandlers/lheHandler:CascadeHandler /Herwig/Shower/ShowerHandler',
     'set /Herwig/EventHandlers/lheHandler:HadronizationHandler /Herwig/Hadronization/ClusterHadHandler',
     'set /Herwig/EventHandlers/lheHandler:DecayHandler /Herwig/Decays/DecayHandler',
@@ -61,7 +60,7 @@ herwigGenerator = (
 
 herwigPreConfiguration = (
     #'read defaults/HerwigDefaults.in',
-    #'read snippets/PPCollider.in',
+    'read snippets/PPCollider.in',
     #'read snippets/HepMC.in',
     #'set HepMC:PrintEvent 1',
 )

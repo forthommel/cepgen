@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2018-2022  Laurent Forthomme
+ *  Copyright (C) 2018-2024  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
 #include "CepGen/EventFilter/EventModifier.h"
 #include "CepGen/Modules/EventModifierFactory.h"
 #include "CepGen/Physics/Hadroniser.h"
+#include "CepGen/Utils/Filesystem.h"
 
 std::shared_ptr<cepgen::Event> kCepGenEvent;               ///< Last event produced by the generator
 std::shared_ptr<cepgen::RunParameters> kCepGenParameters;  ///< Generator running parameters
@@ -45,8 +46,27 @@ std::shared_ptr<cepgen::RunParameters> kCepGenParameters;  ///< Generator runnin
 /// \note It can be used in a single particle decay mode as well as a full event hadronisation using the cluster model.
 class HerwigHadroniser : public cepgen::hadr::Hadroniser, private Herwig::HerwigUI {
 public:
-  explicit HerwigHadroniser(const cepgen::ParametersList&);
-  virtual ~HerwigHadroniser();
+  explicit HerwigHadroniser(const cepgen::ParametersList& params)
+      : cepgen::hadr::Hadroniser(params),
+        repo_location_(steerPath("herwigPath")),
+        generator_(steer<std::string>("generator")),
+        repository_(fullPath(steer<std::string>("repository"))),
+        in_file_(fullPath("defaults/HerwigDefaults.in")),
+        prep_read_dir_(std::vector<std::string>{repo_location_ / "lib"}) {
+    ThePEG::Repository::exitOnError() = steer<bool>("exitOnError");
+    ThePEG::Repository::load(repository_);
+    //Herwig::API::init( *this );
+    ThePEG::SamplerBase::setIntegratePerJob(1);
+    ThePEG::SamplerBase::setIntegrationJobs(steer<int>("numParallelJobs"));
+    CG_INFO("HerwigHadroniser") << "Initialising the Herwig core.\n"
+                                << ThePEG::Repository::banner() << "Base path:\n  " << repo_location_ << "\n"
+                                << "Repository: " << steer<std::string>("repository");
+  }
+  virtual ~HerwigHadroniser() {
+    if (thepeg_)
+      thepeg_->finalize();
+    ThePEG::Repository::cleanup();
+  }
 
   static cepgen::ParametersDescription description() {
     auto desc = cepgen::hadr::Hadroniser::description();
@@ -62,7 +82,10 @@ public:
 
   /// \name CepGen UI part
   //\{
-  void readString(const std::string&) override;
+  inline void readString(const std::string& param) override {
+    if (const std::string out = ThePEG::Repository::exec(param, std::cerr); !out.empty())
+      throw CG_FATAL("HerwigHadroniser") << "Herwig/ThePEG error:\n" << out;
+  }
   void initialise() override;
   bool run(cepgen::Event&, double&, bool) override;
   inline void setCrossSection(const cepgen::Value&) override {}
@@ -100,53 +123,16 @@ public:
   //\}
 
 private:
+  inline std::string fullPath(const std::string& path) const { return repo_location_ / "share" / "Herwig" / path; }
+
   ThePEG::EGPtr thepeg_{nullptr};
   ThePEG::EventPtr evt_;
   Herwig::RunMode::Mode run_mode_{Herwig::RunMode::READ};
   mutable std::stringstream ss_;
-  unsigned short parallel_jobs_;
-  bool exit_on_error_;
-  const std::string repo_location_, run_;
+  const fs::path repo_location_;
   const std::string generator_, repository_, in_file_, setup_file_;
-  std::vector<std::string> prep_read_dir_, app_read_dir_;
-  bool repo_set_;
-  int seed_;
+  const std::vector<std::string> prep_read_dir_, app_read_dir_;
 };
-
-std::string fullPath(const std::string& repo_location, const std::string& path) {
-  return repo_location + "/share/Herwig/" + path;
-}
-
-HerwigHadroniser::HerwigHadroniser(const cepgen::ParametersList& params)
-    : Hadroniser(params),
-      parallel_jobs_(steer<int>("numParallelJobs")),
-      exit_on_error_(steer<bool>("exitOnError")),
-      repo_location_(steer<std::string>("herwigPath")),
-      run_(steer<std::string>("run")),
-      generator_(steer<std::string>("generator")),
-      repository_(fullPath(repo_location_, steer<std::string>("repository"))),
-      in_file_(fullPath(repo_location_, "defaults/HerwigDefaults.in")),
-      prep_read_dir_(std::vector<std::string>{repo_location_ + "/lib"}) {
-  ThePEG::Repository::exitOnError() = exit_on_error_;
-  ThePEG::Repository::load(repository_);
-  //Herwig::API::init( *this );
-  ThePEG::SamplerBase::setIntegratePerJob(1);
-  ThePEG::SamplerBase::setIntegrationJobs(parallel_jobs_);
-  CG_INFO("HerwigHadroniser") << "Initialising the Herwig core.\n"
-                              << ThePEG::Repository::banner() << "Base path:\n  " << repo_location_ << "\n"
-                              << "Repository: " << steer<std::string>("repository");
-}
-
-HerwigHadroniser::~HerwigHadroniser() {
-  if (thepeg_)
-    thepeg_->finalize();
-  ThePEG::Repository::cleanup();
-}
-
-void HerwigHadroniser::readString(const std::string& param) {
-  if (const std::string out = ThePEG::Repository::exec(param, std::cerr); !out.empty())
-    throw CG_FATAL("HerwigHadroniser") << "Herwig/ThePEG error:\n" << out;
-}
 
 void HerwigHadroniser::initialise() {
   std::cerr.setstate(std::ios_base::badbit);  //FIXME avoid to fill the error stream
@@ -173,7 +159,7 @@ void HerwigHadroniser::initialise() {
       throw CG_FATAL("HerwigHadroniser") << "Event generator could not be initialised!";
     kCepGenParameters.reset(new cepgen::RunParameters(runParameters()));
     ThePEG::SamplerBase::setRunLevel(ThePEG::SamplerBase::RunMode);
-    thepeg_ = ThePEG::Repository::makeRun(tmp, run_);
+    thepeg_ = ThePEG::Repository::makeRun(tmp, steer<std::string>("run"));
     thepeg_->setSeed((long)seed_);
   } catch (const ThePEG::Exception& e) {
     throw CG_FATAL("HerwigHadroniser") << "ThePEG exception caught:\n\t" << e.what();
@@ -187,32 +173,28 @@ void HerwigHadroniser::initialise() {
   CG_INFO("HerwigHadroniser") << "Event generator successfully initialised.";
 
   /*switch (runParameters().kinematics.mode) {
-        case Kinematics::Mode::ElasticElastic:
-          break;
-        case Kinematics::Mode::ElasticInelastic:
-          break;
-        case Kinematics::Mode::InelasticElastic:
-          break;
-        case Kinematics::Mode::InelasticInelastic:
-        default:
-          break;
-      }*/
+    case Kinematics::Mode::ElasticElastic:
+      break;
+    case Kinematics::Mode::ElasticInelastic:
+      break;
+    case Kinematics::Mode::InelasticElastic:
+      break;
+    case Kinematics::Mode::InelasticInelastic:
+    default:
+      break;
+  }*/
 }
 
 bool HerwigHadroniser::run(cepgen::Event& ev, double& weight, bool) {
   weight = 1.;
   kCepGenEvent.reset(new cepgen::Event(ev));
-
-  //kCepGenEvent->dump();
   try {
-    std::cout << "hihi" << std::endl;
     ThePEG::EventPtr evt = thepeg_->shoot();
     ThePEG::tSubProPtr proc = evt->primarySubProcess();
     if (!proc) {
       CG_WARNING("HerwigHadroniser") << "Failed to retrieve the primary subprocess";
       return false;
     }
-    std::cout << "haha" << std::endl;
     proc->printMe(std::cerr);
     for (const auto& ip : proc->collision()->getRemnants())
       std::cout << ip->id() << std::endl;
