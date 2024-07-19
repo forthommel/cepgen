@@ -36,14 +36,11 @@
 #include "CepGen/Event/Event.h"
 #include "CepGen/Modules/EventModifierFactory.h"
 #include "CepGen/Physics/Hadroniser.h"
+#include "CepGen/Utils/Filesystem.h"
 
 namespace cepgen::herwig {
   std::shared_ptr<Event> kCepGenEvent;  ///< Last event produced by the generator
   RunParameters* kCepGenParameters;     ///< Generator running parameters
-
-  static std::string fullPath(const std::string& repo_location, const std::string& path) {
-    return repo_location + "/share/Herwig/" + path;
-  }
 
   /// Interface to the Herwig hadronisation algorithm
   /// \note It can be used in a single particle decay mode as well as a full event hadronisation using the cluster model.
@@ -51,12 +48,12 @@ namespace cepgen::herwig {
   public:
     explicit Hadroniser(const ParametersList& params)
         : cepgen::hadr::Hadroniser(params),
-          repo_location_(steer<std::string>("herwigPath")),
+          repo_location_(steerPath("herwigPath")),
           run_(steer<std::string>("run")),
           generator_(steer<std::string>("generator")),
-          repository_(fullPath(repo_location_, steer<std::string>("repository"))),
-          in_file_(fullPath(repo_location_, "defaults/HerwigDefaults.in")),
-          prep_read_dir_(std::vector<std::string>{repo_location_ + "/lib"}) {
+          repository_(fullPath(steer<std::string>("repository"))),
+          in_file_(fullPath("defaults/HerwigDefaults.in")),
+          prep_read_dir_(std::vector<std::string>{repo_location_ / "lib"}) {
       ThePEG::Repository::exitOnError() = steer<bool>("exitOnError");
       ThePEG::Repository::load(repository_);
       //Herwig::API::init( *this );
@@ -66,7 +63,7 @@ namespace cepgen::herwig {
                                    << ThePEG::Repository::banner() << "Base path:\n  " << repo_location_ << "\n"
                                    << "Repository: " << steer<std::string>("repository");
     }
-    ~Hadroniser() {
+    virtual ~Hadroniser() {
       if (thepeg_)
         thepeg_->finalize();
       ThePEG::Repository::cleanup();
@@ -83,6 +80,7 @@ namespace cepgen::herwig {
       desc.add<std::string>("repository", "HerwigDefaults.rpo").setDescription("location to the repository");
       return desc;
     }
+
     /// \name CepGen UI part
     //\{
     void readString(const std::string& param) override {
@@ -126,15 +124,16 @@ namespace cepgen::herwig {
     //\}
 
   private:
+    inline std::string fullPath(const std::string& path) const { return repo_location_ / "share" / "Herwig" / path; }
+
     ThePEG::EGPtr thepeg_{nullptr};
     ThePEG::EventPtr evt_;
     Herwig::RunMode::Mode run_mode_{Herwig::RunMode::READ};
     mutable std::stringstream ss_;
-    const std::string repo_location_, run_;
+    const fs::path repo_location_;
+    const std::string run_;
     const std::string generator_, repository_, in_file_, setup_file_;
-    std::vector<std::string> prep_read_dir_, app_read_dir_;
-    bool repo_set_;
-    int seed_;
+    const std::vector<std::string> prep_read_dir_, app_read_dir_;
   };
 
   void Hadroniser::initialise() {
@@ -175,17 +174,17 @@ namespace cepgen::herwig {
     }
     CG_INFO("herwig:Hadroniser") << "Event generator successfully initialised.";
 
-    /*switch (rt_params_.kinematics.mode) {
-        case Kinematics::Mode::ElasticElastic:
-          break;
-        case Kinematics::Mode::ElasticInelastic:
-          break;
-        case Kinematics::Mode::InelasticElastic:
-          break;
-        case Kinematics::Mode::InelasticInelastic:
-        default:
-          break;
-      }*/
+    /*switch (runParameters().kinematics.mode) {
+      case Kinematics::Mode::ElasticElastic:
+        break;
+      case Kinematics::Mode::ElasticInelastic:
+        break;
+      case Kinematics::Mode::InelasticElastic:
+        break;
+      case Kinematics::Mode::InelasticInelastic:
+      default:
+        break;
+    }*/
   }
 
   bool Hadroniser::run(Event& ev, double& weight, bool) {
@@ -201,7 +200,6 @@ namespace cepgen::herwig {
         CG_WARNING("herwig:Hadroniser") << "Failed to retrieve the primary subprocess";
         return false;
       }
-      std::cout << "haha" << std::endl;
       proc->printMe(std::cerr);
       for (const auto& ip : proc->collision()->getRemnants())
         std::cout << ip->id() << std::endl;
