@@ -22,23 +22,19 @@
 #include <ThePEG/LesHouches/LesHouchesReader.h>
 
 #include "CepGen/Core/Exception.h"
+#include "CepGen/Core/RunParameters.h"
 #include "CepGen/Event/Event.h"
-#include "CepGen/Parameters.h"
 #include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/PDG.h"
 
-namespace cepgen {
-  namespace hadr {
-    extern std::shared_ptr<cepgen::Event> kCepGenEvent;
-    extern std::shared_ptr<cepgen::Parameters> kCepGenParameters;
-  }  // namespace hadr
-}  // namespace cepgen
+extern std::shared_ptr<cepgen::Event> kCepGenEvent;
+extern std::shared_ptr<cepgen::RunParameters> kCepGenParameters;
 
 namespace ThePEG {
   /// ThePEG/Herwig interface to CepGen run and event structure
   class CepGenInterface : public LesHouchesReader {
   public:
-    CepGenInterface() : init_(false) {}
+    explicit CepGenInterface() : init_(false) {}
     /// Register the module in a ThePEG repository scope
     static void Init();
     /// Set the cross section for the process
@@ -47,12 +43,12 @@ namespace ThePEG {
     void setCrossSection(double xsec, double xsec_err);
 
   protected:
-    /// \brief Make a simple clone of this object
+    /// Make a simple clone of this object
     /// \return a pointer to the new object
-    IBPtr clone() const override { return new_ptr(*this); }
-    /// \brief Make a clone of this object, possibly modifying the cloned object to make it sane
+    inline IBPtr clone() const override { return new_ptr(*this); }
+    /// Make a clone of this object, possibly modifying the cloned object to make it sane
     /// \return a pointer to the new object
-    IBPtr fullclone() const override { return clone(); }
+    inline IBPtr fullclone() const override { return clone(); }
 
   private:
     void open() override;
@@ -63,14 +59,14 @@ namespace ThePEG {
 
     double getEvent() override;
     bool doReadEvent() override;
-    double eventWeight() { return 1.; }
+    inline double eventWeight() { return 1.; }
     double reweight() {
       preweight = 1.;
       return preweight;
     }
 
-    long scan() override { return 1; }
-    std::vector<std::string> optWeightsNamesFunc() override { return {"No weight name defined"}; }
+    inline long scan() override { return 1; }
+    inline std::vector<std::string> optWeightsNamesFunc() override { return {"No weight name defined"}; }
 
     static const double mp_, mp2_;
     bool init_;
@@ -88,7 +84,7 @@ namespace ThePEG {
   }
 
   void CepGenInterface::open() {
-    auto params = cepgen::hadr::kCepGenParameters;
+    auto params = kCepGenParameters;
     if (!params) {
       CG_ERROR("CepGenInterface") << "Parameters block is not set.";
       throw Stop();
@@ -96,7 +92,7 @@ namespace ThePEG {
     //--- beam particles information
     const auto& pos_beam = params->kinematics().incomingBeams().positive();
     const auto& neg_beam = params->kinematics().incomingBeams().negative();
-    heprup.IDBMUP = std::pair<long, long>{(long)pos_beam.pdgId(), (long)neg_beam.pdgId()};
+    heprup.IDBMUP = std::pair<long, long>{(long)pos_beam.integerPdgId(), (long)neg_beam.integerPdgId()};
     heprup.EBMUP = std::pair<double, double>{pos_beam.momentum().pz(), neg_beam.momentum().pz()};
     //heprup.PDFGUP = std::pair<int,int>{ 0, 0 }; //FIXME
     //--- subprocesses considered
@@ -115,14 +111,14 @@ namespace ThePEG {
     reset();
 
     //--- interfacing magic is done here...
-    auto evt = cepgen::hadr::kCepGenEvent;
+    auto evt = kCepGenEvent;
     if (!evt)
       throw Stop();
 
     hepeup.XPDWUP = {-1, -1};
     hepeup.IDPRUP = 0;
     hepeup.XWGTUP = 1.;
-    hepeup.SCALUP = (*evt)[cepgen::Particle::Intermediate][0].mass();
+    hepeup.SCALUP = (*evt)[cepgen::Particle::Intermediate][0].get().momentum().mass();
     hepeup.AQEDUP = cepgen::constants::ALPHA_EM;
     hepeup.AQCDUP = cepgen::constants::ALPHA_QCD;
 
@@ -139,9 +135,9 @@ namespace ThePEG {
     //--------------------------------------------------------------------------
 
     for (auto p : part1)
-      fillParticle(i, p.setMass().setStatus(4)), parton1_ids.emplace_back(i++);
+      fillParticle(i, p.get().setStatus(4)), parton1_ids.emplace_back(i++);
     for (auto p : part2)
-      fillParticle(i, p.setMass().setStatus(4)), parton2_ids.emplace_back(i++);
+      fillParticle(i, p.get().setStatus(4)), parton2_ids.emplace_back(i++);
 
     //--------------------------------------------------------------------------
     // add the final state system
@@ -167,8 +163,8 @@ namespace ThePEG {
     hepeup.IDUP[id] = part.integerPdgId();
     hepeup.ISTUP[id] = (int)part.status();
     hepeup.ICOLUP[id] = std::pair<int, int>{0, 0};  //FIXME
-    hepeup.PUP[id] = std::array<double, 5>{
-        part.momentum().px(), part.momentum().py(), part.momentum().pz(), part.energy(), part.mass()};
+    const auto& mom = part.momentum();
+    hepeup.PUP[id] = std::array<double, 5>{mom.px(), mom.py(), mom.pz(), mom.energy(), mom.mass()};
     hepeup.VTIMUP[id] = -1.;
     hepeup.SPINUP[id] = 9;
   }
