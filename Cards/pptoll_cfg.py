@@ -2,7 +2,7 @@ import Config.Core as cepgen
 import Config.ktProcess_cfi as kt
 #from Config.Hadronisation.pythia6_cfi import pythia6 as hadroniser
 #from Config.Hadronisation.pythia8_cfi import pythia8 as hadroniser
-#from Config.Hadronisation.herwig7_cfi import herwig7 as hadroniser
+#from Config.Hadronisation.herwig_cfi import herwig as hadroniser
 from Config.PDG_cfi import PDG
 from Config.generator_cfi import generator
 

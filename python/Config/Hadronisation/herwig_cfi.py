@@ -1,5 +1,5 @@
 from EventModifiers.herwig_cfi import herwig as _herwig
-from Config.Hadronisation.herwigDefaults_cfi import herwigPreConfiguration
+from Config.Hadronisation.herwigDefaults_cff import herwigPreConfiguration
 
 from os import environ
 try: hwpath = environ['HERWIG7_DIR']
