@@ -110,9 +110,9 @@ namespace cepgen::herwig {
     inline long N() const { return 1l; }
     inline int seed() const { return seed_; }
     inline int jobs() const { return 1; }
-    unsigned int jobSize() const { return 1; }
-    unsigned int maxJobs() const { return 1; }
-    void quitWithHelp() const override {
+    inline unsigned int jobSize() const { return 1; }
+    inline unsigned int maxJobs() const { return 1; }
+    inline void quitWithHelp() const override {
       CG_ERROR("herwig:Hadroniser") << "An error occured...";
       quit();
     }
@@ -120,10 +120,9 @@ namespace cepgen::herwig {
       ThePEG::Repository::cleanup();
       CG_INFO("herwig:Hadroniser") << "Cleanup of the hadroniser";
     }
-
-    std::ostream& outStream() const override { return *utils::Logger::get().output(); }
-    std::ostream& errStream() const override { return std::cerr; }
-    std::istream& inStream() const override { return ss_; }
+    inline std::ostream& outStream() const override { return *utils::Logger::get().output(); }
+    inline std::ostream& errStream() const override { return std::cerr; }
+    inline std::istream& inStream() const override { return ss_; }
     //\}
 
   private:

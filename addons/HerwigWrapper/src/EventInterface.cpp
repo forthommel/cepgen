@@ -36,7 +36,7 @@ namespace ThePEG {
   /// ThePEG/Herwig interface to CepGen run and event structure
   class CepGenInterface : public LesHouchesReader {
   public:
-    CepGenInterface() : init_(false) {}
+    explicit CepGenInterface() : init_(false) {}
     /// Register the module in a ThePEG repository scope
     static void Init();
     /// Set the cross section for the process
@@ -45,12 +45,12 @@ namespace ThePEG {
     void setCrossSection(double xsec, double xsec_err);
 
   protected:
-    /// \brief Make a simple clone of this object
+    /// Make a simple clone of this object
     /// \return a pointer to the new object
-    IBPtr clone() const override { return new_ptr(*this); }
-    /// \brief Make a clone of this object, possibly modifying the cloned object to make it sane
+    inline IBPtr clone() const override { return new_ptr(*this); }
+    /// Make a clone of this object, possibly modifying the cloned object to make it sane
     /// \return a pointer to the new object
-    IBPtr fullclone() const override { return clone(); }
+    inline IBPtr fullclone() const override { return clone(); }
 
   private:
     void open() override;
@@ -61,14 +61,14 @@ namespace ThePEG {
 
     double getEvent() override;
     bool doReadEvent() override;
-    double eventWeight() { return 1.; }
+    inline double eventWeight() { return 1.; }
     double reweight() {
       preweight = 1.;
       return preweight;
     }
 
-    long scan() override { return 1; }
-    std::vector<std::string> optWeightsNamesFunc() override { return {"No weight name defined"}; }
+    inline long scan() override { return 1; }
+    inline std::vector<std::string> optWeightsNamesFunc() override { return {"No weight name defined"}; }
 
     static const double mp_, mp2_;
     bool init_;
@@ -162,11 +162,8 @@ namespace ThePEG {
     hepeup.IDUP[id] = part.integerPdgId();
     hepeup.ISTUP[id] = (int)part.status();
     hepeup.ICOLUP[id] = std::pair<int, int>{0, 0};  //FIXME
-    hepeup.PUP[id] = std::array<double, 5>{part.momentum().px(),
-                                           part.momentum().py(),
-                                           part.momentum().pz(),
-                                           part.momentum().energy(),
-                                           part.momentum().mass()};
+    const auto& mom = part.momentum();
+    hepeup.PUP[id] = std::array<double, 5>{mom.px(), mom.py(), mom.pz(), mom.energy(), mom.mass()};
     hepeup.VTIMUP[id] = -1.;
     hepeup.SPINUP[id] = 9;
   }
