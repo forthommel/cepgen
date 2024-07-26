@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2018-2022  Laurent Forthomme
+ *  Copyright (C) 2018-2024  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "CepGen/Event/Event.h"
 #include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/PDG.h"
+#include "CepGen/Utils/Value.h"
 
 extern std::shared_ptr<cepgen::Event> kCepGenEvent;
 extern std::shared_ptr<cepgen::RunParameters> kCepGenParameters;
@@ -34,13 +35,12 @@ namespace ThePEG {
   /// ThePEG/Herwig interface to CepGen run and event structure
   class CepGenInterface : public LesHouchesReader {
   public:
-    explicit CepGenInterface() : init_(false) {}
+    explicit CepGenInterface() {}
     /// Register the module in a ThePEG repository scope
     static void Init();
     /// Set the cross section for the process
-    /// \param[in] xsec Process cross section, in pb
-    /// \param[in] xsec_err Uncertainty on process cross section, in pb
-    void setCrossSection(double xsec, double xsec_err);
+    /// \param[in] xsec Process cross section and uncertainty, in pb
+    inline void setCrossSection(const cepgen::Value& xsec) { xsec_ = xsec; }
 
   protected:
     /// Make a simple clone of this object
@@ -69,19 +69,14 @@ namespace ThePEG {
     inline std::vector<std::string> optWeightsNamesFunc() override { return {"No weight name defined"}; }
 
     static const double mp_, mp2_;
-    bool init_;
-    double xsec_, xsec_err_;
+    bool init_{false};
+    cepgen::Value xsec_;
     long printEvery_;
     static ClassDescription<CepGenInterface> initCepGenInterface;
   };
 
   const double CepGenInterface::mp_ = cepgen::PDG::get().mass(cepgen::PDG::proton);
   const double CepGenInterface::mp2_ = CepGenInterface::mp_ * CepGenInterface::mp_;
-
-  void CepGenInterface::setCrossSection(double xsec, double xsec_err) {
-    xsec_ = xsec;
-    xsec_err_ = xsec_err;
-  }
 
   void CepGenInterface::open() {
     auto params = kCepGenParameters;
@@ -96,11 +91,11 @@ namespace ThePEG {
     heprup.EBMUP = std::pair<double, double>{pos_beam.momentum().pz(), neg_beam.momentum().pz()};
     //heprup.PDFGUP = std::pair<int,int>{ 0, 0 }; //FIXME
     //--- subprocesses considered
-    heprup.NPRUP = 1;             // number of subprocesses
-    heprup.LPRUP = {0};           // subprocess code
-    heprup.XSECUP = {xsec_};      // subprocess cross section
-    heprup.XERRUP = {xsec_err_};  // subprocess cross section error
-    heprup.XMAXUP = {1000.};      // maximum event weight
+    heprup.NPRUP = 1;                       // number of subprocesses
+    heprup.LPRUP = {0};                     // subprocess code
+    heprup.XSECUP = {(double)xsec_};        // subprocess cross section
+    heprup.XERRUP = {xsec_.uncertainty()};  // subprocess cross section error
+    heprup.XMAXUP = {1000.};                // maximum event weight
     //--- how the generator envisages the events weights should be interpreted
     heprup.IDWTUP = 3;
 
