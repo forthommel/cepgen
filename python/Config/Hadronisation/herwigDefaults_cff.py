@@ -60,7 +60,7 @@ herwigGenerator = (
 
 herwigPreConfiguration = (
     #'read defaults/HerwigDefaults.in',
-    'read snippets/PPCollider.in',
+    #'read snippets/PPCollider.in',
     #'read snippets/HepMC.in',
     #'set HepMC:PrintEvent 1',
 )
