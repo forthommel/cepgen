@@ -40,11 +40,13 @@ file(GLOB sources HerwigHadroniser.cpp HerwigEventInterface.cpp)
 
 #----- build the object
 
+enable_testing()
 cepgen_build(CepGenHerwig SOURCES ${sources}
     EXT_LIBS ${Boost_LIBRARIES} ${THEPEG} ${THEPEG_LHE} ${HERWIG} ${HERWIG_API}
     EXT_HEADERS ${THEPEG_INCLUDE} ${HERWIG_INCLUDE} ${HEPMC_INCLUDE}
     PROPERTY CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-misleading-indentation"
     INSTALL_COMPONENT herwig)
+add_test(NAME herwig_kt_hadr COMMAND ${CMAKE_BINARY_DIR}/test/generator/ktfactor_proc_hadronisation -H herwig)
 
 #----- extra installation rules
 
