@@ -34,6 +34,7 @@ if(NOT Boost_FOUND)
   return()
 endif()
 
+enable_testing()
 
 #----- build the object
 cepgen_build(CepGenHerwig SOURCES src/*.cpp
@@ -41,6 +42,7 @@ cepgen_build(CepGenHerwig SOURCES src/*.cpp
     EXT_HEADERS ${CMAKE_CURRENT_SOURCE_DIR} ${THEPEG_INCLUDE} ${HERWIG_INCLUDE} ${HEPMC_INCLUDE}
     PROPERTY CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-misleading-indentation"
     INSTALL_COMPONENT herwig)
+add_test(NAME herwig_kt_hadr COMMAND ${CMAKE_BINARY_DIR}/test/generator/ktfactor_proc_hadronisation -H herwig)
 
 #----- extra installation rules
 install(DIRECTORY DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT herwig FILES_MATCHING PATTERN "*.h")
