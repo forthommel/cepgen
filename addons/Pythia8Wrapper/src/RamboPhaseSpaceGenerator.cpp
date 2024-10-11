@@ -21,30 +21,25 @@
 #include <vector>
 
 #include "CepGen/Core/Exception.h"
+#include "CepGen/Modules/PartonsPhaseSpaceGeneratorFactory.h"
 #include "CepGen/Modules/PhaseSpaceGeneratorFactory.h"
 #include "CepGen/Physics/PDG.h"
 #include "CepGen/Process/FactorisedProcess.h"
-#include "CepGen/Process/PartonsCollinearPhaseSpaceGenerator.h"
-#include "CepGen/Process/PartonsKTPhaseSpaceGenerator.h"
+#include "CepGen/Process/PartonsPhaseSpaceGenerator.h"
 #include "CepGen/Utils/Math.h"
 
 using namespace cepgen;
 
-template <typename T>
 class RamboPhaseSpaceGenerator : public cepgen::PhaseSpaceGenerator {
 public:
   explicit RamboPhaseSpaceGenerator(const ParametersList& params)
       : PhaseSpaceGenerator(params),
-        part_psgen_(new T(params)),
+        part_psgen_(PartonsPhaseSpaceGeneratorFactory::get().build(steer<std::string>("partonsGenerator"), params_)),
         random_engine_(new Pythia8RandomWrapper(coords_)),
         random_(steer<unsigned long long>("seed")),
         rambo_(&random_),
         central_(steer<std::vector<int> >("ids")) {
     random_.rndmEnginePtr(random_engine_);
-    //for (const auto& id : partons_)
-    //  masses_.emplace_back(PDG::get().mass(id));
-    for (const auto& id : central_)
-      masses_.emplace_back(PDG::get().mass(id));
   }
 
   static ParametersDescription description() {
@@ -67,6 +62,10 @@ public:
     CG_ASSERT(part_psgen_);
     part_psgen_->initialise(process);
     proc_ = process;
+    //for (const auto& id : partons())
+    //  masses_.emplace_back(PDG::get().mass(id));
+    for (const auto& id : central_)
+      masses_.emplace_back(PDG::get().mass(id));
     const auto ndim = masses_.size() * 4;
     coords_.resize(ndim);
     for (size_t i = 0; i < ndim; ++i)
@@ -145,7 +144,4 @@ private:
   std::vector<Pythia8::Vec4> vecs_;
   double central_weight_{0.};
 };
-typedef RamboPhaseSpaceGenerator<cepgen::PartonsKTPhaseSpaceGenerator> KTRambo;
-typedef RamboPhaseSpaceGenerator<cepgen::PartonsCollinearPhaseSpaceGenerator> CollRambo;
-REGISTER_PSGEN("ktrambo", KTRambo);
-REGISTER_PSGEN("collrambo", CollRambo);
+REGISTER_PHASE_SPACE_GENERATOR("rambo", RamboPhaseSpaceGenerator);
