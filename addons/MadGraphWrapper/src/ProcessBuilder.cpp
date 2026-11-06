@@ -120,10 +120,10 @@ namespace cepgen::mg5amc {
       if (off_shell_polarisation_)
         for (size_t i = 0; i < 2; ++i) {  // incoming partons polarisation along their (transverse) momentum
           const auto& qi = i == 0 ? q1() : q2();
-          if (const auto qt = std::hypot(qi.px(), qi.py()); qt > 0.)
-            mg5_proc_->setPolarisation(i, {0., qi.px() / qt, qi.py() / qt, 0.});
-          else
+          const auto qt = std::hypot(qi.px(), qi.py());
+          if (qt <= 0.)
             return 0.;  // flux vanishes for a vanishing transverse momentum
+          mg5_proc_->setPolarisation(i, {0., qi.px() / qt, qi.py() / qt, 0.});
         }
       if (const auto weight = mg5_proc_->eval(); utils::positive(weight))
         return weight * std::pow(shat(), -2);
