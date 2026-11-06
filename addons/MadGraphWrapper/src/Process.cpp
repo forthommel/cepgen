@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2025  Laurent Forthomme
+ *  Copyright (C) 2020-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,6 +40,11 @@ Process& Process::setMomentum(size_t i, const Momentum& mom) {
   mom_[i][2] = mom.py();
   mom_[i][3] = mom.pz();
   return *this;
+}
+
+void Process::setPolarisation(size_t, const std::array<double, 4>&) {
+  throw CG_FATAL("mg5amc:Process") << "This process implementation does not support incoming legs polarisation "
+                                      "overrides. Was the process library generated with an older version of CepGen?";
 }
 
 cepgen::ParametersDescription Process::description() {

@@ -22,6 +22,8 @@
 
 #include <array>
 #include <fstream>
+#include <regex>
+#include <sstream>
 
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Physics/PDG.h"
@@ -180,5 +182,44 @@ namespace cepgen::mg5amc {
     return (!physics_model.empty() ? physics_model + "__" : "") +
            utils::replaceAll(process_name,
                              {{" ", "_"}, {">", "_to_"}, {"+", "p"}, {"-", "m"}, {"~", "bar"}, {"/", "_exc_"}});
+  }
+
+  size_t patchHelAmps(const fs::path& src_dir) {
+    static const std::string marker = "CepGenMadGraph off-shell hook";
+    // vxxxxx(p, vmass, nhel, nsv, vc): capture the names of the momentum, incoming/outgoing flag and wavefunction
+    static const std::regex vxxxxx_definition(
+        R"(void\s+vxxxxx\s*\(\s*(?:const\s+)?double\s*\*?\s*(\w+)\s*(?:\[[^\]]*\])?\s*,\s*(?:const\s+)?double\s+\w+\s*,\s*int\s+\w+\s*,\s*int\s+(\w+)\s*,\s*(?:std::)?complex<double>\s*\*?\s*(\w+)\s*(?:\[[^\]]*\])?\s*\)\s*\{)");
+    size_t num_patched = 0, num_found = 0;
+    for (const auto& entry : fs::directory_iterator(src_dir)) {
+      const auto filename = entry.path().filename().string();
+      if (entry.path().extension() != ".cc" || filename.rfind("HelAmps", 0) != 0)
+        continue;
+      std::ifstream in(entry.path());
+      std::stringstream buffer;
+      buffer << in.rdbuf();
+      in.close();
+      auto content = buffer.str();
+      if (content.find(marker) != std::string::npos) {  // already patched
+        ++num_found;
+        continue;
+      }
+      std::smatch match;
+      if (!std::regex_search(content, match, vxxxxx_definition))
+        continue;  // no external vector wavefunction defined in this file
+      ++num_found;
+      const auto hook = "\n  if (cepgen::mg5amc::offshell::fill(" + match.str(1) + ", " + match.str(2) + ", " +
+                        match.str(3) + "))\n    return;  // " + marker;
+      content.insert(match.position(0) + match.length(0), hook);
+      content = "#include \"CepGenMadGraph/OffShell.h\"  // " + marker + "\n" + content;
+      std::ofstream out(entry.path(), std::ios::trunc);
+      out << content;
+      ++num_patched;
+      CG_DEBUG("mg5amc:patchHelAmps") << "Inserted the off-shell legs hook in " << entry.path() << ".";
+    }
+    if (num_found == 0)
+      throw CG_FATAL("mg5amc:patchHelAmps")
+          << "Failed to find the definition of the vxxxxx external wavefunction routine in any HelAmps_*.cc file of "
+          << src_dir << ". This mg5_aMC version produces a layout that is not (yet) handled.";
+    return num_patched;
   }
 }  // namespace cepgen::mg5amc

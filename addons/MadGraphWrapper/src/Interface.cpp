@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2025  Laurent Forthomme
+ *  Copyright (C) 2020-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,7 +57,8 @@ Interface::Interface(const ParametersList& params)
       log_filename_(steer<std::string>("logFile")),
       standalone_cpp_path_(steerAs<std::string, fs::path>("standaloneCppPath")),
       extra_particles_(steer<ParametersList>("extraParticles")),
-      model_parameters_(steer<ParametersList>("modelParameters")) {
+      model_parameters_(steer<ParametersList>("modelParameters")),
+      patch_helamps_(steer<bool>("patchHelAmps")) {
   if (proc_.empty() && standalone_cpp_path_.empty())
     throw CG_FATAL("mg5amc:Interface") << "Neither a 'process' keyword nor a path to a MadGraph process interface "
                                           "already generated ('standaloneCppPath') was set to the parameters!\n"
@@ -134,6 +135,11 @@ std::string Interface::run() const {
   fs::path lib_path = "libCepGenMadGraphProcess.so";
 #endif
 
+  if (patch_helamps_) {
+    const auto num_files_patched = patchHelAmps(cpp_path / "src");
+    CG_DEBUG("mg5amc:Interface:run") << "Inserted the off-shell legs hook in "
+                                     << utils::s("HELAS source file", num_files_patched, true) << ".";
+  }
   generateLibrary(cg_proc, cpp_path, lib_path);
   linkCards();
   return lib_path;
@@ -314,5 +320,9 @@ ParametersDescription Interface::description() {
       .setDescription("define internal MadGraph alias for a particle name");
   desc.add("modelParameters", ParametersDescription{})
       .setDescription("list of model parameters for the process generation");
+  desc.add("patchHelAmps", false)
+      .setDescription(
+          "insert the hook allowing to override incoming legs polarisations in the generated HELAS sources "
+          "(required for the 'offShellPolarisation' option of the process)");
   return desc;
 }

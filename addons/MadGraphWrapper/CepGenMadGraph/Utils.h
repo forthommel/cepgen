@@ -20,6 +20,7 @@
 #define CepGenMadGraph_Utils_h
 
 #include "CepGen/Physics/ParticleProperties.h"
+#include "CepGen/Utils/Filesystem.h"
 
 namespace cepgen::mg5amc {
   using ProcessParticles = std::pair<std::vector<std::string>, std::vector<std::string> >;
@@ -41,6 +42,12 @@ namespace cepgen::mg5amc {
   /// Normalise a process name to make it computer-readable
   /// \param[in] physics_model mg5_aMC model to use
   std::string normalise(const std::string& process_name, const std::string& physics_model = "");
+  /// Insert the off-shell incoming legs hook (see CepGenMadGraph/OffShell.h) in the HELAS external vector
+  /// wavefunction of all HelAmps_*.cc files of a mg5_aMC standalone_cpp output
+  /// \note idempotent: already patched files are left untouched
+  /// \param[in] src_dir "src" sub-directory of the mg5_aMC standalone_cpp output
+  /// \return number of files modified
+  size_t patchHelAmps(const fs::path& src_dir);
 }  // namespace cepgen::mg5amc
 
 #endif

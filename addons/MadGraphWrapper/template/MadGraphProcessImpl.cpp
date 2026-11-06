@@ -18,6 +18,7 @@
 
 //=============================================================================
 // NOLI SE TANGERE
+#include <array>
 #include <iostream>
 
 #include "CPPProcess.h"
@@ -25,6 +26,7 @@
 #include "CepGen/Physics/Momentum.h"
 #include "CepGen/Utils/Caller.h"
 #include "CepGen/Utils/Math.h"
+#include "CepGenMadGraph/OffShell.h"
 #include "CepGenMadGraph/Process.h"
 #include "CepGenMadGraph/ProcessFactory.h"
 
@@ -68,8 +70,21 @@ public:
     momenta_.resize(proc_->nexternal);
   }
 
+  void setPolarisation(size_t leg, const std::array<double, 4>& eps) override {
+    if (leg >= eps_.size())
+      throw CG_FATAL("MadGraphProcessImpl:setPolarisation") << "Invalid incoming leg index: " << leg << "!";
+    eps_.at(leg) = eps;
+  }
+
   double eval() override {
     proc_->setMomenta(mom_);
+    // incoming legs polarisation overrides (picked up by the hook inserted in the HELAS external wavefunctions)
+    struct OverridesReset {  // ensure the stock wavefunctions are restored, even if the evaluation fails
+      ~OverridesReset() { mg5amc::offshell::reset(); }
+    } overrides_reset;
+    for (size_t i = 0; i < eps_.size(); ++i)
+      if (eps_.at(i))
+        mg5amc::offshell::set(i, mom_.at(i), *eps_.at(i));
     proc_->sigmaKin();
     const double* me = proc_->getMatrixElements();
     if (!utils::positive(me[0]))
@@ -99,6 +114,7 @@ public:
 private:
   const std::unique_ptr<CPPProcess> proc_;
   std::vector<Momentum> momenta_;
+  std::array<std::optional<std::array<double, 4> >, 2> eps_;  ///< incoming legs polarisation overrides
 };
 REGISTER_MG5AMC_PROCESS("XXX_PROC_NAME_XXX", MadGraphProcessImpl);
 //=============================================================================

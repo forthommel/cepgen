@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2025  Laurent Forthomme
+ *  Copyright (C) 2020-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -54,6 +54,7 @@ namespace cepgen::mg5amc {
     const fs::path log_filename_;
     const fs::path standalone_cpp_path_;
     const ParametersList extra_particles_, model_parameters_;
+    const bool patch_helamps_;
 
     std::string extra_part_definitions_;
   };

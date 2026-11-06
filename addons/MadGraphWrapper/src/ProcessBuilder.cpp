@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2025  Laurent Forthomme
+ *  Copyright (C) 2020-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cmath>
 #include <fstream>
 
 #include "CepGen/Core/Exception.h"
@@ -38,7 +39,8 @@ using namespace std::string_literals;
 namespace cepgen::mg5amc {
   class ProcessBuilder final : public proc::FactorisedProcess {
   public:
-    explicit ProcessBuilder(const ParametersList& params, bool load_library = true) : FactorisedProcess(params) {
+    explicit ProcessBuilder(const ParametersList& params, bool load_library = true)
+        : FactorisedProcess(params), off_shell_polarisation_(steer<bool>("offShellPolarisation")) {
       if (load_library)
         loadMG5Library();
       CG_DEBUG("mg5amc:ProcessBuilder") << "List of MadGraph process registered in the runtime database: "
@@ -68,6 +70,10 @@ namespace cepgen::mg5amc {
       desc.setDescription("MadGraph_aMC process builder");
       desc.add("lib", ""s).setDescription("Precompiled library for this process definition");
       desc.add("parametersCard", "param_card.dat"s).setDescription("Runtime MadGraph parameters card");
+      desc.add("offShellPolarisation", false)
+          .setDescription(
+              "Use the kT-factorisation polarisation of the incoming partons (eps = kT/|kT|, no helicity sum) "
+              "instead of the on-shell helicity states. To be set for kT-factorised parton fluxes.");
       desc += Interface::description();
       return desc;
     }
@@ -111,6 +117,14 @@ namespace cepgen::mg5amc {
       mg5_proc_->setMomentum(1, q2());   // second incoming parton
       mg5_proc_->setMomentum(2, pc(0));  // first outgoing central particle
       mg5_proc_->setMomentum(3, pc(1));  // second outgoing central particle
+      if (off_shell_polarisation_)
+        for (size_t i = 0; i < 2; ++i) {  // incoming partons polarisation along their (transverse) momentum
+          const auto& qi = i == 0 ? q1() : q2();
+          if (const auto qt = std::hypot(qi.px(), qi.py()); qt > 0.)
+            mg5_proc_->setPolarisation(i, {0., qi.px() / qt, qi.py() / qt, 0.});
+          else
+            return 0.;  // flux vanishes for a vanishing transverse momentum
+        }
       if (const auto weight = mg5_proc_->eval(); utils::positive(weight))
         return weight * std::pow(shat(), -2);
       return 0.;
@@ -131,6 +145,7 @@ namespace cepgen::mg5amc {
       }
     }
 
+    const bool off_shell_polarisation_;  ///< use the kT-factorisation polarisation for the incoming partons?
     std::unique_ptr<mg5amc::Process> mg5_proc_;
   };
 }  // namespace cepgen::mg5amc

@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2020-2025  Laurent Forthomme
+ *  Copyright (C) 2020-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #ifndef CepGenMadGraph_Process_h
 #define CepGenMadGraph_Process_h
+
+#include <array>
 
 #include "CepGen/Modules/NamedModule.h"
 #include "CepGen/Physics/ParticleProperties.h"
@@ -43,6 +45,12 @@ namespace cepgen::mg5amc {
     virtual const std::vector<Momentum>& momenta() = 0;
 
     Process& setMomentum(size_t i, const Momentum& mom);
+    /// Replace the wavefunction of an incoming leg by an explicit (real) polarisation four-vector
+    /// \param[in] leg incoming leg index (0 or 1)
+    /// \param[in] eps polarisation four-vector (E, x, y, z components), used instead of the helicity states
+    /// \note to be applied after \a setMomentum, until the next call to \a eval ; a process generated without the
+    ///       off-shell legs hook (see CepGenMadGraph/OffShell.h) does not support it
+    virtual void setPolarisation(size_t leg, const std::array<double, 4>& eps);
 
   protected:
     const spdgids_t incoming_pdgids_;  ///< incoming partons content
