@@ -320,7 +320,7 @@ ParametersDescription Interface::description() {
       .setDescription("define internal MadGraph alias for a particle name");
   desc.add("modelParameters", ParametersDescription{})
       .setDescription("list of model parameters for the process generation");
-  desc.add("patchHelAmps", false)
+  desc.add("patchHelAmps", true)
       .setDescription(
           "insert the hook allowing to override incoming legs polarisations in the generated HELAS sources "
           "(required for the 'offShellPolarisation' option of the process)");
