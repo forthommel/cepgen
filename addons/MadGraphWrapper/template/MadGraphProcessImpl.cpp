@@ -20,6 +20,7 @@
 // NOLI SE TANGERE
 #include <array>
 #include <iostream>
+#include <optional>
 
 #include "CPPProcess.h"
 #include "CepGen/Core/Exception.h"
@@ -86,6 +87,7 @@ public:
       if (eps_.at(i))
         mg5amc::offshell::set(i, mom_.at(i), *eps_.at(i));
     proc_->sigmaKin();
+    checkPolarisationOverrides();
     const double* me = proc_->getMatrixElements();
     if (!utils::positive(me[0]))
       return 0.;
@@ -112,9 +114,22 @@ public:
   }
 
 private:
+  /// Ensure the overrides were applied, instead of silently falling back on the stock on-shell wavefunctions
+  void checkPolarisationOverrides() {
+    if (checked_)
+      return;
+    for (size_t i = 0; i < eps_.size(); ++i)
+      if (eps_.at(i) && mg5amc::offshell::hits(i) == 0)
+        throw CG_FATAL("MadGraphProcessImpl:eval")
+            << "The polarisation of incoming leg " << i << " was not overridden: this process library does not "
+            << "include the off-shell legs hook in its HelAmps source. Regenerate it (without the 'lib' parameter).";
+    checked_ = true;
+  }
+
   const std::unique_ptr<CPPProcess> proc_;
   std::vector<Momentum> momenta_;
   std::array<std::optional<std::array<double, 4> >, 2> eps_;  ///< incoming legs polarisation overrides
+  bool checked_{false};
 };
 REGISTER_MG5AMC_PROCESS("XXX_PROC_NAME_XXX", MadGraphProcessImpl);
 //=============================================================================
