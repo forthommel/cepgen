@@ -23,7 +23,7 @@
 
 namespace cepgen::formfac {
   /// \cite Kelly:2004hm
-  class Kelly final : public Parameterisation {
+  class Kelly : public Parameterisation {
   public:
     explicit Kelly(const ParametersList& params)
         : Parameterisation(params),
@@ -42,7 +42,7 @@ namespace cepgen::formfac {
       return desc;
     }
 
-  private:
+  protected:
     static double computeFF(double tau, const std::vector<double>& as, const std::vector<double>& bs) {
       double num{0.}, den{1.};
       for (size_t i = 0; i < as.size(); ++i)
@@ -51,13 +51,53 @@ namespace cepgen::formfac {
         den += bs.at(i) * std::pow(tau, i + 1);
       return num / den;
     }
+
+  private:
     void eval() override {
       const auto tau_value = tau(q2_);
       setGEGM(computeFF(tau_value, ae_, be_), MU * computeFF(tau_value, am_, bm_));
     }
 
-    const std::vector<double> ae_, be_, am_, bm_;
+    const std::vector<double> ae_, be_;
+
+  protected:
+    const std::vector<double> am_, bm_;
+  };
+
+  // Alberico et al. fits
+  struct Alberico1 final : Kelly {
+    using Kelly::Kelly;
+    static ParametersDescription description() {
+      auto desc = Kelly::description();
+      desc.setDescription("Alberico (fit #1)");
+      desc.add("aE", std::vector<double>{});
+      desc.add("bE", std::vector<double>{});
+      desc.add("aM", std::vector{1., 1.53});
+      desc.add("bM", std::vector{12.87, 29.16, 41.4});
+      return desc;
+    }
+    void eval() override {
+      static constexpr double kC0 = 1.02, kC1 = -0.13;
+      const auto ff_m = computeFF(tau(q2_), am_, bm_);
+      setGEGM((kC0 + kC1 * q2_) * ff_m, MU * ff_m);
+    }
+  };
+  struct Alberico2 final : Kelly {
+    using Kelly::Kelly;
+    static ParametersDescription description() {
+      auto desc = Kelly::description();
+      desc.setDescription("Alberico (fit #2)");
+      desc.add("aE", std::vector{1., -0.19});
+      desc.add("bE", std::vector{11.12, 15.16, 21.25});
+      desc.add("aM", std::vector{1., 1.09});
+      desc.add("bM", std::vector{12.31, 25.57, 30.61});
+      return desc;
+    }
   };
 }  // namespace cepgen::formfac
 using cepgen::formfac::Kelly;
 REGISTER_FORMFACTORS("Kelly", Kelly);
+using cepgen::formfac::Alberico1;
+using cepgen::formfac::Alberico2;
+REGISTER_FORMFACTORS("Alberico1", Alberico1);
+REGISTER_FORMFACTORS("Alberico2", Alberico2);
