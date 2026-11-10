@@ -304,12 +304,10 @@ void CepGenEvent::addCorresp(unsigned short pythia_id, unsigned short cepgen_id)
   py_cg_corresp_[pythia_id] = cepgen_id;
 }
 
-void CepGenEvent::dumpCorresp() const {
-  CG_INFO("CepGenEvent:dump").log([&](auto& msg) {
-    msg << "List of Pythia ←|→ CepGen particle ids correspondence";
-    for (const auto& py_cg : py_cg_corresp_)
-      msg << "\n\t" << py_cg.first << " <-> " << py_cg.second;
-  });
+void CepGenEvent::dumpCorresp(std::ostream& os) const {
+  os << "List of Pythia ←|→ CepGen particle ids correspondence";
+  for (const auto& py_cg : py_cg_corresp_)
+    os << "\n\t" << py_cg.first << " <-> " << py_cg.second;
 }
 
 std::pair<int, int> CepGenEvent::findMothers(const cepgen::Event& cepgen_event,

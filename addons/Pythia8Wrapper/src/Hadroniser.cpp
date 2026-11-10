@@ -281,44 +281,34 @@ namespace cepgen::pythia8 {
     for (unsigned short i = 1 + offset_; i < pythia_->event.size(); ++i) {
       const Pythia8::Particle& p = pythia_->event[i];
       const unsigned short cg_id = cepgen_event_->cepgenId(i - offset_);
-      if (cg_id != Pythia8::CepGenEvent::INVALID_ID) {
-        //----- particle already in the event
+      if (cg_id != Pythia8::CepGenEvent::INVALID_ID) {  // particle already in the event
         Particle& cg_part = event[cg_id];
-        //--- fragmentation result
         if (cg_part.role() == Particle::Role::OutgoingBeam1 || cg_part.role() == Particle::Role::OutgoingBeam2) {
-          cg_part.setStatus(Particle::Status::Fragmented);
+          cg_part.setStatus(Particle::Status::Fragmented);  // fragmentation succeeded, move to next particle
           continue;
         }
-        //--- resonance decayed; apply branching ratio for this decay
+        // resonance decayed; apply branching ratio for this decay
         if (cg_part.role() == Particle::Role::CentralSystem && p.status() < 0) {
           if (res_decay_)
             weight *= p.particleDataEntry().pickChannel().bRatio();
           cg_part.setStatus(Particle::Status::Resonance);
           central_parts.emplace_back(i);
         }
-        //--- particle is not what we expect
-        if (p.idAbs() != std::labs(cg_part.integerPdgId())) {
-          CG_INFO("pythia8::Hadroniser:update") << "LHAEVT event content:";
-          cepgen_event_->listEvent();
-          CG_INFO("pythia8::Hadroniser:update") << "Pythia event content:";
-          pythia_->event.list();
-          CG_INFO("pythia8::Hadroniser:update") << "CepGen event content:";
-          event.dump();
-          CG_INFO("pythia8::Hadroniser:update") << "Correspondence:";
-          cepgen_event_->dumpCorresp();
-
-          throw CG_FATAL("pythia8::Hadroniser:update")
-              << "Event list corruption detected for (Pythia/CepGen) particle " << i << "/" << cg_id << ":\n\t"
-              << "should be " << abs(p.id()) << ", "
-              << "got " << cg_part.integerPdgId() << "!";
-        }
-      }
-      //--- check for messed up particles parentage and discard incoming beam particles
-      /*else if ( p.mother1() > i || p.mother1() <= offset_ )
-          continue;
-        else if ( p.mother2() > i || p.mother2() <= offset_ )
-          continue;*/
-      else {  // new particle to be added
+        if (p.idAbs() != std::labs(cg_part.integerPdgId()))  // particle is not what we expect
+          throw CG_FATAL("pythia8::Hadroniser:update").log([this, &event, &i, &cg_id, &cg_part, &p](auto& log) {
+            log << "Event list corruption detected for (Pythia/CepGen) particle " << i << "/" << cg_id << ":\n\t"
+                << "should be " << abs(p.id()) << ", "
+                << "got " << cg_part.integerPdgId() << ".\n"
+                << "LHAEVT event content:";
+            cepgen_event_->listEvent();
+            log << "Pythia event content:";
+            pythia_->event.list(true, true);
+            log << "CepGen event content:";
+            event.dump();
+            log << "Correspondence:";
+            cepgen_event_->dumpCorresp(log.stream());
+          });
+      } else {  // new particle to be added
         const unsigned short role = findRole(event, p);
         //--- intact beam particle produced by Pythia for an unresolved hadron: CepGen already holds it, with the
         //    proper kT recoil, so the (collinear) Pythia copy is dropped
