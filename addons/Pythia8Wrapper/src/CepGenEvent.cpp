@@ -39,9 +39,9 @@ void CepGenEvent::initialise(const cepgen::RunParameters& params) {
   inel2_ = !params_->kinematics().incomingBeams().negative().elastic();
 
   setBeamA(params_->kinematics().incomingBeams().positive().integerPdgId(),
-           params_->kinematics().incomingBeams().positive().momentum().pz());
+           params_->kinematics().incomingBeams().positive().momentum().energy());
   setBeamB(params_->kinematics().incomingBeams().negative().integerPdgId(),
-           params_->kinematics().incomingBeams().negative().momentum().pz());
+           params_->kinematics().incomingBeams().negative().momentum().energy());
   //addProcess( 0, params_->integration().result, params_->integration().err_result, 100. );
 }
 
