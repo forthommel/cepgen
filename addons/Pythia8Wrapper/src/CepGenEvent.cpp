@@ -57,7 +57,7 @@ void CepGenEvent::setCrossSection(int id, double cross_section, double cross_sec
   //listInit();
 }
 
-void CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type, double event_weight) {
+bool CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type, double event_weight) {
   const double scale = ev(cepgen::Particle::Role::Intermediate)[0].momentum().mass();
   setProcess(0, event_weight, scale, ev.metadata("alphaEM"), ev.metadata("alphaS"));
 
@@ -65,6 +65,7 @@ void CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type, double ev
   const auto &op1 = ev(cepgen::Particle::Role::OutgoingBeam1)[0], &op2 = ev(cepgen::Particle::Role::OutgoingBeam2)[0];
   const double q2_1 = -part1.momentum().mass2(), q2_2 = -part2.momentum().mass2();
   const double x1 = q2_1 / (q2_1 + op1.momentum().mass2() - mp2_), x2 = q2_2 / (q2_2 + op2.momentum().mass2() - mp2_);
+  collinearised_ = false;
 
   unsigned short colour_index = MIN_COLOUR_INDEX;
 
@@ -200,6 +201,7 @@ void CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type, double ev
       status = 2;
     addCepGenParticle(p, status, mothers, colours);
   }
+  return true;
 }
 
 void CepGenEvent::setProcess(int id, double cross_section, double q2_scale, double alpha_qed, double alpha_qcd) {

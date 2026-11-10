@@ -45,7 +45,8 @@ namespace Pythia8 {
     /// \param[in] ev CepGen event to be fed
     /// \param[in] type Type of storage
     /// \param[in] event_weight Weight associated to this event in the LHA record
-    void feedEvent(const cepgen::Event& ev, const Type& type, double event_weight = 1.);
+    /// \return false if the event could not be mapped onto a collinear LHA record
+    bool feedEvent(const cepgen::Event& ev, const Type& type, double event_weight = 1.);
     inline void setWeightedEvents() { setStrategy(4); }  ///< Events have a mean weight equal to the cross-section
     /// Set the cross-section for a given process
     /// \param[in] id Process identifier
@@ -97,6 +98,7 @@ namespace Pythia8 {
     bool inel1_{false}, inel2_{false};
     std::unordered_map<unsigned short, unsigned short> py_cg_corresp_;
     const cepgen::RunParameters* params_{nullptr};  // borrowed
+    bool collinearised_{false};
   };
 }  // namespace Pythia8
 #endif

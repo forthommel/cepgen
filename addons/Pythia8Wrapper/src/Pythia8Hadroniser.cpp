@@ -184,8 +184,13 @@ bool Pythia8Hadroniser::run(Event& event, double& weight, bool fast) {
   // convert our event into a custom LHA format
   //===========================================================================================
 
-  cepgen_event_->feedEvent(
-      event, fast ? Pythia8::CepGenEvent::Type::centralAndPartons : Pythia8::CepGenEvent::Type::centralAndBeamRemnants);
+  // full-event mode -> kT-dependent initial state mapped onto collinear one
+  if (!cepgen_event_->feedEvent(event,
+                                fast ? Pythia8::CepGenEvent::Type::centralAndPartons
+                                     : Pythia8::CepGenEvent::Type::centralAndBeamRemnants)) {
+    CG_DEBUG("Pythia8Hadroniser") << "Failed to build a collinear Les Houches record for this event.";
+    return false;
+  }
   if (debug_lhef_ && !fast)
     cepgen_event_->eventLHEF();
 
