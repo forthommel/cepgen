@@ -240,20 +240,25 @@ namespace cepgen::pythia8 {
                                     const Pythia8::Particle& py_part,
                                     const Pythia8::Vec4& momentum,
                                     unsigned short role) const {
-    ParticleProperties prop;
     const pdgid_t pdg_id = py_part.idAbs();
     //--- define the particle if not already in the list of handled PDGs
-    try {
-      prop = PDG::get()(pdg_id);
-    } catch (const Exception&) {
+    // (no try/catch on the lookup: a cepgen::Exception prints itself on destruction, even when caught)
+    if (!PDG::get().has(pdg_id)) {
+      const auto& entry = py_part.particleDataEntry();  // properties of the particle (not antiparticle)
+      ParticleProperties prop;
       prop.pdgid = pdg_id;
-      prop.name = prop.human_name = py_part.name();
-      prop.colours = py_part.col();  // colour factor
-      prop.mass = py_part.m0();
-      prop.width = py_part.mWidth();
-      if (const auto ch = static_cast<int>(py_part.charge() * 3.); std::abs(ch) > 0)
+      prop.name = prop.human_name = entry.name();
+      switch (std::abs(entry.colType())) {  // colour factor (py_part.col() is a colour *tag*)
+        case 1: prop.colours = 3; break;
+        case 2: prop.colours = 8; break;
+        case 3: prop.colours = 6; break;
+        default: prop.colours = 1; break;
+      }
+      prop.mass = entry.m0();
+      prop.width = entry.mWidth();
+      if (const auto ch = entry.chargeType(); ch != 0)
         prop.charges = {ch, -ch};
-      prop.fermion = py_part.isLepton();
+      prop.fermion = entry.spinType() % 2 == 0;  // spinType = 2s+1
       PDG::get().define(prop);
     }
     //--- add the particle to the event content
