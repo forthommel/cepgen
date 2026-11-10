@@ -128,17 +128,25 @@ bool CepGenEvent::feedCollinearInitialState(const cepgen::Event& ev, double scal
   const Particle* outgoing[2] = {&ev(Particle::Role::OutgoingBeam1)[0], &ev(Particle::Role::OutgoingBeam2)[0]};
   const bool inel[2] = {inel1_, inel2_};
 
+  RotBstMatrix lab_to_cm;
+  lab_to_cm.bstback(momToVec4(beams[0]->momentum()) + momToVec4(beams[1]->momentum()));
+  RotBstMatrix cm_to_lab = lab_to_cm;
+  cm_to_lab.invert();
+
   Vec4 mom_beam[2], mom_parton[2];
   double sign[2], beam_lc[2];
   for (size_t i = 0; i < 2; ++i) {
     mom_beam[i] = momToVec4(beams[i]->momentum());
+    mom_beam[i].rotbst(lab_to_cm);
     mom_parton[i] = momToVec4(partons[i]->momentum());
+    mom_parton[i].rotbst(lab_to_cm);
     sign[i] = mom_beam[i].pz() > 0. ? 1. : -1.;
     beam_lc[i] = lightCone(mom_beam[i], sign[i]);
   }
   Vec4 mom_central;
   for (const auto& p : ev(Particle::Role::CentralSystem))
     mom_central += momToVec4(p.momentum());
+  mom_central.rotbst(lab_to_cm);
   const double m2_central = mom_central.m2Calc();
   if (m2_central <= 0.)
     return false;
@@ -175,12 +183,19 @@ bool CepGenEvent::feedCollinearInitialState(const cepgen::Event& ev, double scal
     mom_init[i] = collinear(x[i], beam_lc[i], sign[i]);
     mom_hard += inel[i] ? mom_parton[i] : mom_init[i];
   }
-  boost_lha_to_cg_.reset();
-  boost_lha_to_cg_.bstback(mom_hard);  // collinear hard system -> its rest frame
-  boost_lha_to_cg_.bst(mom_central);   // rest frame -> CepGen central system
-  boost_cg_to_lha_ = boost_lha_to_cg_;
-  boost_cg_to_lha_.invert();
-  collinearised_ = !inel[0] || !inel[1];  // for double dissociation the transformation is the identity
+  RotBstMatrix collinear_to_kt;       // in the CM frame: collinear hard system -> CepGen central system
+  collinear_to_kt.bstback(mom_hard);  // collinear hard system -> its rest frame
+  collinear_to_kt.bst(mom_central);   // rest frame -> CepGen central system (identity for double dissociation)
+  RotBstMatrix kt_to_collinear = collinear_to_kt;
+  kt_to_collinear.invert();
+  // CepGen (lab) -> LHA record (CM, collinear)
+  boost_cg_to_lha_ = lab_to_cm;
+  boost_cg_to_lha_.rotbst(kt_to_collinear);
+  // Pythia output (lab, collinear) -> CepGen (lab)
+  boost_lha_to_cg_ = lab_to_cm;
+  boost_lha_to_cg_.rotbst(collinear_to_kt);
+  boost_lha_to_cg_.rotbst(cm_to_lab);
+  collinearised_ = true;
 
   //--- flavour / x value of hard-process initiators
   int pdg_id[2], colour[2] = {0, 0};
