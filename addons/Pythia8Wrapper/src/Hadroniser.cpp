@@ -100,7 +100,7 @@ namespace cepgen::pythia8 {
   void Hadroniser::initialise() {
     cepgen_event_->initialise(runParameters());
 #if defined(PYTHIA_VERSION_INTEGER) && PYTHIA_VERSION_INTEGER < 8300
-    pythia_->setLHAupPtr(cg_evt_.get());
+    pythia_->setLHAupPtr(cepgen_event_.get());
 #else
     pythia_->setLHAupPtr(cepgen_event_);
 #endif
