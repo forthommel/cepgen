@@ -103,6 +103,7 @@ namespace cepgen::pythia8 {
     pythia_->settings.mode("Beams:frameType", 5);
     pythia_->settings.parm("Beams:eCM", kin.incomingBeams().sqrtS());
     //pythia_->settings.flag("Check:beams", false);  //FIXME
+    pythia_->settings.mode("Next:numberCount", 0);
     min_ids_ = kin.minimumFinalState();
     if (debug_lhef_)
       cg_evt_->openLHEF("debug.lhe");
