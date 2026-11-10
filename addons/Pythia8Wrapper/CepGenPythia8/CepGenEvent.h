@@ -47,6 +47,9 @@ namespace Pythia8 {
     /// \param[in] event_weight Weight associated to this event in the LHA record
     /// \return false if the event could not be mapped onto a collinear LHA record
     bool feedEvent(const cepgen::Event& ev, const Type& type, double event_weight = 1.);
+    /// Lorentz transformation bringing the (collinear) Les Houches central system back to the CepGen (kT-dependent) one
+    /// \note Identity unless the last event was fed with the Type::centralAndBeamRemnants mode
+    inline const RotBstMatrix& lhaToCepGenBoost() const { return boost_lha_to_cg_; }
     inline void setWeightedEvents() { setStrategy(4); }  ///< Events have a mean weight equal to the cross-section
     /// Set the cross-section for a given process
     /// \param[in] id Process identifier
@@ -93,11 +96,25 @@ namespace Pythia8 {
 #endif
 
   private:
+    /// Build a collinear initial state from kT-dependent partons emitted by the beams
+    ///
+    /// \note Pythia 8 requires massless, collinear hard-process initiators, while space-like partons are generated in CepGen.
+    ///   Two strategies:
+    ///   - dissociative beam: kT absorbed by explicit recoil -> incoming massless valence quark \f$k_i = x_i\cdot P_i\f$,
+    ///     outgoing massless quark \f$k_i - q_i\f$ -> untouched parton \f$q_i\f$ in hard system.
+    ///     \f$(k_i - q_i)^2 = 0\f\Rightarrow x_i = q_i^2 / (P_i^+ q_i^-)\f\rightarrow q_i^+/P_i^+\f$ (\f$k_T \to 0\f$).
+    ///   - elastic beam: collinear parton, \f$x_i\cdot P_i\f$, and left to Pythia as unresolved hadron.
+    ///     \f$x_i\f$ such that hard system keeps central-system invariant mass, and central system Lorentz-transformed to
+    ///     collinear frame (transformation stored for the way back).
+    ///   Energy-momentum is conserved exactly in the LHA record in all beam configurations.
+    bool feedCollinearInitialState(const cepgen::Event& ev, double scale, unsigned short& colour_index);
     std::pair<int, int> findMothers(const cepgen::Event& cepgen_event, const cepgen::Particle& cepgen_particle) const;
     const double mp_, mp2_;
     bool inel1_{false}, inel2_{false};
     std::unordered_map<unsigned short, unsigned short> py_cg_corresp_;
-    const cepgen::RunParameters* params_{nullptr};  // borrowed
+    const cepgen::RunParameters* params_{nullptr};  //NOT owning
+    RotBstMatrix boost_lha_to_cg_;                  ///< collinear Les Houches frame -> CepGen frame (central system)
+    RotBstMatrix boost_cg_to_lha_;                  ///< inverse transformation
     bool collinearised_{false};
   };
 }  // namespace Pythia8

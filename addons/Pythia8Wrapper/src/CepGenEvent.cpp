@@ -16,6 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
+#include <cmath>
+
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Core/RunParameters.h"
 #include "CepGen/Event/Event.h"
@@ -57,120 +60,34 @@ void CepGenEvent::setCrossSection(int id, double cross_section, double cross_sec
   //listInit();
 }
 
+namespace {
+  /// Light-cone component of a four-momentum along a beam direction (sign = +1 for a +z beam, -1 for a -z beam)
+  double lightCone(const Vec4& mom, double sign) { return mom.e() + sign * mom.pz(); }
+  /// Massless four-momentum collinear to a beam, carrying a fraction x of its light-cone momentum
+  Vec4 collinear(double x, double beam_light_cone, double sign) {
+    return Vec4(0., 0., sign * 0.5 * x * beam_light_cone, 0.5 * x * beam_light_cone);
+  }
+}  // namespace
+
 bool CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type, double event_weight) {
   const double scale = ev(cepgen::Particle::Role::Intermediate)[0].momentum().mass();
   setProcess(0, event_weight, scale, ev.metadata("alphaEM"), ev.metadata("alphaS"));
-
-  const auto &part1 = ev(cepgen::Particle::Role::Parton1)[0], &part2 = ev(cepgen::Particle::Role::Parton2)[0];
-  const auto &op1 = ev(cepgen::Particle::Role::OutgoingBeam1)[0], &op2 = ev(cepgen::Particle::Role::OutgoingBeam2)[0];
-  const double q2_1 = -part1.momentum().mass2(), q2_2 = -part2.momentum().mass2();
-  const double x1 = q2_1 / (q2_1 + op1.momentum().mass2() - mp2_), x2 = q2_2 / (q2_2 + op2.momentum().mass2() - mp2_);
+  boost_lha_to_cg_.reset();
+  boost_cg_to_lha_.reset();
   collinearised_ = false;
 
   unsigned short colour_index = MIN_COLOUR_INDEX;
 
-  const Vec4 mom_part1(momToVec4(part1.momentum())), mom_part2(momToVec4(part2.momentum()));
-
-  if (type == Type::centralAndBeamRemnants) {  // full event content (with collinear partons)
-    Vec4 mom_iq1 = mom_part1, mom_iq2 = mom_part2;
-    unsigned short parton1_id, parton2_id;
-    unsigned short parton1_pdgid = part1.integerPdgId(), parton2_pdgid = part2.integerPdgId();
-    unsigned short parton1_colour = 0, parton2_colour = 0;
-    //FIXME select quark flavours accordingly
-    if (inel1_) {
-      parton1_pdgid = 2;
-      parton1_colour = colour_index++;
-      mom_iq1 = momToVec4(x1 * ev(cepgen::Particle::Role::IncomingBeam1)[0].momentum());
-    }
-    if (inel2_) {
-      parton2_pdgid = 2;
-      parton2_colour = colour_index++;
-      mom_iq2 = momToVec4(x2 * ev(cepgen::Particle::Role::IncomingBeam2)[0].momentum());
-    }
-
-    //--- flavour / x value of hard-process initiators
-    setIdX(part1.integerPdgId(), part2.integerPdgId(), x1, x2);
-    setPdf(parton1_pdgid, parton2_pdgid, x1, x2, scale, 0., 0., false);
-
-    //===========================================================================================
-    // incoming valence quarks
-    //===========================================================================================
-
-    parton1_id = sizePart();
-    addCorresp(parton1_id, op1.id());
-    addParticle(parton1_pdgid,
-                -1,
-                0,
-                0,
-                parton1_colour,
-                0,
-                mom_iq1.px(),
-                mom_iq1.py(),
-                mom_iq1.pz(),
-                mom_iq1.e(),
-                mom_iq1.mCalc(),
-                0.,
-                1.);
-
-    parton2_id = sizePart();
-    addCorresp(parton2_id, op2.id());
-    addParticle(parton2_pdgid,
-                -1,
-                0,
-                0,
-                parton2_colour,
-                0,
-                mom_iq2.px(),
-                mom_iq2.py(),
-                mom_iq2.pz(),
-                mom_iq2.e(),
-                mom_iq2.mCalc(),
-                0.,
-                1.);
-
-    //===========================================================================================
-    // outgoing valence quarks
-    //===========================================================================================
-
-    if (inel1_) {
-      const Vec4 mom_oq1 = mom_iq1 - mom_part1;
-      addParticle(parton1_pdgid,
-                  1,
-                  parton1_id,
-                  parton2_id,
-                  parton1_colour,
-                  0,
-                  mom_oq1.px(),
-                  mom_oq1.py(),
-                  mom_oq1.pz(),
-                  mom_oq1.e(),
-                  mom_oq1.mCalc(),
-                  0.,
-                  1.);
-    }
-    if (inel2_) {
-      const Vec4 mom_oq2 = mom_iq2 - mom_part2;
-      addParticle(parton2_pdgid,
-                  1,
-                  parton1_id,
-                  parton2_id,
-                  parton2_colour,
-                  0,
-                  mom_oq2.px(),
-                  mom_oq2.py(),
-                  mom_oq2.pz(),
-                  mom_oq2.e(),
-                  mom_oq2.mCalc(),
-                  0.,
-                  1.);
-    }
+  if (type == Type::centralAndBeamRemnants) {  // full event content, with a collinear initial state
+    if (!feedCollinearInitialState(ev, scale, colour_index))
+      return false;
   } else {
     //===========================================================================================
     // incoming partons
     //===========================================================================================
 
-    addCepGenParticle(part1, -2);
-    addCepGenParticle(part2, -2);
+    addCepGenParticle(ev(cepgen::Particle::Role::Parton1)[0], -2);
+    addCepGenParticle(ev(cepgen::Particle::Role::Parton2)[0], -2);
 
     if (type == Type::centralAndFullBeamRemnants)  // full beam remnants content
       for (const auto& forward_system : {cepgen::Particle::Role::OutgoingBeam1, cepgen::Particle::Role::OutgoingBeam2})
@@ -204,6 +121,127 @@ bool CepGenEvent::feedEvent(const cepgen::Event& ev, const Type& type, double ev
   return true;
 }
 
+bool CepGenEvent::feedCollinearInitialState(const cepgen::Event& ev, double scale, unsigned short& colour_index) {
+  using cepgen::Particle;
+  const Particle* beams[2] = {&ev(Particle::Role::IncomingBeam1)[0], &ev(Particle::Role::IncomingBeam2)[0]};
+  const Particle* partons[2] = {&ev(Particle::Role::Parton1)[0], &ev(Particle::Role::Parton2)[0]};
+  const Particle* outgoing[2] = {&ev(Particle::Role::OutgoingBeam1)[0], &ev(Particle::Role::OutgoingBeam2)[0]};
+  const bool inel[2] = {inel1_, inel2_};
+
+  Vec4 mom_beam[2], mom_parton[2];
+  double sign[2], beam_lc[2];
+  for (size_t i = 0; i < 2; ++i) {
+    mom_beam[i] = momToVec4(beams[i]->momentum());
+    mom_parton[i] = momToVec4(partons[i]->momentum());
+    sign[i] = mom_beam[i].pz() > 0. ? 1. : -1.;
+    beam_lc[i] = lightCone(mom_beam[i], sign[i]);
+  }
+  Vec4 mom_central;
+  for (const auto& p : ev(Particle::Role::CentralSystem))
+    mom_central += momToVec4(p.momentum());
+  const double m2_central = mom_central.m2Calc();
+  if (m2_central <= 0.)
+    return false;
+
+  //--- momentum fractions of the collinear initiators
+  double x[2] = {0., 0.};
+  for (size_t i = 0; i < 2; ++i) {
+    if (!inel[i])
+      continue;
+    const double q_lc_opposite = lightCone(mom_parton[i], -sign[i]);  // q^- for a +z beam
+    x[i] = std::fabs(q_lc_opposite) > 1.e-12 ? mom_parton[i].m2Calc() / (beam_lc[i] * q_lc_opposite)
+                                             : lightCone(mom_parton[i], sign[i]) / beam_lc[i];
+  }
+  if (!inel[0] && !inel[1]) {  // both elastic: keep the central-system mass and rapidity
+    const double c_1 = lightCone(mom_central, sign[0]), c_2 = lightCone(mom_central, sign[1]);
+    if (c_1 <= 0. || c_2 <= 0.)
+      return false;
+    x[0] = std::sqrt(m2_central * c_1 / c_2) / beam_lc[0];
+    x[1] = std::sqrt(m2_central * c_2 / c_1) / beam_lc[1];
+  } else if (inel[0] != inel[1]) {  // single dissociation: (x_e P_e + q_r)^2 = M^2
+    const size_t el = inel[0] ? 1 : 0, rec = 1 - el;
+    const double denominator = 2. * (collinear(1., beam_lc[el], sign[el]) * mom_parton[rec]);
+    if (denominator <= 0.)
+      return false;
+    x[el] = (m2_central - mom_parton[rec].m2Calc()) / denominator;
+  }
+  for (const auto& xi : x)
+    if (xi <= 0. || xi >= 1.)
+      return false;
+
+  //--- collinear initiators, and transformation between the collinear hard system and the CepGen central system
+  Vec4 mom_init[2], mom_hard;
+  for (size_t i = 0; i < 2; ++i) {
+    mom_init[i] = collinear(x[i], beam_lc[i], sign[i]);
+    mom_hard += inel[i] ? mom_parton[i] : mom_init[i];
+  }
+  boost_lha_to_cg_.reset();
+  boost_lha_to_cg_.bstback(mom_hard);  // collinear hard system -> its rest frame
+  boost_lha_to_cg_.bst(mom_central);   // rest frame -> CepGen central system
+  boost_cg_to_lha_ = boost_lha_to_cg_;
+  boost_cg_to_lha_.invert();
+  collinearised_ = !inel[0] || !inel[1];  // for double dissociation the transformation is the identity
+
+  //--- flavour / x value of hard-process initiators
+  int pdg_id[2], colour[2] = {0, 0};
+  for (size_t i = 0; i < 2; ++i) {
+    pdg_id[i] = inel[i] ? 2 : partons[i]->integerPdgId();  //FIXME select quark flavours accordingly
+    if (inel[i])
+      colour[i] = colour_index++;
+  }
+  setIdX(pdg_id[0], pdg_id[1], x[0], x[1]);
+  setPdf(pdg_id[0], pdg_id[1], x[0], x[1], scale, 0., 0., false);
+
+  //===========================================================================================
+  // incoming (massless, collinear) initiators
+  //===========================================================================================
+
+  unsigned short init_id[2];
+  for (size_t i = 0; i < 2; ++i) {
+    init_id[i] = sizePart();
+    // valence quark from a dissociated beam is attached to the outgoing CepGen remnant; an elastic parton to itself
+    addCorresp(init_id[i], inel[i] ? outgoing[i]->id() : partons[i]->id());
+    addParticle(pdg_id[i],
+                -1,
+                0,
+                0,
+                colour[i],
+                0,
+                mom_init[i].px(),
+                mom_init[i].py(),
+                mom_init[i].pz(),
+                mom_init[i].e(),
+                0.,
+                0.,
+                1.);
+  }
+
+  //===========================================================================================
+  // outgoing valence quarks, absorbing the kT recoil of the emitted partons
+  //===========================================================================================
+
+  for (size_t i = 0; i < 2; ++i) {
+    if (!inel[i])
+      continue;
+    const Vec4 mom_out = mom_init[i] - mom_parton[i];
+    addCorresp(sizePart(), outgoing[i]->id());
+    addParticle(pdg_id[i],
+                1,
+                init_id[i],
+                0,
+                colour[i],
+                0,
+                mom_out.px(),
+                mom_out.py(),
+                mom_out.pz(),
+                mom_out.e(),
+                std::sqrt(std::max(0., mom_out.m2Calc())),
+                0.,
+                1.);
+  }
+  return true;
+}
+
 void CepGenEvent::setProcess(int id, double cross_section, double q2_scale, double alpha_qed, double alpha_qcd) {
   LHAup::setProcess(id, cross_section, q2_scale, alpha_qed, alpha_qcd);
   py_cg_corresp_.clear();
@@ -228,7 +266,9 @@ void CepGenEvent::addCepGenParticle(const cepgen::Particle& part,
                                     int status,
                                     const std::pair<int, int>& mothers,
                                     const std::pair<int, int>& colours) {
-  const Vec4 mom_part(momToVec4(part.momentum()));
+  Vec4 mom_part(momToVec4(part.momentum()));
+  if (collinearised_)
+    mom_part.rotbst(boost_cg_to_lha_);
   int pdg_id = part.integerPdgId();
   if (status == INVALID_ID)
     switch (part.status()) {
