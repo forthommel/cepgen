@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: 'laufor/ci-images:cepgen-fedora40'
+      image: 'laufor/ci-images:cepgen-fedora45'
       options: -v ${{ github.workspace }}:/Package
     steps:
     - uses: actions/checkout@v7
@@ -69,7 +69,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: 'laufor/ci-images:cepgen-fedora40'
+      image: 'laufor/ci-images:cepgen-fedora45'
       options: -v ${{ github.workspace }}:/Package
     steps:
     - uses: actions/checkout@v7
@@ -90,7 +90,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: 'laufor/ci-images:cepgen-fedora40'
+      image: 'laufor/ci-images:cepgen-fedora45'
       options: -v ${{ github.workspace }}:/Package
     steps:
     - uses: actions/checkout@v7
@@ -118,7 +118,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: 'laufor/ci-images:cepgen-fedora40'
+      image: 'laufor/ci-images:cepgen-fedora45'
       options: -v ${{ github.workspace }}:/Package
     steps:
     - uses: actions/checkout@v7
@@ -150,7 +150,7 @@ jobs:
       - benchmark
     runs-on: ubuntu-latest
     container:
-      image: 'laufor/ci-images:cepgen-fedora40'
+      image: 'laufor/ci-images:cepgen-fedora45'
       options: -v ${{ github.workspace }}:/Package
     steps:
     - uses: actions/checkout@v7
