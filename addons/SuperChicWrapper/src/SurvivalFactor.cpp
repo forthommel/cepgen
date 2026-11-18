@@ -16,8 +16,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <CepGen/Event/Event.h>
 #include <CepGen/Modules/SurvivalFactorFactory.h>
 #include <CepGen/SurvivalFactors/SurvivalFactor.h>
+
+#include <complex>
+
+extern "C" {
+extern struct {
+  int sfac;
+} survival_;
+extern void schimcgam_(double&, double&, double&, double&, std::complex<double>*);
+}
 
 namespace cepgen::superchic {
   /// An interfacing for SuperChic's gap survival factor \f$S^2\f$ modelling
@@ -32,14 +42,30 @@ namespace cepgen::superchic {
       return desc;
     }
     bool singleThreaded() const override { return true; }  ///< SuperChic common blocks are process-wide
-    double operator()(const Event&) const {
+    double operator()(const Event& event) const {
       if (!initialised_)
-        initialise();
-      return 1.;
+        initialise(event);
+
+      const auto &ob1 = event.oneWithRole(Particle::Role::OutgoingBeam1).momentum(),
+                 &ob2 = event.oneWithRole(Particle::Role::OutgoingBeam2).momentum();
+      double ob1_px = ob1.px(), ob1_py = ob1.py(), ob2_px = ob1.px(), ob2_py = ob2.py();
+      std::array<std::complex<double>, 10> wts, wtb;
+      survival_.sfac = 1;
+      schimcgam_(ob1_px, ob1_py, ob2_px, ob2_py, wts.data());
+      survival_.sfac = 0;
+      schimcgam_(ob1_px, ob1_py, ob2_px, ob2_py, wtb.data());
+      const auto num_s = std::pow(std::abs(wts.at(0)), 2), num_b = std::pow(std::abs(wtb.at(0)), 2);
+      if (num_b > 0.)
+        return num_s / num_b;
+      return 0.;
     }
 
   private:
-    void initialise() const { initialised_ = true; }
+    void initialise(const Event& first_event) const {
+      const auto &ib1 = first_event.oneWithRole(Particle::Role::IncomingBeam1).momentum(),
+                 &ib2 = first_event.oneWithRole(Particle::Role::IncomingBeam2).momentum();
+      initialised_ = true;
+    }
 
     mutable bool initialised_{false};
   };
