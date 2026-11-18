@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <CepGen/Modules/SurvivalFactorFactory.h>
 #include <CepGen/SurvivalFactors/SurvivalFactor.h>
 
 namespace cepgen::superchic {
@@ -30,7 +31,18 @@ namespace cepgen::superchic {
       desc.setDescription("SuperChic survival factor modelling interface");
       return desc;
     }
+    bool singleThreaded() const override { return true; }  ///< SuperChic common blocks are process-wide
+    double operator()(const Event&) const {
+      if (!initialised_)
+        initialise();
+      return 1.;
+    }
 
-    double operator()(const Event&) const { return 1.; }
+  private:
+    void initialise() const { initialised_ = true; }
+
+    mutable bool initialised_{false};
   };
 }  // namespace cepgen::superchic
+using SuperChicSurvivalFactor = cepgen::superchic::SurvivalFactor;
+REGISTER_SURVIVAL_FACTOR("superchic", SuperChicSurvivalFactor);
