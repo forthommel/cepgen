@@ -16,16 +16,23 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <CepGen/Core/Exception.h>
 #include <CepGen/Event/Event.h>
 #include <CepGen/Modules/SurvivalFactorFactory.h>
 #include <CepGen/SurvivalFactors/SurvivalFactor.h>
 
 #include <complex>
 
+using namespace std::complex_literals;
+
 extern "C" {
 extern struct {
   int sfac;
 } survival_;
+extern struct {
+  std::array<std::complex<double>, 10> ppa, mma, pma, mpa;
+} ppamps_;
+
 extern void schimcgam_(double&, double&, double&, double&, std::complex<double>*);
 }
 
@@ -34,7 +41,14 @@ namespace cepgen::superchic {
   /// \date Nov 2026
   class SurvivalFactor : public cepgen::SurvivalFactor {
   public:
-    explicit SurvivalFactor(const ParametersList& params) : cepgen::SurvivalFactor(params) {}
+    explicit SurvivalFactor(const ParametersList& params) : cepgen::SurvivalFactor(params) {
+      if (const auto model = steer<std::string>("model"); model == "scalar")
+        amplitudes_ = std::array<std::complex<double>, 4>{1., 1., 0., 0.};
+      else if (model == "pseudoscalar")
+        amplitudes_ = std::array<std::complex<double>, 4>{1., -1., 0., 0.};
+      else if (model == "tensor")
+        amplitudes_ = std::array<std::complex<double>, 4>{0., 0., 1., 1.};
+    }
 
     static ParametersDescription description() {
       auto desc = cepgen::SurvivalFactor::description();
@@ -45,6 +59,11 @@ namespace cepgen::superchic {
     double operator()(const Event& event) const {
       if (!initialised_)
         initialise(event);
+
+      ppamps_.ppa[0] = amplitudes_.at(0);
+      ppamps_.mma[0] = amplitudes_.at(1);
+      ppamps_.pma[0] = amplitudes_.at(2);
+      ppamps_.mpa[0] = amplitudes_.at(3);
 
       const auto &ob1 = event.oneWithRole(Particle::Role::OutgoingBeam1).momentum(),
                  &ob2 = event.oneWithRole(Particle::Role::OutgoingBeam2).momentum();
@@ -66,6 +85,8 @@ namespace cepgen::superchic {
                  &ib2 = first_event.oneWithRole(Particle::Role::IncomingBeam2).momentum();
       initialised_ = true;
     }
+
+    std::array<std::complex<double>, 4> amplitudes_;
 
     mutable bool initialised_{false};
   };
