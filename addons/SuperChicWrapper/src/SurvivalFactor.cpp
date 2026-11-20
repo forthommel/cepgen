@@ -44,6 +44,9 @@ extern struct {
   double gf, v, mt, mb, mw, me, mtau, alpha;
 } ewpars_;
 extern struct {
+  char intag[100];
+} in_;
+extern struct {
   int s2int;
 } nsurv_;
 extern struct {
@@ -58,6 +61,9 @@ extern struct {
 extern struct {
   int sfac;
 } survival_;
+extern struct {
+  double s, rts, yx, mx, rtsnn;
+} vars_;
 extern void gaussinit_();
 extern void initparsr_(int&);
 extern void readscreen_();
@@ -73,7 +79,8 @@ namespace cepgen::superchic {
         : cepgen::SurvivalFactor(params),
           alpha_em_(AlphaEMFactory::get().build(steer<ParametersList>("alphaEM"))),
           survival_factor_model_(steer<int>("survivalFactorModel")),
-          integration_parameter_(steer<int>("integrationParameter")) {
+          integration_parameter_(steer<int>("integrationParameter")),
+          tag_(steer<std::string>("tag")) {
       if (const auto model = steer<std::string>("model"); model == "scalar")
         amplitudes_ = std::array<std::complex<double>, 4>{1., 1., 0., 0.};
       else if (model == "pseudoscalar")
@@ -94,6 +101,7 @@ namespace cepgen::superchic {
           .allow(4, ""s)
           .setDescription("SuperChic soft survival model");
       desc.add("integrationParameter", 16).setDescription("SuperChic survival integration parameter");
+      desc.add("tag", "user"s).setDescription("SuperChic 'intag' used when running its 'init' program");
       return desc;
     }
     bool singleThreaded() const override { return true; }  ///< SuperChic common blocks are process-wide
@@ -103,7 +111,7 @@ namespace cepgen::superchic {
 
       const auto &ob1 = event.oneWithRole(Particle::Role::OutgoingBeam1).momentum(),
                  &ob2 = event.oneWithRole(Particle::Role::OutgoingBeam2).momentum();
-      double ob1_px = ob1.px(), ob1_py = ob1.py(), ob2_px = ob1.px(), ob2_py = ob2.py();
+      double ob1_px = ob1.px(), ob1_py = ob1.py(), ob2_px = ob2.px(), ob2_py = ob2.py();
       std::array<std::complex<double>, 10> wts, wtb;
       survival_.sfac = 1;
       schimcgam_(ob1_px, ob1_py, ob2_px, ob2_py, wts.data());
@@ -135,6 +143,11 @@ namespace cepgen::superchic {
       initparsr_(surv);
       readscreen_();
 
+      std::memset(in_.intag, ' ', sizeof in_.intag);
+      std::memcpy(in_.intag, tag_.data(), std::min(tag_.size(), sizeof in_.intag));
+      vars_.rts = first_event.cmEnergy();
+      vars_.s = vars_.rts * vars_.rts;
+
       ppamps_.ppa[0] = amplitudes_.at(0);
       ppamps_.mma[0] = amplitudes_.at(1);
       ppamps_.pma[0] = amplitudes_.at(2);
@@ -146,6 +159,7 @@ namespace cepgen::superchic {
     const std::unique_ptr<Coupling> alpha_em_;
     const int survival_factor_model_;
     const int integration_parameter_;
+    const std::string tag_;
 
     std::array<std::complex<double>, 4> amplitudes_;
 
