@@ -50,6 +50,9 @@ extern struct {
   char intag[100];
 } in_;
 extern struct {
+  int pol;
+} polarization_;
+extern struct {
   int s2int;
 } nsurv_;
 extern struct {
@@ -67,15 +70,33 @@ extern struct {
 extern struct {
   double s, rts, yx, mx, rtsnn;
 } vars_;
+extern struct {
+  double x1, x2;
+} x_com_;
+extern void apfelinit_();
 extern void calcop_();
+extern void calcs2diss_();
 extern void calcscreen_();
+extern void dd_();
 extern void gaussinit_();
+extern void inpdf_();
 extern void initparsr_(int&);
+extern void readcoh_();
 extern void readscreen_();
+extern void sdcoh_();
+extern void sdincoh_();
 extern void schimcgam_(double&, double&, double&, double&, std::complex<double>*);
 }
 
 namespace cepgen::superchic {
+  namespace {
+    /// Fill a Fortran CHARACTER*N common block member (blank-padded, no NUL terminator, as expected for comparisons)
+    template <size_t N>
+    void setFortranString(char (&dest)[N], const std::string& src) {
+      std::memset(dest, ' ', N);
+      std::memcpy(dest, src.data(), std::min(src.size(), N));
+    }
+  }  // namespace
   /// An interfacing for SuperChic's gap survival factor \f$S^2\f$ modelling
   /// \date Nov 2026
   class SurvivalFactor : public cepgen::SurvivalFactor {
@@ -142,13 +163,13 @@ namespace cepgen::superchic {
       nsurv_.s2int = integration_parameter_;
 
       diss_com_.diss1 = 0;
-      diss_com_.diss2 = 0;  //FIXME: el-el
-      std::strcpy(btype_.beam, "prot");
-      std::strcpy(diff_com_.diff, "el");
+      diss_com_.diss2 = 0;
+      setFortranString(btype_.beam, "prot");
+      setFortranString(diff_com_.diff, "el");
+      polarization_.pol = 1;  // only the first polarisation state amplitudes are filled below
 
       // fill the common blocks first: both the screening amplitude generation and its reading rely on them
-      std::memset(in_.intag, ' ', sizeof in_.intag);
-      std::memcpy(in_.intag, tag_.data(), std::min(tag_.size(), sizeof in_.intag));
+      setFortranString(in_.intag, tag_);
       vars_.rts = first_event.cmEnergy();
       vars_.s = vars_.rts * vars_.rts;
 
@@ -160,9 +181,9 @@ namespace cepgen::superchic {
       // the screening amplitude is written to 'inputs/screening<tag>.dat' in the current working directory
       const auto screening_file = std::filesystem::path("inputs") / ("screening"s + tag_ + ".dat"s);
       if (regenerate_ || !std::filesystem::exists(screening_file)) {
-        CG_INFO("SuperChic:survivalFactor") << "Computing the screening amplitude for tag '" << tag_
-                                            << "' (sqrt(s) = " << vars_.rts << " GeV, model " << surv << ") into "
-                                            << screening_file << ".";
+        CG_INFO("SuperChic:initialise") << "Computing the screening amplitude for tag '" << tag_
+                                        << "' (sqrt(s) = " << vars_.rts << " GeV, model " << surv << ") into "
+                                        << screening_file << ".";
         std::filesystem::create_directories("inputs");
         calcop_();  // proton opacity (needed for the screening amplitude computation)
         calcscreen_();
