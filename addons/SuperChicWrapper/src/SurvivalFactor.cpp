@@ -53,6 +53,9 @@ extern struct {
   int pol;
 } polarization_;
 extern struct {
+  int proc, dps, hel;
+} process_;
+extern struct {
   int s2int;
 } nsurv_;
 extern struct {
@@ -107,7 +110,8 @@ namespace cepgen::superchic {
           survival_factor_model_(steer<int>("survivalFactorModel")),
           integration_parameter_(steer<int>("integrationParameter")),
           tag_(steer<std::string>("tag")),
-          regenerate_(steer<bool>("regenerate")) {
+          regenerate_(steer<bool>("regenerate")),
+          proc_(steer<int>("proc")) {
       if (const auto model = steer<std::string>("model"); model == "scalar")
         amplitudes_ = std::array<std::complex<double>, 4>{1., 1., 0., 0.};
       else if (model == "pseudoscalar")
@@ -131,16 +135,22 @@ namespace cepgen::superchic {
       desc.add("tag", "user"s).setDescription("SuperChic 'intag' used when running its 'init' program");
       desc.add("regenerate", false)
           .setDescription("force the (re)computation of SuperChic's screening amplitude, even if its file exists");
+      desc.add("proc", 0).setDescription(
+          "SuperChic process number, used for (single/double) dissociative events only (requires its off-shell "
+          "amplitude)");
       return desc;
     }
     bool singleThreaded() const override { return true; }  ///< SuperChic common blocks are process-wide
-    double operator()(const Event& event) const {
+    double operator()(const Event& event) const override {
       if (!initialised_)
         initialise(event);
 
+      const auto &ib1 = event.oneWithRole(Particle::Role::IncomingBeam1).momentum(),
+                 &ib2 = event.oneWithRole(Particle::Role::IncomingBeam2).momentum();
       const auto &ob1 = event.oneWithRole(Particle::Role::OutgoingBeam1).momentum(),
                  &ob2 = event.oneWithRole(Particle::Role::OutgoingBeam2).momentum();
       double ob1_px = ob1.px(), ob1_py = ob1.py(), ob2_px = ob2.px(), ob2_py = ob2.py();
+      process_.proc = 0;
       std::array<std::complex<double>, 10> wts, wtb;
       survival_.sfac = 1;
       schimcgam_(ob1_px, ob1_py, ob2_px, ob2_py, wts.data());
@@ -204,6 +214,7 @@ namespace cepgen::superchic {
     const int integration_parameter_;
     const std::string tag_;
     const bool regenerate_;
+    const int proc_;
 
     std::array<std::complex<double>, 4> amplitudes_;
 
