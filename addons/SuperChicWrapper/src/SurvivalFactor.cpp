@@ -18,21 +18,49 @@
 
 #include <CepGen/Core/Exception.h>
 #include <CepGen/Event/Event.h>
+#include <CepGen/Modules/CouplingFactory.h>
 #include <CepGen/Modules/SurvivalFactorFactory.h>
+#include <CepGen/Physics/Coupling.h>
+#include <CepGen/Physics/PDG.h>
 #include <CepGen/SurvivalFactors/SurvivalFactor.h>
 
 #include <complex>
+#include <cstring>
 
 using namespace std::complex_literals;
+using namespace std::string_literals;
 
 extern "C" {
 extern struct {
-  int sfac;
-} survival_;
+  char beam[10];
+} btype_;
+extern struct {
+  char diff[3], diffsd[3];
+} diff_com_;
+extern struct {
+  int diss1, diss2, offshell, elcoll;
+} diss_com_;
+extern struct {
+  double gf, v, mt, mb, mw, me, mtau, alpha;
+} ewpars_;
+extern struct {
+  int s2int;
+} nsurv_;
+extern struct {
+  double pi;
+} pi_com_;
+extern struct {
+  double mp;
+} pmass_;
 extern struct {
   std::array<std::complex<double>, 10> ppa, mma, pma, mpa;
 } ppamps_;
-
+extern struct {
+  int sfac;
+} survival_;
+extern void gaussinit_();
+extern void initparsr_(int&);
+extern void readscreen_();
 extern void schimcgam_(double&, double&, double&, double&, std::complex<double>*);
 }
 
@@ -41,7 +69,11 @@ namespace cepgen::superchic {
   /// \date Nov 2026
   class SurvivalFactor : public cepgen::SurvivalFactor {
   public:
-    explicit SurvivalFactor(const ParametersList& params) : cepgen::SurvivalFactor(params) {
+    explicit SurvivalFactor(const ParametersList& params)
+        : cepgen::SurvivalFactor(params),
+          alpha_em_(AlphaEMFactory::get().build(steer<ParametersList>("alphaEM"))),
+          survival_factor_model_(steer<int>("survivalFactorModel")),
+          integration_parameter_(steer<int>("integrationParameter")) {
       if (const auto model = steer<std::string>("model"); model == "scalar")
         amplitudes_ = std::array<std::complex<double>, 4>{1., 1., 0., 0.};
       else if (model == "pseudoscalar")
@@ -53,17 +85,21 @@ namespace cepgen::superchic {
     static ParametersDescription description() {
       auto desc = cepgen::SurvivalFactor::description();
       desc.setDescription("SuperChic survival factor modelling interface");
+      desc.add("alphaEM", AlphaEMFactory::get().describeParameters("fixed"))
+          .setDescription("alpha(EM) modelling for scale evolution");
+      desc.add("survivalFactorModel", 4)
+          .allow(1, ""s)  //TODO
+          .allow(2, ""s)
+          .allow(3, ""s)
+          .allow(4, ""s)
+          .setDescription("SuperChic soft survival model");
+      desc.add("integrationParameter", 16).setDescription("SuperChic survival integration parameter");
       return desc;
     }
     bool singleThreaded() const override { return true; }  ///< SuperChic common blocks are process-wide
     double operator()(const Event& event) const {
       if (!initialised_)
         initialise(event);
-
-      ppamps_.ppa[0] = amplitudes_.at(0);
-      ppamps_.mma[0] = amplitudes_.at(1);
-      ppamps_.pma[0] = amplitudes_.at(2);
-      ppamps_.mpa[0] = amplitudes_.at(3);
 
       const auto &ob1 = event.oneWithRole(Particle::Role::OutgoingBeam1).momentum(),
                  &ob2 = event.oneWithRole(Particle::Role::OutgoingBeam2).momentum();
@@ -83,8 +119,33 @@ namespace cepgen::superchic {
     void initialise(const Event& first_event) const {
       const auto &ib1 = first_event.oneWithRole(Particle::Role::IncomingBeam1).momentum(),
                  &ib2 = first_event.oneWithRole(Particle::Role::IncomingBeam2).momentum();
+      pmass_.mp = PDG::get().mass(PDG::proton);
+      pi_com_.pi = M_PI;
+      ewpars_.alpha = (*alpha_em_)(0. /*FIXME*/);
+
+      nsurv_.s2int = integration_parameter_;
+
+      diss_com_.diss1 = 0;
+      diss_com_.diss2 = 0;  //FIXME: el-el
+      std::strcpy(btype_.beam, "prot");
+      std::strcpy(diff_com_.diff, "el");
+
+      gaussinit_();
+      int surv = survival_factor_model_;
+      initparsr_(surv);
+      readscreen_();
+
+      ppamps_.ppa[0] = amplitudes_.at(0);
+      ppamps_.mma[0] = amplitudes_.at(1);
+      ppamps_.pma[0] = amplitudes_.at(2);
+      ppamps_.mpa[0] = amplitudes_.at(3);
+
       initialised_ = true;
     }
+
+    const std::unique_ptr<Coupling> alpha_em_;
+    const int survival_factor_model_;
+    const int integration_parameter_;
 
     std::array<std::complex<double>, 4> amplitudes_;
 
