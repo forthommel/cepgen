@@ -20,6 +20,7 @@
 #define CepGen_SurvivalFactors_SurvivalFactor_h
 
 #include "CepGen/Modules/NamedModule.h"
+#include "CepGen/Physics/Modes.h"
 
 namespace cepgen {
   class Event;
@@ -33,18 +34,28 @@ namespace cepgen {
   /// \date Nov 2026
   class SurvivalFactor : public NamedModule<SurvivalFactor> {
   public:
-    explicit SurvivalFactor(const ParametersList& params) : NamedModule(params) {}
+    explicit SurvivalFactor(const ParametersList& params)
+        : NamedModule(params), mode_(steerAs<int, mode::Kinematics>("kinematicsMode")) {}
     ~SurvivalFactor() override = default;
 
     static ParametersDescription description() {
       auto desc = ParametersDescription();
       desc.setDescription("Unnamed gap survival factor modelling");
+      desc.addAs<int, mode::Kinematics>("kinematicsMode", mode::Kinematics::invalid)
+          .setDescription("process kinematics mode (elastic/dissociative beams), filled in by the process");
       return desc;
     }
 
     /// Compute the survival factor for a given event
     /// \return A value in [0, 1] (values outside this range are not prevented, but will be warned about once)
     virtual double operator()(const Event&) const = 0;
+
+    /// Process kinematics mode (elastic/single- or double-dissociative), as set by the process owning this modelling
+    /// \note mode::Kinematics::invalid if the modelling was built outside of a process
+    inline mode::Kinematics kinematicsMode() const { return mode_; }
+
+  private:
+    const mode::Kinematics mode_;
   };
 }  // namespace cepgen
 

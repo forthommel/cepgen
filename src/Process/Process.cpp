@@ -315,7 +315,9 @@ void Process::initialise() {
     if (!event_)
       throw CG_FATAL("Process:initialise")
           << "A gap survival factor modelling was requested, but this process does not carry an event content.";
-    survival_factor_ = SurvivalFactorFactory::get().build(survival);
+    // the survival factor modelling is aware of the elastic/dissociative nature of the beams
+    survival_factor_ = SurvivalFactorFactory::get().build(
+        ParametersList(survival).setAs<int, mode::Kinematics>("kinematicsMode", kin_.incomingBeams().mode()));
     CG_DEBUG("Process:initialise") << "Gap survival factor modelling: " << survival_factor_->name() << ".";
   }
 
