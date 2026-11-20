@@ -24,8 +24,11 @@
 #include <CepGen/Physics/PDG.h>
 #include <CepGen/SurvivalFactors/SurvivalFactor.h>
 
+#include <array>
 #include <complex>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 
 using namespace std::complex_literals;
 using namespace std::string_literals;
@@ -64,6 +67,8 @@ extern struct {
 extern struct {
   double s, rts, yx, mx, rtsnn;
 } vars_;
+extern void calcop_();
+extern void calcscreen_();
 extern void gaussinit_();
 extern void initparsr_(int&);
 extern void readscreen_();
@@ -80,7 +85,8 @@ namespace cepgen::superchic {
           alpha_em_(AlphaEMFactory::get().build(steer<ParametersList>("alphaEM"))),
           survival_factor_model_(steer<int>("survivalFactorModel")),
           integration_parameter_(steer<int>("integrationParameter")),
-          tag_(steer<std::string>("tag")) {
+          tag_(steer<std::string>("tag")),
+          regenerate_(steer<bool>("regenerate")) {
       if (const auto model = steer<std::string>("model"); model == "scalar")
         amplitudes_ = std::array<std::complex<double>, 4>{1., 1., 0., 0.};
       else if (model == "pseudoscalar")
@@ -102,6 +108,8 @@ namespace cepgen::superchic {
           .setDescription("SuperChic soft survival model");
       desc.add("integrationParameter", 16).setDescription("SuperChic survival integration parameter");
       desc.add("tag", "user"s).setDescription("SuperChic 'intag' used when running its 'init' program");
+      desc.add("regenerate", false)
+          .setDescription("force the (re)computation of SuperChic's screening amplitude, even if its file exists");
       return desc;
     }
     bool singleThreaded() const override { return true; }  ///< SuperChic common blocks are process-wide
@@ -138,15 +146,29 @@ namespace cepgen::superchic {
       std::strcpy(btype_.beam, "prot");
       std::strcpy(diff_com_.diff, "el");
 
-      gaussinit_();
-      int surv = survival_factor_model_;
-      initparsr_(surv);
-      readscreen_();
-
+      // fill the common blocks first: both the screening amplitude generation and its reading rely on them
       std::memset(in_.intag, ' ', sizeof in_.intag);
       std::memcpy(in_.intag, tag_.data(), std::min(tag_.size(), sizeof in_.intag));
       vars_.rts = first_event.cmEnergy();
       vars_.s = vars_.rts * vars_.rts;
+
+      gaussinit_();
+      int surv = survival_factor_model_;
+      initparsr_(surv);
+
+      // equivalent of SuperChic's 'init' program (restricted to what the survival factor requires):
+      // the screening amplitude is written to 'inputs/screening<tag>.dat' in the current working directory
+      const auto screening_file = std::filesystem::path("inputs") / ("screening"s + tag_ + ".dat"s);
+      if (regenerate_ || !std::filesystem::exists(screening_file)) {
+        CG_INFO("SuperChic:survivalFactor") << "Computing the screening amplitude for tag '" << tag_
+                                            << "' (sqrt(s) = " << vars_.rts << " GeV, model " << surv << ") into "
+                                            << screening_file << ".";
+        std::filesystem::create_directories("inputs");
+        calcop_();  // proton opacity (needed for the screening amplitude computation)
+        calcscreen_();
+      } else
+        calcop_();  // opacity table: assumed needed by the survival amplitudes as well
+      readscreen_();
 
       ppamps_.ppa[0] = amplitudes_.at(0);
       ppamps_.mma[0] = amplitudes_.at(1);
@@ -160,6 +182,7 @@ namespace cepgen::superchic {
     const int survival_factor_model_;
     const int integration_parameter_;
     const std::string tag_;
+    const bool regenerate_;
 
     std::array<std::complex<double>, 4> amplitudes_;
 
