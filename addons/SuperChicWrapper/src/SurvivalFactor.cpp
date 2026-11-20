@@ -21,6 +21,7 @@
 #include <CepGen/Modules/CouplingFactory.h>
 #include <CepGen/Modules/SurvivalFactorFactory.h>
 #include <CepGen/Physics/Coupling.h>
+#include <CepGen/Physics/Modes.h>
 #include <CepGen/Physics/PDG.h>
 #include <CepGen/SurvivalFactors/SurvivalFactor.h>
 
@@ -150,7 +151,6 @@ namespace cepgen::superchic {
       const auto &ob1 = event.oneWithRole(Particle::Role::OutgoingBeam1).momentum(),
                  &ob2 = event.oneWithRole(Particle::Role::OutgoingBeam2).momentum();
       double ob1_px = ob1.px(), ob1_py = ob1.py(), ob2_px = ob2.px(), ob2_py = ob2.py();
-      process_.proc = 0;
       std::array<std::complex<double>, 10> wts, wtb;
       survival_.sfac = 1;
       schimcgam_(ob1_px, ob1_py, ob2_px, ob2_py, wts.data());
@@ -172,10 +172,35 @@ namespace cepgen::superchic {
 
       nsurv_.s2int = integration_parameter_;
 
-      diss_com_.diss1 = 0;
-      diss_com_.diss2 = 0;
+      // elastic/dissociative nature of the beams, as defined by the process kinematics
+      switch (kinematicsMode()) {
+        case mode::Kinematics::ElasticElastic:
+        case mode::Kinematics::invalid:  // not built by a process: assume elastic-elastic
+          diss_com_.diss1 = diss_com_.diss2 = 0;
+          setFortranString(diff_com_.diff, "el");
+          break;
+        case mode::Kinematics::InelasticElastic:  // positive-z beam dissociates
+          diss_com_.diss1 = 1;
+          diss_com_.diss2 = 0;
+          setFortranString(diff_com_.diff, "sd");
+          break;
+        case mode::Kinematics::ElasticInelastic:  // negative-z beam dissociates
+          diss_com_.diss1 = 0;
+          diss_com_.diss2 = 1;
+          setFortranString(diff_com_.diff, "sd");
+          break;
+        case mode::Kinematics::InelasticInelastic:
+          diss_com_.diss1 = diss_com_.diss2 = 1;
+          setFortranString(diff_com_.diff, "dd");
+          break;
+      }
+      const bool dissociative = diss_com_.diss1 != 0 || diss_com_.diss2 != 0;
+      if (dissociative && proc_ == 0)
+        throw CG_FATAL("SuperChic:initialise")
+            << "Dissociative kinematics (" << kinematicsMode() << ") require a SuperChic process number ('proc').";
+      diss_com_.offshell = dissociative;
+      process_.proc = dissociative ? proc_ : 0;
       setFortranString(btype_.beam, "prot");
-      setFortranString(diff_com_.diff, "el");
       polarization_.pol = 1;  // only the first polarisation state amplitudes are filled below
 
       // fill the common blocks first: both the screening amplitude generation and its reading rely on them
