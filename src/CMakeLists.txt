@@ -11,6 +11,7 @@ file(GLOB phys_sources
         Event/*.cpp
         FormFactors/*.cpp
         HelicityAmplitudes/*.cpp
+        KFactors/*.cpp
         PartonFluxes/*.cpp
         Physics/*.cpp
         StructureFunctions/*.cpp

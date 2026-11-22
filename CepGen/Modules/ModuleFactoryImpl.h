@@ -36,6 +36,7 @@
 #include "CepGen/StructureFunctions/Parameterisation.h"
 #include "CepGen/StructureFunctions/SigmaRatio.h"
 #include "CepGen/SurvivalFactors/SurvivalFactor.h"
+#include "CepGen/KFactors/KFactor.h"
 #include "CepGen/Utils/Derivator.h"
 #include "CepGen/Utils/DocumentationGenerator.h"
 #include "CepGen/Utils/Drawer.h"
@@ -57,6 +58,7 @@ namespace cepgen {
   template class ModuleFactory<formfac::Parameterisation>;
   template class ModuleFactory<GeneratorWorker>;
   template class ModuleFactory<Integrator>;
+  template class ModuleFactory<KFactor>;
   template class ModuleFactory<KTFlux>;
   template class ModuleFactory<proc::Process>;
   template class ModuleFactory<sigrat::Parameterisation>;

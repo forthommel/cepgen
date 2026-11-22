@@ -24,6 +24,7 @@
 #include "CepGen/Event/Event.h"
 #include "CepGen/Physics/Coupling.h"
 #include "CepGen/Physics/Kinematics.h"
+#include "CepGen/KFactors/KFactor.h"
 #include "CepGen/SurvivalFactors/SurvivalFactor.h"
 #include "CepGen/Utils/ProcessVariablesAnalyser.h"
 
@@ -68,6 +69,9 @@ namespace cepgen::proc {
 
     /// Gap survival factor modelling, if any (applied on the event content at the integrand level)
     inline const SurvivalFactor* survivalFactor() const { return survival_factor_.get(); }
+
+    /// Higher-order (K-factor) correction modelling, if any (applied on the event content at the integrand level)
+    inline const KFactor* kFactor() const { return k_factor_.get(); }
 
     inline size_t ndim() const { return mapped_variables_.size(); }  ///< Number of dimensions to perform integration
 
@@ -193,6 +197,7 @@ namespace cepgen::proc {
     mutable bool alpha_em_used_{false};                ///< Was the electromagnetic coupling evaluated?
     mutable bool alpha_s_used_{false};                 ///< Was the strong coupling evaluated?
     std::unique_ptr<SurvivalFactor> survival_factor_;  ///< Gap survival factor modelling (if any)
+    std::unique_ptr<KFactor> k_factor_;                ///< Higher-order correction (K-factor) modelling (if any)
     /// Handler to a variable mapped by this process
     struct MappingVariable {
       std::string name;         ///< Variable name for debugging

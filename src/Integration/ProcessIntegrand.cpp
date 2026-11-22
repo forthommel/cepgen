@@ -137,6 +137,16 @@ double ProcessIntegrand::eval(const std::vector<double>& x) {
       event->metadata["survivalFactor"] = survival;
   }
 
+  // apply the higher-order (K-factor) correction on the event as built by the process
+  if (const auto* k_factor = process_->kFactor(); k_factor) {
+    const auto k = (*k_factor)(*event);
+    if (!utils::positive(k))
+      return 0.;
+    weight *= k;
+    if (storage_)
+      event->metadata["kFactor"] = k;
+  }
+
   // once kinematics variables computed, can apply taming functions
   for (const auto& taming_function : local_modules_ ? local_taming_functions_ : run_parameters_->tamingFunctions())
     if (const auto val = (*taming_function)(bws_.get(*event, taming_function->variables().at(0))) != 0.)

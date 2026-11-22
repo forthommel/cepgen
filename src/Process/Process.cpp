@@ -21,6 +21,7 @@
 #include "CepGen/Core/Exception.h"
 #include "CepGen/Modules/CouplingFactory.h"
 #include "CepGen/Modules/RandomGeneratorFactory.h"
+#include "CepGen/Modules/KFactorFactory.h"
 #include "CepGen/Modules/SurvivalFactorFactory.h"
 #include "CepGen/Physics/Constants.h"
 #include "CepGen/Physics/Coupling.h"
@@ -88,7 +89,7 @@ std::unique_ptr<Process> Process::clone() const {
 }
 
 bool Process::singleThreaded() const {
-  return (survival_factor_ && survival_factor_->singleThreaded()) ||
+  return (survival_factor_ && survival_factor_->singleThreaded()) || (k_factor_ && k_factor_->singleThreaded()) ||
          (alpha_em_used_ && alpha_em_ && alpha_em_->singleThreaded()) ||
          (alpha_s_used_ && alpha_s_ && alpha_s_->singleThreaded());
 }
@@ -319,6 +320,15 @@ void Process::initialise() {
     CG_DEBUG("Process:initialise") << "Gap survival factor modelling: " << survival_factor_->name() << ".";
   }
 
+  // build the higher-order correction (K-factor) modelling (if any)
+  if (const auto& k_factor = steer<ParametersList>("kFactor"); k_factor.hasName()) {
+    if (!event_)
+      throw CG_FATAL("Process:initialise")
+          << "A K-factor modelling was requested, but this process does not carry an event content.";
+    k_factor_ = KFactorFactory::get().build(k_factor);
+    CG_DEBUG("Process:initialise") << "K-factor modelling: " << k_factor_->name() << ".";
+  }
+
   const auto& p1 = kin_.incomingBeams().positive().momentum();
   const auto& p2 = kin_.incomingBeams().negative().momentum();
   //--- define incoming system
@@ -430,6 +440,8 @@ ParametersDescription Process::description() {
   desc.add("alphaS", AlphaSFactory::get().describeParameters("pegasus"))
       .setDescription("strong coupling evolution algorithm");
   desc.add("survivalFactor", ParametersDescription{}).setDescription("gap survival factor modelling (none by default)");
+  desc.add("kFactor", ParametersDescription{})
+      .setDescription("higher-order correction (K-factor) modelling (none by default)");
   desc.add("hasEvent", true).setDescription("does the process carry an event definition");
   desc.add("kinematics", Kinematics::description());
   return desc;
