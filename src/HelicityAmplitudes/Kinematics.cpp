@@ -25,12 +25,17 @@
 using namespace cepgen::amplitudes;
 
 Kinematics::Kinematics(double mv2, double s_hat, double t_hat, double u_hat)
+    : Kinematics(mv2, mv2, s_hat, t_hat, u_hat) {}
+
+Kinematics::Kinematics(double mv32, double mv42, double s_hat, double t_hat, double u_hat)
     : shat(s_hat),
       that(t_hat),
       uhat(u_hat),
-      mv2_(mv2),
+      mv32_(mv32),
+      mv42_(mv42),
       shat2(s_hat * s_hat),
-      beta2(1. - 4. * mv2_ / s_hat),
+      // sqrt(lambda(s,m3^2,m4^2))/s, reducing to 1-4m^2/s squared for identical masses
+      beta2(((s_hat - mv32_ - mv42_) * (s_hat - mv32_ - mv42_) - 4. * mv32_ * mv42_) / (s_hat * s_hat)),
       beta(sqrt(beta2)),
       inv_gamma2(1. - beta2),
       gamma2(1. / inv_gamma2),
@@ -61,8 +66,10 @@ bool Kinematics::operator!=(const Kinematics& oth) const {
 
 namespace cepgen::amplitudes {
   std::ostream& operator<<(std::ostream& os, const Kinematics& kin) {
-    return os << "Kin{mV2=" << kin.mv2_ << ",shat=" << kin.shat << ",that=" << kin.that << ",uhat=" << kin.uhat
-              << ",beta=" << kin.beta << ",gamma=" << kin.gamma << ",cos(theta)=" << kin.cos_theta
-              << "->1/A=" << kin.invA << "}";
+    os << "Kin{mV2=" << kin.mv32_;
+    if (kin.mv42_ != kin.mv32_)
+      os << "/" << kin.mv42_;
+    return os << ",shat=" << kin.shat << ",that=" << kin.that << ",uhat=" << kin.uhat << ",beta=" << kin.beta
+              << ",gamma=" << kin.gamma << ",cos(theta)=" << kin.cos_theta << "->1/A=" << kin.invA << "}";
   }
 }  // namespace cepgen::amplitudes

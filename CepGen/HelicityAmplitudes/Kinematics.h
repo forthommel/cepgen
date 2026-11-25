@@ -26,7 +26,10 @@ namespace cepgen::amplitudes {
   /// Helper container to handle all kinematics variables computation once
   class Kinematics {
   public:
+    /// Kinematics block for two produced bosons of identical squared mass
     explicit Kinematics(double mv2, double s_hat, double t_hat, double u_hat);
+    /// Kinematics block for two produced particles of different squared masses
+    explicit Kinematics(double mv32, double mv42, double s_hat, double t_hat, double u_hat);
 
     /// Build a kinematics block from its angular and momenta information
     static Kinematics fromSCosTheta(double shat, double cos_theta, double mv2);
@@ -39,7 +42,9 @@ namespace cepgen::amplitudes {
 
   private:
     void setCosTheta(double cos_theta);  ///< Set the rotation angle (in rad)
-    const double mv2_{0.};               /// Squared mass of each of the two produced bosons (in GeV^2)
+
+    const double mv32_{0.};  ///< Squared mass of the first produced particle (in GeV^2)
+    const double mv42_{0.};  ///< Squared mass of the second produced particle (in GeV^2)
 
   public:
     // all derived variables
