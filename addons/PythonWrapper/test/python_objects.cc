@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
   cepgen::python::Environment env(cepgen::ParametersList{});
   TEST_TYPE(bool, true)
   TEST_TYPE(bool, false)
+  TEST_TYPE(std::complex<double>, std::complex<double>(1.5, -2.5))
   TEST_TYPE(string, "Héhéhé, test @ ünıc0d€ 🐗"s)
   TEST_TYPE(cepgen::Limits, cepgen::Limits(-2., 3.1))
   TEST_TYPE(cepgen::ParametersList,
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]) {
                 .set("bar", M_PI)
                 .set("baz", "héhé"s)
                 .set("flag", true)
+                .set("coupling", std::complex<double>(0.5, 1.25))
                 .set("plist", cepgen::ParametersList().set("foo", 10).set("bar", 42.42).set("baz", "hîhî"s)))
 
   CG_TEST_SUMMARY;

@@ -67,6 +67,24 @@ int main(int argc, char* argv[]) {
     other += cepgen::ParametersList().set("sub", 2);
     CG_TEST_EQUAL(other.typeOf("sub"), "int", "single-type storage after concatenation");
   }
+  {  // complex values
+    cepgen::ParametersList plist;
+    plist.set("c", std::complex<double>(0.5, -1.25)).set("r", 2.).set("i", 3);
+    CG_TEST_EQUAL(plist.typeOf("c"), "complex", "complex stored type");
+    CG_TEST_EQUAL(plist.get<std::complex<double> >("c"), std::complex<double>(0.5, -1.25), "complex retrieval");
+    CG_TEST_EQUAL(plist.get<std::complex<double> >("r"), std::complex<double>(2., 0.), "complex <- double");
+    CG_TEST_EQUAL(plist.get<std::complex<double> >("i"), std::complex<double>(3., 0.), "complex <- int");
+    CG_TEST_EXCEPT([&plist]() { plist.get<double>("c"); }, "double <- complex with a non-null imaginary part");
+    plist.set("c", std::complex<double>(4., 0.));
+    CG_TEST_EQUAL(plist.get<double>("c"), 4., "double <- complex with a null imaginary part");
+    plist.set("c", std::complex<double>(0.5, -1.25));
+    CG_TEST_EQUAL(plist.serialise(), "c:0.5-1.25j,i:3,r:2.0"s, "complex serialisation");
+    const auto re_fed = cepgen::ParametersList().feed(plist.serialise());
+    CG_TEST_EQUAL(re_fed.get<std::complex<double> >("c"), std::complex<double>(0.5, -1.25), "complex parsing");
+    CG_TEST_EQUAL(cepgen::ParametersList().feed("z:1e-3+2.5e2j").get<std::complex<double> >("z"),
+                  std::complex<double>(1e-3, 250.),
+                  "complex parsing (Ee notation)");
+  }
   {  // lossless scalar conversions
     const auto plist = cepgen::ParametersList()
                            .set("int", 42)

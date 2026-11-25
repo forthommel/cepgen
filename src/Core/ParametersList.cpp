@@ -209,6 +209,8 @@ ParametersList ParametersList::operator+(const ParametersList& other) const {
 }
 
 ParametersList& ParametersList::feed(const std::string& raw_args) {
+  static const std::regex complex_regex(
+      R"(([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)([+-](?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)j)");
   auto raw_list = raw_args;
   if (const auto raw_list_stripped = utils::between(raw_list, "{", "}");
       raw_list_stripped.size() == 1 && raw_list == "{" + raw_list_stripped[0] + "}")
@@ -260,6 +262,8 @@ ParametersList& ParametersList::feed(const std::string& raw_args) {
         set(key, std::stoi(value));
       else if (utils::isFloat(value))
         set(key, std::stod(value));
+      else if (std::smatch complex_match; std::regex_match(value, complex_match, complex_regex))  // "a+bj"
+        set(key, std::complex<double>{std::stod(complex_match[1]), std::stod(complex_match[2])});
       else if (value[0] == value[value.size() - 1] && (value[0] == '\'' || value[0] == '"'))  // string parameter
         set(key, value.substr(1, value.size() - 2));
       else {
@@ -492,6 +496,7 @@ IMPL_TYPE_ALL(bool, bool_values_);
 IMPL_TYPE_ALL(int, int_values_);
 IMPL_TYPE_ALL(unsigned long long, ulong_values_);
 IMPL_TYPE_ALL(double, dbl_values_);
+IMPL_TYPE_ALL(std::complex<double>, cplx_values_);
 IMPL_TYPE_ALL(std::string, str_values_);
 IMPL_TYPE_ALL(std::vector<int>, vec_int_values_);
 IMPL_TYPE_ALL(std::vector<double>, vec_dbl_values_);
@@ -595,6 +600,24 @@ bool ParametersList::convert<double>(const std::string& key, double& value) cons
       it != ulong_values_.end() &&
       static_cast<unsigned long long>(static_cast<double>(it->second)) == it->second) {  // exactly representable
     value = static_cast<double>(it->second);
+    return true;
+  }
+  if (const auto it = cplx_values_.find(key); it != cplx_values_.end() && it->second.imag() == 0.) {
+    value = it->second.real();  // a complex number with a null imaginary part is a real number
+    return true;
+  }
+  return false;
+}
+
+template <>
+bool ParametersList::convert<std::complex<double> >(const std::string& key, std::complex<double>& value) const {
+  // any real number (stored as a float, or losslessly convertible into it) is a complex number with no imaginary part
+  if (const auto it = dbl_values_.find(key); it != dbl_values_.end()) {
+    value = std::complex<double>{it->second, 0.};
+    return true;
+  }
+  if (double real; convert<double>(key, real)) {
+    value = std::complex<double>{real, 0.};
     return true;
   }
   return false;

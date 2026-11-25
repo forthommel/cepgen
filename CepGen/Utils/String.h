@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2013-2024  Laurent Forthomme
+ *  Copyright (C) 2013-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #define CepGen_Utils_String_h
 
 #include <algorithm>
+#include <complex>
 #include <functional>
 #include <numeric>
 #include <set>
@@ -36,6 +37,9 @@ namespace cepgen::utils {
   inline std::string toString(const T& obj) {
     return std::to_string(obj);
   }
+  /// Specialisation of string conversion of complex numbers (in "a+bj" notation)
+  template <>
+  std::string toString(const std::complex<double>&);
   /// Specialisation of string conversion of limits
   template <>
   std::string toString(const Limits&);

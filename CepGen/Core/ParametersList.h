@@ -1,6 +1,6 @@
 /*
  *  CepGen: a central exclusive processes event generator
- *  Copyright (C) 2018-2025  Laurent Forthomme
+ *  Copyright (C) 2018-2026  Laurent Forthomme
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #ifndef CepGen_Core_ParametersList_h
 #define CepGen_Core_ParametersList_h
 
+#include <complex>
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -36,6 +37,7 @@
   __TYPE_ENUM(int, int_values_, "int")                                   \
   __TYPE_ENUM(unsigned long long, ulong_values_, "ulong")                \
   __TYPE_ENUM(double, dbl_values_, "float")                              \
+  __TYPE_ENUM(std::complex<double>, cplx_values_, "complex")             \
   __TYPE_ENUM(std::string, str_values_, "str")                           \
   __TYPE_ENUM(Limits, lim_values_, "Limits")                             \
   __TYPE_ENUM(ParametersList, param_values_, "Params")                   \
@@ -184,6 +186,7 @@ namespace cepgen {
     std::unordered_map<std::string, int> int_values_;
     std::unordered_map<std::string, unsigned long long> ulong_values_;
     std::unordered_map<std::string, double> dbl_values_;
+    std::unordered_map<std::string, std::complex<double> > cplx_values_;
     std::unordered_map<std::string, std::string> str_values_;
     std::unordered_map<std::string, Limits> lim_values_;
     std::unordered_map<std::string, std::vector<int> > vec_int_values_;

@@ -19,7 +19,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <cmath>
 #include <codecvt>
+#include <complex>
 #include <cstdint>
 #include <locale>
 #include <random>
@@ -188,6 +190,11 @@ namespace cepgen::utils {
     if (out.find('.') == std::string::npos && out.find('e') == std::string::npos && out.find('E') == std::string::npos)
       out += ".0";
     return out;
+  }
+
+  template <>
+  std::string toString(const std::complex<double>& val) {
+    return toString(val.real()) + (std::signbit(val.imag()) ? "-" : "+") + toString(std::abs(val.imag())) + "j";
   }
 
   std::string toCamelCase(const std::string& in, bool lower) {

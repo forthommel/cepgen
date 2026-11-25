@@ -194,6 +194,28 @@ ObjectPtr ObjectPtr::make<double>(const double& val) {
 //---------------------------------------------------------
 
 //---------------------------------------------------------
+// complex value parameters
+//---------------------------------------------------------
+template <>
+bool ObjectPtr::is<std::complex<double> >() const {
+  CG_ASSERT(get());
+  return PyComplex_Check(get());
+}
+
+template <>
+std::complex<double> ObjectPtr::value<std::complex<double> >() const {
+  if (!is<std::complex<double> >())
+    throw CG_ERROR("Python:get") << "Object has invalid type: complex != \"" << get()->ob_type->tp_name << "\".";
+  return {PyComplex_RealAsDouble(get()), PyComplex_ImagAsDouble(get())};
+}
+
+template <>
+ObjectPtr ObjectPtr::make<std::complex<double> >(const std::complex<double>& val) {
+  return ObjectPtr(PyComplex_FromDoubles(val.real(), val.imag()));
+}
+//---------------------------------------------------------
+
+//---------------------------------------------------------
 // string parameters
 //---------------------------------------------------------
 template <>
@@ -290,6 +312,8 @@ ParametersList ObjectPtr::value<ParametersList>() const {
       out.set(skey, val.value<int>());
     else if (val.is<double>())
       out.set(skey, val.value<double>());
+    else if (val.is<std::complex<double> >())
+      out.set(skey, val.value<std::complex<double> >());
     else if (val.is<std::string>())
       out.set(skey, val.value<std::string>());
     else if (val.is<ParametersList>())
@@ -327,6 +351,8 @@ ObjectPtr ObjectPtr::make<ParametersList>(const ParametersList& plist) {
       PyDict_SetItem(obj.get(), make(key).release(), make(plist.get<int>(key)).release());
     else if (plist.has<double>(key))
       PyDict_SetItem(obj.get(), make(key).release(), make(plist.get<double>(key)).release());
+    else if (plist.has<std::complex<double> >(key))
+      PyDict_SetItem(obj.get(), make(key).release(), make(plist.get<std::complex<double> >(key)).release());
     else if (plist.has<std::string>(key))
       PyDict_SetItem(obj.get(), make(key).release(), make(plist.get<std::string>(key)).release());
     else if (plist.has<ParametersList>(key))

@@ -25,6 +25,7 @@
 #define PYTHON2
 #endif
 
+#include <complex>
 #include <memory>
 #include <string>
 #include <vector>
