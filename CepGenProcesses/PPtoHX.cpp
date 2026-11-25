@@ -28,17 +28,21 @@
 
 using namespace cepgen;
 
-/// \brief Compute the matrix element for a CE \f$\gamma^*\gamma^*\rightarrow H X\f$ process, with \f$X\f$ a neutral,
-///  stable particle of free mass, in the \f$k_{\rm T}\f$-factorisation approach.
+/// Define X in the PDG library (before the base class is built) and return the central system content
+static spdgids_t centralIds(const ParametersList& params) {
+  const auto id = params.get<int>("pdgIdX", 9900025);
+  PDG::get().define(
+      ParticleProperties(static_cast<pdgid_t>(id), "X", "X", 0, params.get<double>("massX", 100.), 0., {0}, false));
+  return spdgids_t{static_cast<spdgid_t>(PDG::higgs), static_cast<spdgid_t>(id)};
+}
+
+/// Compute the matrix element for a CE \f$\gamma^*\gamma^*\rightarrow H X\f$ process, with \f$X\f$ a neutral, stable particle
 /// \note The spin, parity and \f$\gamma\gamma HX\f$ couplings of X are described by a helicity amplitudes model
-///  (default: "hxModel", model-independent partial waves) -- see src/HelicityAmplitudes/HXAmplitudes.cpp.
+///  (default: "hxModel", model-independent partial waves)
 class PPtoHX final : public proc::FactorisedProcess {
 public:
   explicit PPtoHX(const ParametersList& params)
-      : proc::FactorisedProcess(params, centralIds(params)),
-        mx_(steer<double>("massX")),
-        coupling_(steer<double>("coupling")),
-        ff_scale2_(std::pow(steer<double>("formFactorScale"), 2)) {}
+      : proc::FactorisedProcess(params, centralIds(params)), mx_(steer<double>("massX")) {}
 
   proc::ProcessPtr clone() const override { return std::make_unique<PPtoHX>(parameters()); }
 
@@ -46,33 +50,23 @@ public:
     auto desc = proc::FactorisedProcess::description();
     desc.setDescription("γ*γ* → H X (X neutral and stable, helicity amplitudes model)");
     desc.add("ktFactorised", true);
+    desc.add("randomiseCharge", false);  // H and X are neutral: no charge conjugation to randomise
     desc.add("pdgIdX", 9900025).setDescription("PDG id assigned to X (defined on the fly in the PDG library)");
-    desc.add("massX", 100.).setDescription("mass of X (GeV/c^2)");
-    desc.add("coupling", 1.e-3).setDescription("overall scale c/Lambda2 multiplying shat in the amplitude (GeV^-2)");
-    desc.add("formFactorScale", 0.).setDescription("dipole cut-off on sqrt(shat) (GeV) restoring unitarity");
+    desc.add("massX", 100.).setDescription("mass of X (GeV/c²)");
     desc.add("model", amplitudes::HelicityAmplitudesFactory::get().describeParameters("hxModel"))
         .setDescription("Helicity amplitudes model");
     return desc;
   }
 
 private:
-  /// Define X in the PDG library (before the base class is built) and return the central system content
-  static spdgids_t centralIds(const ParametersList& params) {
-    const auto id = params.get<int>("pdgIdX", 9900025);
-    PDG::get().define(
-        ParticleProperties(static_cast<pdgid_t>(id), "X", "X", 0, params.get<double>("massX", 100.), 0., {0}, false));
-    return spdgids_t{static_cast<spdgid_t>(PDG::higgs), static_cast<spdgid_t>(id)};
-  }
-
   void prepareFactorisedPhaseSpace() override {
     if (!partonsKtFactorised())
       throw CG_FATAL("PPtoHX:prepare") << "This process is only defined for kt-factorised (off-shell) photons.";
-    mh2_ = std::pow(PDG::get()(PDG::higgs).mass, 2);
-    mx2_ = mx_ * mx_;
-    if (mh2_ <= 0.)
+    if (mh2_ = std::pow(PDG::get()(PDG::higgs).mass, 2); mh2_ <= 0.)
       throw CG_FATAL("PPtoHX:prepare") << "The Higgs mass is not defined in the PDG library.";
-    amplitudes_ = amplitudes::HelicityAmplitudesFactory::get().build(steer<ParametersList>("model"));
-    if (!amplitudes_->hasAAHX())
+    mx2_ = mx_ * mx_;
+    if (amplitudes_ = amplitudes::HelicityAmplitudesFactory::get().build(steer<ParametersList>("model"));
+        !amplitudes_->hasAAHX())
       throw CG_FATAL("PPtoHX:prepare") << "Model '" << amplitudes_->name()
                                        << "' does not have a registered γγ → H X vertex in its specifications.";
     spin_ = amplitudes_->parameters().get<int>("spin", 0);
@@ -97,14 +91,12 @@ private:
       amat2 += std::norm(amplitudes_->amplitudeLinearPolarisations(kin, 0, lam_x, e1, e2));
     if (!utils::positive(amat2))
       return 0.;
-    // M = coupling · ŝ · F(ŝ) · (helicity amplitude), and |M|²/ŝ² to match the 2→2 phase space convention
-    const auto form_factor = ff_scale2_ > 0. ? 1. / std::pow(1. + s_hat / ff_scale2_, 2) : 1.;
-    return coupling_ * coupling_ * form_factor * form_factor * amat2;
+    // the model returns the full dimensionless amplitude M (contact terms and resonances): |M|²/ŝ² matches the
+    // 2→2 phase space convention
+    return amat2 / (s_hat * s_hat);
   }
 
   const double mx_;
-  const double coupling_;
-  const double ff_scale2_;
 
   double mh2_{0.};
   double mx2_{0.};
