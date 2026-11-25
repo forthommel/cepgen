@@ -64,6 +64,7 @@ namespace cepgen::amplitudes {
     virtual bool hasAAZZ() const { return false; }
     virtual bool hasAAFF() const { return false; }
     virtual bool hasAASS() const { return false; }
+    virtual bool hasAAHX() const { return false; }
 
   protected:
     explicit HelicityAmplitudes(const ParametersList&);
